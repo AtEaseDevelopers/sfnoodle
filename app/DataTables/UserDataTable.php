@@ -29,7 +29,19 @@ class UserDataTable extends DataTable
      */
     public function query(User $model)
     {
-        return $model->newQuery();
+        return $model->newQuery()
+            ->join('model_has_roles', function ($join) {
+                $join->on('users.id', '=', 'model_has_roles.model_id');
+            })
+            ->join('roles', function ($join) {
+                $join->on('roles.id', '=', 'model_has_roles.role_id');
+            })
+            ->select(
+                'users.id',
+                'users.name',
+                'users.email',
+                'roles.name as role_name'
+            );
     }
 
     /**
@@ -94,8 +106,17 @@ class UserDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'name',
-            'email'
+            'name' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Name',
+                'data'  => 'name',
+                'name'  => 'users.name'
+            ]),
+            'email',
+            'role' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Role',
+                'data'  => 'role_name',
+                'name'  => 'roles.name'
+            ]),
         ];
     }
 

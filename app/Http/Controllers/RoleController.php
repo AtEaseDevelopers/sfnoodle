@@ -12,6 +12,7 @@ use App\Http\Controllers\AppBaseController;
 use Response;
 use Illuminate\Support\Facades\Crypt;
 use App\Repositories\RoleHasPermissionRepository;
+use Illuminate\Support\Facades\DB;
 
 class RoleController extends AppBaseController
 {
@@ -59,18 +60,16 @@ class RoleController extends AppBaseController
     {
         $input = $request->all();
 
-        $permission_id = $input["permission_id"] ?? "";
-        
-        unset($input["permission_id"]);
-
+        $permissionIds = $request->input('permission_id', []);
+        unset($input['permission_id']);
         $role = $this->roleRepository->create($input);
-
-        $rolePermission = [
-            "role_id" => $role["id"],
-            "permission_id" => $permission_id
-        ];
-        
-        $roleHasPermission = $this->roleHasPermissionRepository->create($rolePermission);
+        // attach each permission
+        foreach ($permissionIds as $permId) {
+            $this->roleHasPermissionRepository->create([
+                'role_id' => $role->id,
+                'permission_id' => $permId,
+            ]);
+        }
 
         Flash::success('Role saved successfully.');
 
@@ -121,9 +120,9 @@ class RoleController extends AppBaseController
             return redirect(route('roles.index'));
         }
         
-        $roleHasPermission = $this->roleHasPermissionRepository->where('role_id', $id)->first();  // Use Eloquent 'where' and 'first'
+        $roleHasPermission = $this->roleHasPermissionRepository->where('role_id', $id)->get();  // Use Eloquent 'where' and 'first'
 
-        $role->permission_id = $roleHasPermission->permission_id ?? "";
+        $role->permissions = $roleHasPermission->pluck('permission_id')->toArray();
 
         return view('roles.edit')->with('role', $role);
     }
@@ -149,24 +148,14 @@ class RoleController extends AppBaseController
 
         $role = $this->roleRepository->update($request->all(), $id);
 
-        $roleHasPermission = $this->roleHasPermissionRepository->where('role_id', $id)->first();  // Use Eloquent 'where' and 'first'
-
-        if($roleHasPermission)
-        {
-            $rolePermission = [
-                "permission_id" => $request["permission_id"]
-            ];
-
-            $this->roleHasPermissionRepository->update($rolePermission, $roleHasPermission->id);
-        }
-        else
-        {
-            $rolePermission = [
-                "model_id" => $user["id"],
-                "role_id" => $request["role_id"]
-            ];
-    
-            $roleHasPermission = $this->roleHasPermissionRepository->create($rolePermission);
+        // sync permissions: remove old and add new
+        DB::table('role_has_permissions')->where('role_id', $id)->delete();
+        $permissionIds = $request->input('permission_id', []);
+        foreach ($permissionIds as $permId) {
+            $this->roleHasPermissionRepository->create([
+                'role_id' => $id,
+                'permission_id' => $permId,
+            ]);
         }
 
         Flash::success('Role updated successfully.');
@@ -193,6 +182,8 @@ class RoleController extends AppBaseController
         }
 
         $this->roleRepository->delete($id);
+
+        DB::table('role_has_permissions')->where('role_id', $id)->delete();
 
         Flash::success('Role deleted successfully.');
 

@@ -5,10 +5,19 @@
 </div>
 
 
-<!-- Permission Id Field -->
+<!-- Permissions Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('permission_id', 'Permission:') !!}<span class="asterisk"> *</span>
-    {!! Form::select('permission_id', $permissionItems, null, ['class' => 'form-control selectpicker', 'placeholder' => 'Pick a Permission...','data-live-search'=>'true']) !!}
+    {!! Form::label('permission_id[]', 'Permissions:') !!}<span class="asterisk"> *</span>
+    {!! Form::select(
+        'permission_id[]',
+        $permissionItems,
+        isset($role) ? $role->permissions : [],
+        [
+            'class' => 'form-control selectpicker',
+            'multiple' => true,
+            'data-live-search' => 'true'
+        ]
+    ) !!}
 </div>
 
 
