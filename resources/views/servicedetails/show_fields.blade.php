@@ -1,36 +1,36 @@
 <!-- Lorry Id Field -->
 <div class="form-group">
-    {!! Form::label('lorry_id', 'Lorry:') !!}
+    {!! Form::label('lorry_id', __('lorry_service.lorry')) !!}:
     <p>{{ $servicedetails->lorry->lorryno }}</p>
 </div>
 
 <!-- Type Field -->
 <div class="form-group">
-    {!! Form::label('type', 'Type:') !!}
-    <p>{{ $servicedetails->type }}</p>
+    {!! Form::label('type', __('lorry_service.type')) !!}:
+    <p>{{ __("lorry_service.type_" . strtolower($servicedetails->type)) }}</p>
 </div>
 
 <!-- Date Field -->
 <div class="form-group">
-    {!! Form::label('date', 'Date:') !!}
+    {!! Form::label('date', __('lorry_service.date')) !!}:
     <p>{{ $servicedetails->date }}</p>
 </div>
 
 <!-- Nextdate Field -->
 <div class="form-group">
-    {!! Form::label('nextdate', 'Nextdate:') !!}
+    {!! Form::label('nextdate', __('lorry_service.next_date')) !!}:
     <p>{{ $servicedetails->nextdate }}</p>
 </div>
 
 <!-- Amount Field -->
 <div class="form-group">
-    {!! Form::label('amount', 'Amount:') !!}
-    <p>{{ number_format($servicedetails->amount,2) }}</p>
+    {!! Form::label('amount', __('lorry_service.amount')) !!}:
+    <p>{{ number_format($servicedetails->amount, 2) }}</p>
 </div>
 
 <!-- Remark Field -->
 <div class="form-group">
-    {!! Form::label('remark', 'Remark:') !!}
+    {!! Form::label('remark', __('lorry_service.remark')) !!}:
     <p>{{ $servicedetails->remark }}</p>
 </div>
 
@@ -46,4 +46,3 @@
         });
     </script>
 @endpush
-

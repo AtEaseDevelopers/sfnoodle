@@ -1,12 +1,8 @@
-
-
-
-
 {{-- @canany(['deliveryorder'])
 <li class="nav-item {{ Request::is('deliveryOrders*') ? 'active' : '' }}">
     <a class="nav-link {{ Request::is('deliveryOrders*') ? 'active' : '' }}" href="{{ route('deliveryOrders.index') }}">
         <i class="nav-icon icon-notebook"></i>
-        <span>Delivery Orders</span>
+        <span>{{ trans('side_menu.delivery_orders') }}</span>
     </a>
 </li>
 @endcanany
@@ -15,14 +11,14 @@
 <li class="nav-item nav-dropdown {{ Request::is('loans*','loanpayments*') ? 'open' : '' }}">
     <a class="nav-link nav-dropdown-toggle" href="#">
         <i class="nav-icon icon-diamond"></i>
-        <span>Loan Management</span>
+        <span>{{ trans('side_menu.loan_management') }}</span>
     </a>
 
     @can('loan')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('loans*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('loans*') ? 'active' : '' }}" href="{{ route('loans.index') }}">
-                    <span>Loans</span>
+                    <span>{{ trans('side_menu.loans') }}</span>
                 </a>
             </li>
         </ul>
@@ -32,7 +28,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('loanpayments*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('loanpayments*') ? 'active' : '' }}" href="{{ route('loanpayments.index') }}">
-                    <span>Loan Payments</span>
+                    <span>{{ trans('side_menu.loan_payments') }}</span>
                 </a>
             </li>
         </ul>
@@ -45,14 +41,14 @@
 <li class="nav-item nav-dropdown {{ Request::is('bonuses*','claims*','advances*','compounds*','paymentdetails*') ? 'open' : '' }}">
     <a class="nav-link nav-dropdown-toggle" href="#">
         <i class="nav-icon icon-wallet"></i>
-        <span>Finance</span>
+        <span>{{ trans('side_menu.finance') }}</span>
     </a>
 
     @can('paymentdetail')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('paymentdetails*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('paymentdetails*') ? 'active' : '' }}" href="{{ route('paymentdetails.index') }}">
-                    <span>Payment Details</span>
+                    <span>{{ trans('side_menu.payment_details') }}</span>
                 </a>
             </li>
         </ul>
@@ -62,7 +58,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('compounds*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('compounds*') ? 'active' : '' }}" href="{{ route('compounds.index') }}">
-                    <span>Compounds</span>
+                    <span>{{ trans('side_menu.compounds') }}</span>
                 </a>
             </li>
         </ul>
@@ -72,7 +68,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('advances*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('advances*') ? 'active' : '' }}" href="{{ route('advances.index') }}">
-                    <span>Advances</span>
+                    <span>{{ trans('side_menu.advances') }}</span>
                 </a>
             </li>
         </ul>
@@ -82,7 +78,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('claims*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('claims*') ? 'active' : '' }}" href="{{ route('claims.index') }}">
-                    <span>Claims</span>
+                    <span>{{ trans('side_menu.claims') }}</span>
                 </a>
             </li>
         </ul>
@@ -92,7 +88,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('bonuses*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('bonuses*') ? 'active' : '' }}" href="{{ route('bonuses.index') }}">
-                    <span>Bonuses</span>
+                    <span>{{ trans('side_menu.bonuses') }}</span>
                 </a>
             </li>
         </ul>
@@ -105,28 +101,28 @@
 <li class="nav-item nav-dropdown {{ Request::is('invoices*','invoiceDetails*','invoicePayments') ? 'open' : '' }}">
     <a class="nav-link nav-dropdown-toggle" href="#">
         <i class="nav-icon icon-notebook"></i>
-        <span>Invoices</span>
+        <span>{{ trans('side_menu.invoices') }}</span>
     </a>
 
     @can('invoice')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('invoices*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('invoices*') ? 'active' : '' }}" href="{{ route('invoices.index') }}">
-                    <span>Invoices</span>
+                    <span>{{ trans('side_menu.invoices') }}</span>
                 </a>
             </li>
         </ul>
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('invoiceDetails*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('invoiceDetails*') ? 'active' : '' }}" href="{{ route('invoiceDetails.index') }}">
-                    <span>Invoice Details</span>
+                    <span>{{ trans('side_menu.invoice_details') }}</span>
                 </a>
             </li>
         </ul>
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('invoicePayments*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('invoicePayments*') ? 'active' : '' }}" href="{{ route('invoicePayments.index') }}">
-                    <span>Payments</span>
+                    <span>{{ trans('side_menu.payments') }}</span>
                 </a>
             </li>
         </ul>
@@ -139,7 +135,7 @@
 <li class="nav-item {{ Request::is('tasks*','taskTransfers*') ? 'open' : '' }}">
     <a class="nav-link {{ Request::is('tasks*','taskTransfers*') ? 'active' : '' }}" href="{{ route('tasks.index') }}">
         <i class="nav-icon icon-menu"></i>
-        <span>Tasks</span>
+        <span>{{ trans('side_menu.tasks') }}</span>
     </a>
 </li>
 @endcanany
@@ -148,7 +144,7 @@
 <li class="nav-item {{ Request::is('trips*') ? 'active' : '' }}">
     <a class="nav-link" href="{{ route('trips.index') }}">
         <i class="nav-icon icon-login"></i>
-        <span>Trips</span>
+        <span>{{ trans('side_menu.trips') }}</span>
     </a>
 </li>
 @endcanany
@@ -157,14 +153,14 @@
 <li class="nav-item nav-dropdown {{ Request::is('inventoryBalances*','inventoryTransactions*') ? 'open' : '' }}">
     <a class="nav-link nav-dropdown-toggle" href="#">
         <i class="nav-icon icon-drawer"></i>
-        <span>Inventory</span>
+        <span>{{ trans('side_menu.inventory') }}</span>
     </a>
 
     @can('inventorybalance')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('inventoryBalances*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('inventoryBalances*') ? 'active' : '' }}" href="{{ route('inventoryBalances.index') }}">
-                    <span>Balances</span>
+                    <span>{{ trans('side_menu.balances') }}</span>
                 </a>
             </li>
         </ul>
@@ -173,7 +169,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('inventoryTransactions*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('inventoryTransactions*') ? 'active' : '' }}" href="{{ route('inventoryTransactions.index') }}">
-                    <span>Transactions</span>
+                    <span>{{ trans('side_menu.transactions') }}</span>
                 </a>
             </li>
         </ul>
@@ -182,7 +178,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('inventoryTransfers*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('inventoryTransfers*') ? 'active' : '' }}" href="{{ route('inventoryTransfers.index') }}">
-                    <span>Transfers</span>
+                    <span>{{ trans('side_menu.transfers') }}</span>
                 </a>
             </li>
         </ul>
@@ -191,24 +187,24 @@
 @endcanany
 
 @canany(['lorry','driver','kelindan','agent','supervisor','product','customer','specialprice','foc','assigns'])
-<li class="nav-item nav-dropdown {{ Request::is('lorries*','servicedetails*','drivers*','driverLocations*','kelindans*','agents*','supervisors*','products*','customers*','specialprice*','focs*','assigns*') ? 'open' : '' }}">
+<li class="nav-item nav-dropdown {{ Request::is('lorries*','servicedetails*','drivers*','driverLocations*','kelindans*','agents*','supervisors*','products*','customers*','specialprices*','focs*','assigns*') ? 'open' : '' }}">
     <a class="nav-link nav-dropdown-toggle" href="#">
         <i class="nav-icon icon-list"></i>
-        <span>Master Data</span>
+        <span>{{ trans('side_menu.master_data') }}</span>
     </a>
 
     @can('lorry')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('lorries*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('lorries*') ? 'active' : '' }}" href="{{ route('lorries.index') }}">
-                    <span>Lorries</span>
+                    <span>{{ trans('side_menu.lorries') }}</span>
                 </a>
             </li>
         </ul>
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('servicedetails*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('servicedetails*') ? 'active' : '' }}" href="{{ route('servicedetails.index') }}">
-                    <span>Lorry Service</span>
+                    <span>{{ trans('side_menu.lorry_service') }}</span>
                 </a>
             </li>
         </ul>
@@ -218,14 +214,14 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('drivers*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('drivers*') ? 'active' : '' }}" href="{{ route('drivers.index') }}">
-                    <span>Drivers</span>
+                    <span>{{ trans('side_menu.drivers') }}</span>
                 </a>
             </li>
         </ul>
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('driverLocations*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('driverLocations*') ? 'active' : '' }}" href="{{ route('driverLocations.index') }}">
-                    <span>Driver Locations</span>
+                    <span>{{ trans('side_menu.driver_locations') }}</span>
                 </a>
             </li>
         </ul>
@@ -235,7 +231,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('kelindans*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('kelindans*') ? 'active' : '' }}" href="{{ route('kelindans.index') }}">
-                    <span>Kelindans</span>
+                    <span>{{ trans('side_menu.kelindans') }}</span>
                 </a>
             </li>
         </ul>
@@ -245,7 +241,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('agents*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('agents*') ? 'active' : '' }}" href="{{ route('agents.index') }}">
-                    <span>Agents</span>
+                    <span>{{ trans('side_menu.agents') }}</span>
                 </a>
             </li>
         </ul>
@@ -255,7 +251,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('supervisors*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('supervisors*') ? 'active' : '' }}" href="{{ route('supervisors.index') }}">
-                    <span>Operations</span>
+                    <span>{{ trans('side_menu.operations') }}</span>
                 </a>
             </li>
         </ul>
@@ -265,7 +261,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('products*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('products*') ? 'active' : '' }}" href="{{ route('products.index') }}">
-                    <span>Products</span>
+                    <span>{{ trans('side_menu.products') }}</span>
                 </a>
             </li>
         </ul>
@@ -275,7 +271,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('customers*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('customers*') ? 'active' : '' }}" href="{{ route('customers.index') }}">
-                    <span>Customers</span>
+                    <span>{{ trans('side_menu.customers') }}</span>
                 </a>
             </li>
         </ul>
@@ -285,7 +281,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('companies*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('companies*') ? 'active' : '' }}" href="{{ route('companies.index') }}">
-                    <span>Companies</span>
+                    <span>{{ trans('side_menu.companies') }}</span>
                 </a>
             </li>
         </ul>
@@ -293,9 +289,9 @@
 
     @can('specialprice')
         <ul class="nav-dropdown-items">
-            <li class="nav-item {{ Request::is('specialprice*') ? 'active' : '' }}">
-                <a class="nav-link {{ Request::is('specialprice*') ? 'active' : '' }}" href="{{ route('specialPrices.index') }}">
-                    <span>Special Price</span>
+            <li class="nav-item {{ Request::is('specialprices*') ? 'active' : '' }}">
+                <a class="nav-link {{ Request::is('specialprices*') ? 'active' : '' }}" href="{{ route('specialPrices.index') }}">
+                    <span>{{ trans('side_menu.special_prices') }}</span>
                 </a>
             </li>
         </ul>
@@ -305,7 +301,7 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('focs*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('focs*') ? 'active' : '' }}" href="{{ route('focs.index') }}">
-                    <span>Focs</span>
+                    <span>{{ trans('side_menu.focs') }}</span>
                 </a>
             </li>
         </ul>
@@ -315,13 +311,11 @@
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('assigns*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('assigns*') ? 'active' : '' }}" href="{{ route('assigns.index') }}">
-                    <span>Assigns</span>
+                    <span>{{ trans('side_menu.assigns') }}</span>
                 </a>
             </li>
         </ul>
     @endcan
-
-</li>
 
 </li>
 @endcanany
@@ -330,24 +324,34 @@
 <li class="nav-item nav-dropdown {{ Request::is('codes*') ? 'open' : '' }}">
     <a class="nav-link nav-dropdown-toggle" href="#">
         <i class="nav-icon icon-settings"></i>
-        <span>Setup</span>
+        <span>{{ trans('side_menu.setup') }}</span>
     </a>
 
     @can('code')
         <ul class="nav-dropdown-items">
-            <li class="nav-item {{ Request::is('codes*') ? 'active open' : '' }}">
+            <li class="nav-item {{ Request::is('codes*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('codes*') ? 'active' : '' }}" href="{{ route('codes.index') }}">
-                    <span>Codes</span>
+                    <span>{{ trans('side_menu.codes') }}</span>
                 </a>
             </li>
-            <li class="nav-item {{ Request::is('codes*') ? 'active open' : '' }}">
-                <a class="nav-link {{ Request::is('codes*') ? 'active' : '' }}" href="{{ route('customer_group.index') }}">
-                    <span>Customer Group</span>
+            <li class="nav-item {{ Request::is('customer_group*') ? 'active' : '' }}">
+                <a class="nav-link {{ Request::is('customer_group*') ? 'active' : '' }}" href="{{ route('customer_group.index') }}">
+                    <span>{{ trans('side_menu.customer_group') }}</span>
                 </a>
             </li>
-            <li class="nav-item {{ Request::is('codes*') ? 'active open' : '' }}">
-                <a class="nav-link {{ Request::is('codes*') ? 'active' : '' }}" href="{{ route('commission_group.index') }}">
-                    <span>Commission</span>
+            <li class="nav-item {{ Request::is('commission_group*') ? 'active' : '' }}">
+                <a class="nav-link {{ Request::is('commission_group*') ? 'active' : '' }}" href="{{ route('commission_group.index') }}">
+                    <span>{{ trans('side_menu.commission_group') }}</span>
+                </a>
+            </li>
+            <li class="nav-item {{ Request::is('language*') ? 'active' : '' }}">
+                <a class="nav-link {{ Request::is('language*') ? 'active' : '' }}" href="{{ route('language.index') }}">
+                    <span>{{ trans('side_menu.system_language_setting') }}</span>
+                </a>
+            </li>
+            <li class="nav-item {{ Request::is('mobile_language*') ? 'active' : '' }}">
+                <a class="nav-link {{ Request::is('mobile_language*') ? 'active' : '' }}" href="{{ route('mobile_language.index') }}">
+                    <span>{{ trans('side_menu.mobile_app_language_setting') }}</span>
                 </a>
             </li>
         </ul>
@@ -356,19 +360,18 @@
 </li>
 @endcanany
 
-
 @canany(['user','userrole','role','rolepermission'])
 <li class="nav-item nav-dropdown {{ Request::is('users*','userHasRoles*','roles*','roleHasPermissions*','permissions*') ? 'open' : '' }}">
     <a class="nav-link nav-dropdown-toggle" href="#">
         <i class="nav-icon icon-people"></i>
-        <span>User Management</span>
+        <span>{{ trans('side_menu.user_management') }}</span>
     </a>
 
     @can('user')
         <ul class="nav-dropdown-items">
-            <li class="nav-item {{ Request::is('users*') ? 'active open' : '' }}">
+            <li class="nav-item {{ Request::is('users*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('users*') ? 'active' : '' }}" href="{!! route('users.index') !!}">
-                    <span>Users</span>
+                    <span>{{ trans('side_menu.users') }}</span>
                 </a>
             </li>
         </ul>
@@ -376,9 +379,9 @@
 
     @can('userrole')
         <!--<ul class="nav-dropdown-items">
-            <li class="nav-item {{ Request::is('userHasRoles*') ? 'active open' : '' }}">
+            <li class="nav-item {{ Request::is('userHasRoles*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('userHasRoles*') ? 'active' : '' }}" href="{{ route('userHasRoles.index') }}">
-                    <span>User Roles</span>
+                    <span>{{ trans('side_menu.user_roles') }}</span>
                 </a>
             </li>
         </ul>-->
@@ -386,9 +389,9 @@
 
     @can('role')
         <ul class="nav-dropdown-items">
-            <li class="nav-item {{ Request::is('roles*') ? 'active open' : '' }}">
+            <li class="nav-item {{ Request::is('roles*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('roles*') ? 'active' : '' }}" href="{{ route('roles.index') }}">
-                    <span>Roles</span>
+                    <span>{{ trans('side_menu.roles') }}</span>
                 </a>
             </li>
         </ul>
@@ -396,9 +399,9 @@
 
     @can('rolepermission')
         <!--<ul class="nav-dropdown-items">
-            <li class="nav-item {{ Request::is('roleHasPermissions*') ? 'active open' : '' }}">
+            <li class="nav-item {{ Request::is('roleHasPermissions*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('roleHasPermissions*') ? 'active' : '' }}" href="{{ route('roleHasPermissions.index') }}">
-                    <span>Role Permissions</span>
+                    <span>{{ trans('side_menu.role_permissions') }}</span>
                 </a>
             </li>
         </ul>-->
@@ -406,9 +409,9 @@
 
     @if(env('APP_ENV') == 'local')
         <!--<ul class="nav-dropdown-items">
-            <li class="nav-item {{ Request::is('permissions*') ? 'active open' : '' }}">
+            <li class="nav-item {{ Request::is('permissions*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('permissions*') ? 'active' : '' }}" href="{{ route('permissions.index') }}">
-                    <span>Permissions</span>
+                    <span>{{ trans('side_menu.permissions') }}</span>
                 </a>
             </li>
         </ul>-->
@@ -421,7 +424,7 @@
     <li class="nav-item {{ Request::is('reports*') ? 'active' : '' }}">
         <a class="nav-link {{ Request::is('reports*') ? 'active' : '' }}" href="{{ route('reports.index') }}">
             <i class="nav-icon icon-cursor"></i>
-            <span>Reports</span>
+            <span>{{ trans('side_menu.reports') }}</span>
         </a>
     </li>
 

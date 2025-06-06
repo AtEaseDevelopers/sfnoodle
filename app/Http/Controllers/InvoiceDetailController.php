@@ -144,15 +144,15 @@ class InvoiceDetailController extends AppBaseController
                 report($th);
                 
                 $xero_has_err = true;
-                Flash::error('Something went wrong. Please contact administator.');
+                Flash::error(__('invoices_details.something_went_wrong'));
             }
         }
         
         if (!$xero_has_err) {
             if ($is_store == true) {
-                Flash::success('Invoice Detail saved successfully.');   
+                Flash::success(__('invoices_details.invoice_detail_saved_successfully'));
             } else {
-                Flash::success('Invoice Detail updated successfully.');
+                Flash::success(__('invoices_details.invoice_detail_updated_successfully'));
             }
             
             DB::commit();
@@ -174,7 +174,7 @@ class InvoiceDetailController extends AppBaseController
         $invoiceDetail = $this->invoiceDetailRepository->find($id);
 
         if (empty($invoiceDetail)) {
-            Flash::error('Invoice Detail not found');
+            Flash::error(__('invoices_details.invoice_detail_not_found'));
 
             return redirect(route('invoiceDetails.index'));
         }
@@ -195,7 +195,7 @@ class InvoiceDetailController extends AppBaseController
         $invoiceDetail = $this->invoiceDetailRepository->find($id);
 
         if (empty($invoiceDetail)) {
-            Flash::error('Invoice Detail not found');
+            Flash::error(__('invoices_details.invoice_detail_not_found'));
 
             return redirect(route('invoiceDetails.index'));
         }
@@ -217,7 +217,7 @@ class InvoiceDetailController extends AppBaseController
         $invoiceDetail = $this->invoiceDetailRepository->find($id);
 
         if (empty($invoiceDetail)) {
-            Flash::error('Invoice Detail not found');
+            Flash::error(__('invoices_details.invoice_detail_not_found'));
 
             return redirect(route('invoiceDetails.index'));
         }
@@ -249,14 +249,13 @@ class InvoiceDetailController extends AppBaseController
         $invoiceDetail = $this->invoiceDetailRepository->find($id);
 
         if (empty($invoiceDetail)) {
-            Flash::error('Invoice Detail not found');
+            Flash::error(__('invoices_details.invoice_detail_not_found'));
 
             return redirect(route('invoiceDetails.index'));
         }
 
         $this->invoiceDetailRepository->delete($id);
-
-        Flash::success('Invoice Detail deleted successfully.');
+        Flash::success(__('invoices_details.invoice_detail_deleted_successfully'));
 
         return redirect(route('invoiceDetails.index'));
     }

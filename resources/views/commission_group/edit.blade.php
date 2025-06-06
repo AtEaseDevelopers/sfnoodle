@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
           <li class="breadcrumb-item">
-             <a href="{!! route('commission_group.index') !!}">Commission</a>
+             <a href="{!! route('commission_group.index') !!}">{{ __('commission.commission') }}</a>
           </li>
-          <li class="breadcrumb-item active">Edit</li>
+          <li class="breadcrumb-item active">{{ __('commission.edit') }}</li>
         </ol>
     <div class="container-fluid">
          <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                       <div class="card">
                           <div class="card-header">
                               <i class="fa fa-edit fa-lg"></i>
-                              <strong>Edit Commission</strong>
+                              <strong> {{ __('commission.edit_commission') }}</strong>
                           </div>
                           <div class="card-body">
                               {!! Form::model($code, ['route' => ['commission_group.update', Crypt::encrypt($code->id)], 'method' => 'patch']) !!}

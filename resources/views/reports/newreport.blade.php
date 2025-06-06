@@ -7,12 +7,12 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="#">Report</a>
+                <a href="#">{{ __('report.reports') }}</a>
             </li>
             <li class="breadcrumb-item">
                 <a href="#"></a>
             </li>
-            <li class="breadcrumb-item active">Run</li>
+            <li class="breadcrumb-item active">{{ __('report.run') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">

@@ -61,7 +61,7 @@ class CompanyController extends AppBaseController
 
         $company = $this->companyRepository->create($input);
 
-        Flash::success('Company saved successfully.');
+        Flash::success(__('companies.company_saved_successfully'));
 
         return redirect(route('companies.index'));
     }
@@ -79,7 +79,7 @@ class CompanyController extends AppBaseController
         $company = $this->companyRepository->find($id);
 
         if (empty($company)) {
-            Flash::error('Company not found');
+            Flash::error(__('companies.company_not_found'));
 
             return redirect(route('companies.index'));
         }
@@ -100,7 +100,7 @@ class CompanyController extends AppBaseController
         $company = $this->companyRepository->find($id);
 
         if (empty($company)) {
-            Flash::error('Company not found');
+            Flash::error(__('companies.company_not_found'));
 
             return redirect(route('companies.index'));
         }
@@ -122,14 +122,14 @@ class CompanyController extends AppBaseController
         $company = $this->companyRepository->find($id);
 
         if (empty($company)) {
-            Flash::error('Company not found');
+            Flash::error(__('companies.company_not_found'));
 
             return redirect(route('companies.index'));
         }
 
         $company = $this->companyRepository->update($request->all(), $id);
 
-        Flash::success('Company updated successfully.');
+        Flash::success(__('companies.company_updated_successfully'));
 
         return redirect(route('companies.index'));
     }
@@ -147,14 +147,14 @@ class CompanyController extends AppBaseController
         $company = $this->companyRepository->find($id);
 
         if (empty($company)) {
-            Flash::error('Company not found');
+            Flash::error(__('companies.company_not_found'));
 
             return redirect(route('companies.index'));
         }
 
         $this->companyRepository->delete($id);
 
-        Flash::success('Company deleted successfully.');
+        Flash::success(__('companies.company_deleted_successfully'));
 
         return redirect(route('companies.index'));
     }

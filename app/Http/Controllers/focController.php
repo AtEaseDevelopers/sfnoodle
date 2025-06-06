@@ -64,7 +64,7 @@ class focController extends AppBaseController
 
         $foc = $this->focRepository->create($input);
 
-        Flash::success('Foc saved successfully.');
+        Flash::success(__('focs.foc_saved_successfully'));
 
         return redirect(route('focs.index'));
     }
@@ -82,7 +82,7 @@ class focController extends AppBaseController
         $foc = $this->focRepository->find($id);
 
         if (empty($foc)) {
-            Flash::error('Foc not found');
+            Flash::error(__('focs.foc_not_found'));
 
             return redirect(route('focs.index'));
         }
@@ -103,7 +103,7 @@ class focController extends AppBaseController
         $foc = $this->focRepository->find($id);
 
         if (empty($foc)) {
-            Flash::error('Foc not found');
+            Flash::error(__('focs.foc_not_found'));
 
             return redirect(route('focs.index'));
         }
@@ -125,7 +125,7 @@ class focController extends AppBaseController
         $foc = $this->focRepository->find($id);
 
         if (empty($foc)) {
-            Flash::error('Foc not found');
+            Flash::error(__('focs.foc_not_found'));
 
             return redirect(route('focs.index'));
         }
@@ -137,7 +137,7 @@ class focController extends AppBaseController
 
         $foc = $this->focRepository->update($input, $id);
 
-        Flash::success('Foc updated successfully.');
+        Flash::success(__('focs.foc_updated_successfully'));
 
         return redirect(route('focs.index'));
     }
@@ -155,14 +155,14 @@ class focController extends AppBaseController
         $foc = $this->focRepository->find($id);
 
         if (empty($foc)) {
-            Flash::error('Foc not found');
+            Flash::error(__('focs.foc_not_found'));
 
             return redirect(route('focs.index'));
         }
 
         $this->focRepository->delete($id);
 
-        Flash::success('Foc deleted successfully.');
+        Flash::success(__('focs.foc_deleted_successfully'));
 
         return redirect(route('focs.index'));
     }

@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
           <li class="breadcrumb-item">
-             <a href="{!! route('tasks.index') !!}">Task</a>
+             <a href="{!! route('tasks.index') !!}">{{ __('tasks.tasks') }}</a>
           </li>
-          <li class="breadcrumb-item active">Edit</li>
+          <li class="breadcrumb-item active">{{ __('tasks.edit') }}</li>
         </ol>
     <div class="container-fluid">
          <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                       <div class="card">
                           <div class="card-header">
                               <i class="fa fa-edit fa-lg"></i>
-                              <strong>Edit Task</strong>
+                              <strong>{{ __('tasks.edit_task') }}</strong>
                           </div>
                           <div class="card-body">
                               {!! Form::model($task, ['route' => ['tasks.update', encrypt($task->id)], 'method' => 'patch']) !!}

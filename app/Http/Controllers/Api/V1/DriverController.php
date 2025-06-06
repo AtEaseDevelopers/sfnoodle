@@ -28,6 +28,9 @@ use App\Models\InventoryTransaction;
 use App\Models\InventoryTransfer;
 use App\Models\foc;
 use App\Models\DriverLocation;
+use App\Models\Language;
+use App\Models\MobileTranslationVersion;
+use App\Models\MobileTranslation;
 
 class DriverController extends Controller
 {
@@ -74,7 +77,7 @@ class DriverController extends Controller
                     if($session == null){
                         return response()->json([
                                 'result' => true,
-                                'message' => __LINE__.$this->message_separator.'Login successfully',
+                                'message' => __LINE__.$this->message_separator.'api.message.login_successfully',
                                 'data' => [
                                     'driver' => $driver,
                                     'trip' => [
@@ -87,7 +90,7 @@ class DriverController extends Controller
                     }else{
                         return response()->json([
                                 'result' => true,
-                                'message' => __LINE__.$this->message_separator.'Previous session will be override',
+                                'message' => __LINE__.$this->message_separator.'api.message.previous_session_override',
                                 'data' => [
                                     'driver' => $driver,
                                     'trip' => [
@@ -102,7 +105,7 @@ class DriverController extends Controller
                     if($session == null){
                         return response()->json([
                                 'result' => true,
-                                'message' => __LINE__.$this->message_separator.'Login successfully',
+                                'message' => __LINE__.$this->message_separator.'api.message.login_successfully',
                                 'data' => [
                                     'driver' => $driver,
                                     'trip' => [
@@ -114,7 +117,7 @@ class DriverController extends Controller
                     }else{
                         return response()->json([
                                 'result' => true,
-                                'message' => __LINE__.$this->message_separator.'Previous session will be override',
+                                'message' => __LINE__.$this->message_separator.'api.message.previous_session_override',
                                 'data' => [
                                     'driver' => $driver,
                                     'trip' => [
@@ -129,7 +132,7 @@ class DriverController extends Controller
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid Credential',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_credential',
                     'data' => null
                 ], 401);
             }
@@ -165,13 +168,13 @@ class DriverController extends Controller
                 $driver->save();
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Logout successfully',
+                    'message' => __LINE__.$this->message_separator.'api.message.login_successfully',
                     'data' => null
                 ], 200);
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -206,14 +209,15 @@ class DriverController extends Controller
             if(!empty($driver)){
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Session found',
+                    'message' => __LINE__.$this->message_separator.'api.message.session_found',
+
                     'data' => $driver,
                     'colorcode' => $colorcode
                 ], 200);
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -236,7 +240,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -246,14 +250,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -281,7 +285,7 @@ class DriverController extends Controller
             $DriverLocation->save();
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Driver location had been updated successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.driver_location_had_been_updated_successfully',
                 'data' => $DriverLocation
             ], 200);
         }
@@ -302,7 +306,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -312,7 +316,7 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => true,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => [
                             'status' => false
                         ]
@@ -320,7 +324,7 @@ class DriverController extends Controller
                 }else{
                     return response()->json([
                         'result' => true,
-                        'message' => __LINE__.$this->message_separator.'Trip had started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_started',
                         'data' => [
                             'status' => true,
                             'trip' => $trip
@@ -330,7 +334,7 @@ class DriverController extends Controller
             }else{
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => [
                         'status' => false
                     ]
@@ -354,7 +358,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -383,7 +387,7 @@ class DriverController extends Controller
             if(empty($lorry)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid Lorry',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_lorry',
                     'data' => null
                 ], 400);
             }
@@ -428,13 +432,13 @@ class DriverController extends Controller
                     }
                     return response()->json([
                         'result' => true,
-                        'message' => __LINE__.$this->message_separator.'Trip had been started successfully',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_been_started_successfully',
                         'data' => $newtrip
                     ], 200);
                 }else{
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_started',
                         'data' => null
                     ], 401);
                 }
@@ -474,7 +478,7 @@ class DriverController extends Controller
                 }
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Trip had been started successfully',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_been_started_successfully',
                     'data' => $newtrip
                 ], 200);
             }
@@ -528,7 +532,7 @@ class DriverController extends Controller
             if(empty($lorry)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid Lorry',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_lorry',
                     'data' => null
                 ], 400);
             }
@@ -540,7 +544,7 @@ class DriverController extends Controller
                     DB::rollback();
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }else{
@@ -560,7 +564,7 @@ class DriverController extends Controller
                             DB::rollback();
                             return response()->json([
                                 'result' => false,
-                                'message' => __LINE__.$this->message_separator.'Wastage quantity more than available quantity',
+                                'message' => __LINE__.$this->message_separator.'api.message.wastage_quantity_more_than_available_quantity',
                                 'data' => null
                             ], 400);
                         }else{
@@ -568,7 +572,7 @@ class DriverController extends Controller
                                 DB::rollback();
                                 return response()->json([
                                     'result' => false,
-                                    'message' => __LINE__.$this->message_separator.'Wastage quantity more than available quantity',
+                                    'message' => __LINE__.$this->message_separator.'api.message.wastage_quantity_more_than_available_quantity',
                                     'data' => null
                                 ], 400);
                             }else{
@@ -588,7 +592,7 @@ class DriverController extends Controller
                     DB::commit();
                     return response()->json([
                         'result' => true,
-                        'message' => __LINE__.$this->message_separator.'Trip had been ended successfully',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_been_ended_successfully',
                         'data' => $newtrip
                     ], 200);
                 }
@@ -596,7 +600,7 @@ class DriverController extends Controller
                 DB::rollback();
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -617,7 +621,7 @@ class DriverController extends Controller
         if(empty($driver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid session',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                 'data' => null
             ], 401);
         }
@@ -647,14 +651,14 @@ class DriverController extends Controller
         if(empty($lorry)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid Lorry',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_lorry',
                 'data' => null
             ], 400);
         }
         if(!($data['type'] == 1 || $data['type'] == 2)){
             return response()->json([
                'result' => false,
-               'message' => __LINE__.$this->message_separator.'Invalid Type',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_type',
                 'data' => null
             ], 400);
         }
@@ -698,13 +702,13 @@ class DriverController extends Controller
                     }
                     return response()->json([
                         'result' => true,
-                        'message' => __LINE__.$this->message_separator.'Trip had been started successfully',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_been_started_successfully',
                         'data' => $newtrip
                     ], 200);
                 }else{
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_started',
                         'data' => null
                     ], 401);
                 }
@@ -744,7 +748,7 @@ class DriverController extends Controller
                 }
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Trip had been started successfully',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_been_started_successfully',
                     'data' => $newtrip
                 ], 200);
             }
@@ -753,7 +757,7 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 401);
                 }else{
@@ -768,14 +772,14 @@ class DriverController extends Controller
                     $task = Task::where('driver_id', $driver->id)->where('date',date('Y-m-d'))->whereIn('status',[0,1])->update(['status' => 9]);
                     return response()->json([
                         'result' => true,
-                        'message' => __LINE__.$this->message_separator.'Trip had been ended successfully',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_been_ended_successfully',
                         'data' => $newtrip
                     ], 200);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 401);
             }
@@ -791,7 +795,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -801,13 +805,13 @@ class DriverController extends Controller
             if(count($kelindan) != 0){
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Kelindan found',
+                    'message' => __LINE__.$this->message_separator.'api.message.kelindan_found',
                     'data' => $kelindan
                 ], 200);
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Kelindan not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.kelindan_not_found',
                     'data' => null
                 ], 200);
             }
@@ -830,7 +834,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -840,13 +844,13 @@ class DriverController extends Controller
             if(count($lorry) != 0){
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Lorry found',
+                    'message' => __LINE__.$this->message_separator.'api.message.lorry_found',
                     'data' => $lorry
                 ], 200);
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Lorry not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.lorry_not_found',
                     'data' => null
                 ], 200);
             }
@@ -869,7 +873,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -879,14 +883,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -930,7 +934,7 @@ class DriverController extends Controller
             if($message){
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Task found',
+                    'message' => __LINE__.$this->message_separator.'api.message.task_found',
                     'data' => [
                         'task' => $task,
                         'stock' => $inventorybalance
@@ -939,7 +943,7 @@ class DriverController extends Controller
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Task not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.task_not_found',
                     'data' => [
                         'task' => null,
                         'stock' => $inventorybalance
@@ -971,7 +975,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -981,14 +985,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -1035,7 +1039,7 @@ class DriverController extends Controller
             if($message){
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Task found',
+                    'message' => __LINE__.$this->message_separator.'api.message.task_found',
                     'data' => [
                         'task' => $task,
                         'stock' => $inventorybalance
@@ -1044,7 +1048,7 @@ class DriverController extends Controller
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Task not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.task_not_found',
                     'data' => [
                         'task' => null,
                         'stock' => $inventorybalance
@@ -1071,7 +1075,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1081,14 +1085,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -1107,28 +1111,28 @@ class DriverController extends Controller
             if(empty($task)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid task',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_task',
                     'data' => null
                 ], 400);
             }else{
                 if($task->status == 8){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Task had been completed',
+                        'message' => __LINE__.$this->message_separator.'api.message.task_had_been_completed',
                         'data' => null
                     ], 400);
                 }
                 if($task->status == 9){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Task had been cancelled',
+                        'message' => __LINE__.$this->message_separator.'api.message.task_had_been_cancelled',
                         'data' => null
                     ], 400);
                 }
                 if($task->status == 1){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Task had been In-Progress',
+                        'message' => __LINE__.$this->message_separator.'api.message.task_had_been_in_progress',
                         'data' => null
                     ], 400);
                 }
@@ -1138,7 +1142,7 @@ class DriverController extends Controller
             $task->save();
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Task had been started successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.task_had_been_started_successfully',
                 'data' => $task
             ], 200);
         }
@@ -1159,7 +1163,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1169,14 +1173,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -1195,21 +1199,21 @@ class DriverController extends Controller
             if(empty($task)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid task',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_task',
                     'data' => null
                 ], 400);
             }else{
                 if($task->status == 8){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Task had been completed',
+                        'message' => __LINE__.$this->message_separator.'api.message.task_had_been_completed',
                         'data' => null
                     ], 400);
                 }
                 if($task->status == 9){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Task had been cancelled',
+                        'message' => __LINE__.$this->message_separator.'api.message.task_had_been_cancelled',
                         'data' => null
                     ], 400);
                 }
@@ -1219,7 +1223,7 @@ class DriverController extends Controller
             $task->save();
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Task had been cancelled successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.task_had_been_cancelled_successfully',
                 'data' => $task
             ], 200);
         }
@@ -1240,7 +1244,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1250,7 +1254,7 @@ class DriverController extends Controller
                 if(empty($customer)){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Invalid customer',
+                        'message' => __LINE__.$this->message_separator.'api.message.invalid_customer',
                         'data' => null
                     ], 400);
                 }
@@ -1269,7 +1273,7 @@ class DriverController extends Controller
                 ->get();
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Product found',
+                    'message' => __LINE__.$this->message_separator.'api.message.product_found',
                     'data' => $product
                 ], 200);
             }else{
@@ -1279,7 +1283,7 @@ class DriverController extends Controller
                 ->get();
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Product found',
+                    'message' => __LINE__.$this->message_separator.'api.message.product_found',
                     'data' => $product
                 ], 200);
             }
@@ -1301,7 +1305,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1310,13 +1314,13 @@ class DriverController extends Controller
             if(count($customer) != 0){
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Customer found',
+                    'message' => __LINE__.$this->message_separator.'api.message.customer_found',
                     'data' => $customer
                 ], 200);
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Customer not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.customer_not_found',
                     'data' => null
                 ], 200);
             }
@@ -1338,7 +1342,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1358,14 +1362,14 @@ class DriverController extends Controller
             if(empty($customer)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid customer',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_customer',
                     'data' => null], 400);
             }
             //process
             $customer->customerdetail = DB::select("select i.date,i.id,'Invoice' as type, i.invoiceno as name, sum(COALESCE(id.totalprice,0)) as amount from invoices i left join invoice_details id on i.id = id.invoice_id where i.customer_id = ".$customer->id." group by i.date, i.id, i.invoiceno, i.customer_id union select ip.created_at as date,ip.id, 'Payment' as type, '' as name, ip.amount as amount from invoice_payments ip where ip.customer_id = ".$customer->id.";");
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Customer found',
+                'message' => __LINE__.$this->message_separator.'api.message.customer_found',
                 'data' => $customer
             ], 200);
         }
@@ -1386,7 +1390,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1396,14 +1400,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -1423,7 +1427,7 @@ class DriverController extends Controller
             if(empty($customer)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid customer',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_customer',
                     'data' => null
                 ], 400);
             }
@@ -1440,7 +1444,7 @@ class DriverController extends Controller
             $invoicepayment->newcredit = round(DB::select('call ice_spGetCustomerCreditByDate("'.date('Y-m-d H:i:s').'",'.$invoicepayment->customer_id.');')[0]->credit,2);
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Payment insert successfully found',
+                'message' => __LINE__.$this->message_separator.'api.message.payment_insert_successfully_found',
                 'data' => $invoicepayment
             ], 200);
         }
@@ -1461,7 +1465,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1489,7 +1493,7 @@ class DriverController extends Controller
             if(empty($invoice)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invoice not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.invoice_not_found',
                     'data' => null
                 ], 200);
             }else{
@@ -1523,7 +1527,7 @@ class DriverController extends Controller
                 ->first() ?? null;
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Invoice found',
+                    'message' => __LINE__.$this->message_separator.'api.message.invoice_found',
                     'data' => $invoice
                 ], 200);
             }
@@ -1544,7 +1548,7 @@ class DriverController extends Controller
         if(empty($driver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid session',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                 'data' => null
             ], 401);
         }
@@ -1566,7 +1570,7 @@ class DriverController extends Controller
         if(empty($invoicepayment)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invoice Payment not found',
+                'message' => __LINE__.$this->message_separator.'api.message.invoice_payment_not_found',
                 'data' => null
             ], 200);
         }else{
@@ -1593,7 +1597,7 @@ class DriverController extends Controller
             
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Invoice Payment found',
+                'message' => __LINE__.$this->message_separator.'api.message.invoice_payment_found',
                 'data' => $invoicepayment
             ], 200);
         }
@@ -1607,7 +1611,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1617,14 +1621,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 401);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 401);
             }
@@ -1652,7 +1656,7 @@ class DriverController extends Controller
             if(empty($customer)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid customer',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_customer',
                     'data' => null
                 ], 400);
             }
@@ -1707,7 +1711,7 @@ class DriverController extends Controller
                 if(empty($product)){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Invalid product',
+                        'message' => __LINE__.$this->message_separator.'api.message.invalid_product',
                         'data' => null
                     ], 400);
                     DB::rollback();
@@ -1797,7 +1801,7 @@ class DriverController extends Controller
             
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Invoice add successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.invoice_add_successfully',
                 'data' => $iv
             ], 200);
         }
@@ -1819,7 +1823,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -1885,7 +1889,7 @@ class DriverController extends Controller
 
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Load Success',
+                'message' => __LINE__.$this->message_separator.'api.message.load_success',
                 'data' => $url
             ], 200);
         }
@@ -1910,7 +1914,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null,
                     'color_code' => ''
                 ], 401);
@@ -1936,7 +1940,7 @@ class DriverController extends Controller
             if(empty($customer)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid customer',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_customer',
                     'data' => null,
                 ], 400);
             }
@@ -1987,7 +1991,7 @@ class DriverController extends Controller
            
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Invoice add successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.invoice_add_successfully',
                 'data' => $iv
             ], 200);
         }
@@ -2009,7 +2013,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -2074,7 +2078,7 @@ class DriverController extends Controller
             
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Load Success',
+                'message' => __LINE__.$this->message_separator.'api.message.load_success',
                 'data' => $url
             ], 200);
         }
@@ -2098,7 +2102,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -2126,13 +2130,13 @@ class DriverController extends Controller
             if(count($inventorybalance) == 0){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'No stock found',
+                    'message' => __LINE__.$this->message_separator.'api.message.no_stock_found',
                     'data' => null
                 ], 200);
             }else{
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Stock found',
+                    'message' => __LINE__.$this->message_separator.'api.message.stock_found',
                     'data' => $inventorybalance
                 ], 200);
             }
@@ -2210,7 +2214,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null], 401);
             }
             //validation
@@ -2219,14 +2223,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -2240,13 +2244,13 @@ class DriverController extends Controller
             if(count($drivers) == 0){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'No driver found',
+                    'message' => __LINE__.$this->message_separator.'api.message.no_driver_found',
                     'data' => null
                 ], 200);
             }else{
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Driver found',
+                    'message' => __LINE__.$this->message_separator.'api.message.driver_found',
                     'data' => $drivers
                 ], 200);
             }
@@ -2267,7 +2271,7 @@ class DriverController extends Controller
         if(empty($driver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid session',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                 'data' => null
             ], 401);
         }
@@ -2277,14 +2281,14 @@ class DriverController extends Controller
             if($trip->type == 2){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
         }else{
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Trip had not started',
+                'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                 'data' => null
             ], 400);
         }
@@ -2306,7 +2310,7 @@ class DriverController extends Controller
         if(empty($todriver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid driver',
+                'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                 'data' => null
             ], 400);
         }
@@ -2315,14 +2319,14 @@ class DriverController extends Controller
             if($totrip->type == 2){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Selected driver"s trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.selected_driver_trip_had_not_started',
                     'data' => null
                 ], 400);
             }
         }else{
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Selected driver"s trip had not started',
+                'message' => __LINE__.$this->message_separator.'api.message.selected_driver_trip_had_not_started',
                 'data' => null
             ], 400);
         }
@@ -2335,7 +2339,7 @@ class DriverController extends Controller
                 if(empty($product)){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Invalid product',
+                        'message' => __LINE__.$this->message_separator.'api.message.invalid_product',
                         'data' => null
                     ], 400);
                 }
@@ -2353,7 +2357,7 @@ class DriverController extends Controller
             DB::commit();
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Pending driver accept transfer',
+                'message' => __LINE__.$this->message_separator.'api.message.pending_driver_accept_transfer',
                 'data' => null
             ], 200);
         }
@@ -2375,7 +2379,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null], 401);
             }
             //validation
@@ -2384,14 +2388,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -2413,7 +2417,7 @@ class DriverController extends Controller
             ->toarray();
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Transfer found',
+                'message' => __LINE__.$this->message_separator.'api.message.transfer_found',
                 'data' => [
                     'request' => $request,
                     'pending' => $pending
@@ -2436,7 +2440,7 @@ class DriverController extends Controller
         if(empty($driver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid session',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                 'data' => null
             ], 401);
         }
@@ -2446,14 +2450,14 @@ class DriverController extends Controller
             if($trip->type == 2){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
         }else{
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Trip had not started',
+                'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                 'data' => null
             ], 400);
         }
@@ -2474,29 +2478,29 @@ class DriverController extends Controller
         if(empty($inventorytransfer)){
             return response()->json([
                'result' => false,
-               'message' => __LINE__.$this->message_separator.'Transfer not found',
+                'message' => __LINE__.$this->message_separator.'api.message.transfer_not_found',
                 'data' => null
             ], 400);
         }
         if($inventorytransfer->status == 2){
             return response()->json([
               'result' => false,
-              'message' => __LINE__.$this->message_separator.'Transfer already accepted',
+              'message' => __LINE__.$this->message_separator.'api.message.transfer_already_accepted',
                 'data' => null
             ], 400);
         }
         if($inventorytransfer->status == 3){
             return response()->json([
               'result' => false,
-              'message' => __LINE__.$this->message_separator.'Transfer already rejected',
-                'data' => null
+              'message' => __LINE__.$this->message_separator.'api.message.transfer_already_rejected',
+              'data' => null
             ], 400);
         }
         $fromdriver = Driver::where('id',$inventorytransfer->from_driver_id)->first();
         if(empty($fromdriver)){
             return response()->json([
               'result' => false,
-              'message' => __LINE__.$this->message_separator.'From driver not found',
+              'message' => __LINE__.$this->message_separator.'api.message.from_driver_not_found',
                 'data' => null
             ], 400);
         }
@@ -2504,7 +2508,7 @@ class DriverController extends Controller
         if(empty($fromdriver)){
             return response()->json([
               'result' => false,
-              'message' => __LINE__.$this->message_separator.'To driver not found',
+              'message' => __LINE__.$this->message_separator.'api.message.to_driver_not_found',
                 'data' => null
             ], 400);
         }
@@ -2518,7 +2522,7 @@ class DriverController extends Controller
                 DB::commit();
                 return response()->json([
                    'result' => false,
-                   'message' => __LINE__.$this->message_separator.'Transfer reject successfully',
+                    'message' => __LINE__.$this->message_separator.'api.message.transfer_rejecet_successfully',
                     'data' => null
                 ], 200);
             }
@@ -2570,7 +2574,7 @@ class DriverController extends Controller
                  DB::commit();
                  return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Transfer accept successfully',
+                    'message' => __LINE__.$this->message_separator.'api.message.transfer_accept_successfully',
                      'data' => null
                  ], 200);
             }
@@ -2593,7 +2597,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -2603,14 +2607,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -2628,7 +2632,7 @@ class DriverController extends Controller
             if($data['date'] > date('Y-m-d H:i:s')){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Date cannot be future date',
+                    'message' => __LINE__.$this->message_separator.'api.message.date_cannot_be_future_date',
                     'data' => null
                 ], 400);
             }
@@ -2654,13 +2658,13 @@ class DriverController extends Controller
             if(count($finalinventorytransaction) == 0){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Transaction not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.transaction_not_found',
                     'data' => null
                 ], 200);
             }else{
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Transaction found',
+                    'message' => __LINE__.$this->message_separator.'api.message.transaction_found',
                     'data' => $finalinventorytransaction
                 ], 200);
             }
@@ -2682,7 +2686,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -2692,14 +2696,14 @@ class DriverController extends Controller
                 if($trip->type == 2){
                     return response()->json([
                         'result' => false,
-                        'message' => __LINE__.$this->message_separator.'Trip had not started',
+                        'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                         'data' => null
                     ], 400);
                 }
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
@@ -2708,13 +2712,13 @@ class DriverController extends Controller
             if(count($driver) == 0){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid driver',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_driver',
                     'data' => null
                 ], 200);
             }else{
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Driver found',
+                    'message' => __LINE__.$this->message_separator.'api.message.driver_found',
                     'data' => $driver
                 ], 200);
             }
@@ -2991,7 +2995,7 @@ class DriverController extends Controller
         if(empty($driver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid session',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                 'data' => null
             ], 401);
         }
@@ -3001,14 +3005,14 @@ class DriverController extends Controller
             if($trip->type == 2){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
         }else{
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Trip had not started',
+                'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                 'data' => null
             ], 400);
         }
@@ -3029,7 +3033,7 @@ class DriverController extends Controller
         if(empty($todriver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid driver',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_driver',
                 'data' => null
             ], 400);
         }
@@ -3042,7 +3046,7 @@ class DriverController extends Controller
                     DB::rollback();
                     return response()->json([
                        'result' => false,
-                       'message' => __LINE__.$this->message_separator.'Invalid task',
+                        'message' => __LINE__.$this->message_separator.'api.message.invalid_task',
                         'data' => null
                     ], 400);
                 }
@@ -3050,7 +3054,7 @@ class DriverController extends Controller
                     DB::rollback();
                     return response()->json([
                        'result' => false,
-                       'message' => __LINE__.$this->message_separator.'Task had been cancelled',
+                        'message' => __LINE__.$this->message_separator.'api.message.task_had_been_cancelled',
                         'data' => null
                     ], 400);
                 }
@@ -3058,7 +3062,7 @@ class DriverController extends Controller
                     DB::rollback();
                     return response()->json([
                        'result' => false,
-                       'message' => __LINE__.$this->message_separator.'Task had been completed',
+                        'message' => __LINE__.$this->message_separator.'api.message.task_had_been_completed',
                         'data' => null
                     ], 400);
                 }
@@ -3085,7 +3089,7 @@ class DriverController extends Controller
             DB::commit();
             return response()->json([
                 'result' => true,
-                'message' => __LINE__.$this->message_separator.'Push task successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.push_task_successfully',
                 'data' => null
             ], 200);
         }
@@ -3106,7 +3110,7 @@ class DriverController extends Controller
         if(empty($driver)){
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Invalid session',
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                 'data' => null
             ], 401);
         }
@@ -3116,14 +3120,14 @@ class DriverController extends Controller
             if($trip->type == 2){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Trip had not started',
+                    'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                     'data' => null
                 ], 400);
             }
         }else{
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Trip had not started',
+                'message' => __LINE__.$this->message_separator.'api.message.trip_had_not_started',
                 'data' => null
             ], 400);
         }
@@ -3138,13 +3142,13 @@ class DriverController extends Controller
             if(!empty($tasktransfer)){
                 return response()->json([
                     'result' => true,
-                    'message' => __LINE__.$this->message_separator.'Task transfer found',
+                    'message' => __LINE__.$this->message_separator.'api.message.task_transfer_found',
                     'data' => $tasktransfer
                 ], 200);
             }else{
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Task transfer not found',
+                    'message' => __LINE__.$this->message_separator.'api.message.task_transfer_not_found',
                     'data' => null
                 ], 200);
             }
@@ -3166,7 +3170,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -3185,7 +3189,7 @@ class DriverController extends Controller
             if($data['date'] > date('Y-m-d H:i:s')){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Date cannot be future date',
+                    'message' => __LINE__.$this->message_separator.'api.message.date_cannot_be_future_date',
                     'data' => null
                 ], 400);
             }
@@ -3218,7 +3222,7 @@ class DriverController extends Controller
             ];
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Get dashboard successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.get_dashboard_successfully',
                 'data' => $result
             ], 200);
         }
@@ -3239,7 +3243,7 @@ class DriverController extends Controller
             if(empty($driver)){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Invalid session',
+                    'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
                     'data' => null
                 ], 401);
             }
@@ -3258,7 +3262,7 @@ class DriverController extends Controller
             if($data['date'] > date('Y-m-d H:i:s')){
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__.$this->message_separator.'Date cannot be future date',
+                    'message' => __LINE__.$this->message_separator.'api.message.date_cannot_be_future_date',
                     'data' => null
                 ], 400);
             }
@@ -3322,7 +3326,7 @@ class DriverController extends Controller
             ];
             return response()->json([
                 'result' => false,
-                'message' => __LINE__.$this->message_separator.'Get dashboard successfully',
+                'message' => __LINE__.$this->message_separator.'api.message.get_dashboard_successfully',
                 'data' => $result
             ], 200);
         }
@@ -3335,4 +3339,76 @@ class DriverController extends Controller
         }
     }
 
+    public function getAllLanguages(Request $request)
+    {
+        $data = $request->all();
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        $languages = MobileTranslationVersion::with('language')->get();
+
+        $translations = [];
+
+        foreach ($languages as $languageVersion) {
+            $translations[] = [
+                'language' => $languageVersion->language->name, 
+                'code'     => $languageVersion->language->code,  
+                'version'  => $languageVersion->version,
+            ];
+        }
+
+        return response()->json([
+            'supported_languages' => $translations,
+        ]);
+    }
+
+    public function getTranslations(Request $request)
+    {
+        $data = $request->all();
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__.$this->message_separator.'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+        //validation
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string',
+        ]); 
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__.$this->message_separator.$validator->errors()->first(),
+                'data' => null
+            ], 400);
+        }
+        $code = $data['code'];
+        $language = Language::where('code', $code)->first();
+
+        if(empty($language)){
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__.$this->message_separator.'Invalid Language Code',
+                    'data' => null
+                ], 401);
+            }
+        $version = MobileTranslationVersion::where('language_id', $language->id)->first();
+        $translations = MobileTranslation::where('language_id', $language->id)
+            ->get()
+            ->pluck('value', 'key')
+            ->toArray();
+
+        return response()->json([
+            'version' => $version->version,
+            'translation' => $translations
+        ]);
+    }   
 }

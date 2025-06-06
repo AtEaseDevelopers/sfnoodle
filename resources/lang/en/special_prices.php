@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'special_price' => 'Special price',
+    'create' => 'Create',
+    'edit' => 'Edit',
+    'detail' => 'Detail',
+    'create_special_price' => 'Create special price',
+    'edit_special_price' => 'Edit special price',
+    'save' => 'Save',
+    'cancel' => 'Cancel',
+    'close' => 'Close',
+    'status' => 'Status',
+    'action' => 'Action',
+    'are_you_sure_to_delete_the_special_price' => 'Are you sure to delete the special price',
+    'product' => 'Product',
+    'customer' => 'Customer',
+    'price' => 'Price',
+    'active' => 'Active',
+    'unactive' => 'Unactive',
+    'special_price_saved_successfully' => 'Special price saved successfully',
+    'special_price_updated_successfully' => 'Special price updated successfully',
+    'special_price_deleted_successfully' => 'Special price deleted successfully',
+    'special_price_not_found' => 'Special price not found',
+];

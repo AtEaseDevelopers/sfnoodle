@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Inventory Transfers</li>
+        <li class="breadcrumb-item">{{ __('inventory_transfers.inventory_transfers') }}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                      <div class="card">
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
-                             Inventory Transfers
+                             {{ __('inventory_transfers.inventory_transfers') }}
                          </div>
                          <div class="card-body">
                              @include('inventory_transfers.table')

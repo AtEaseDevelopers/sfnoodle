@@ -1,24 +1,24 @@
 <!-- Code Field -->
 <div class="form-group">
-    {!! Form::label('code', 'Code:') !!}
+    {!! Form::label('code', __('codes.code')) !!}
     <p>{{ $code->code }}</p>
 </div>
 
 <!-- Description Field -->
 <div class="form-group">
-    {!! Form::label('description', 'Description:') !!}
+    {!! Form::label('description', __('codes.description')) !!}
     <p>{{ $code->description }}</p>
 </div>
 
 <!-- Value Field -->
 <div class="form-group">
-    {!! Form::label('value', 'Value:') !!}
+    {!! Form::label('value', __('codes.value')) !!}
     <p>{{ $code->value }}</p>
 </div>
 
 <!-- Sequence Field -->
 <div class="form-group">
-    {!! Form::label('sequence', 'Sequence:') !!}
+    {!! Form::label('sequence', __('codes.sequence')) !!}
     <p>{{ $code->sequence }}</p>
 </div>
 
@@ -60,13 +60,13 @@
 
 <!-- Created At Field -->
 <div class="form-group">
-    {!! Form::label('created_at', 'Created At:') !!}
+    {!! Form::label('created_at', __('codes.created_at')) !!}
     <p>{{ $code->created_at }}</p>
 </div>
 
 <!-- Updated At Field -->
 <div class="form-group">
-    {!! Form::label('updated_at', 'Updated At:') !!}
+    {!! Form::label('updated_at', __('codes.updated_at')) !!}
     <p>{{ $code->updated_at }}</p>
 </div>
 

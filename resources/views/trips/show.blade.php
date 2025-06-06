@@ -3,9 +3,9 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('trips.index') }}">Trip</a>
+                <a href="{{ route('trips.index') }}">{{ __('trips.trips') }}</a>
             </li>
-            <li class="breadcrumb-item active">End Trip Summary</li>
+            <li class="breadcrumb-item active">{{ __('trips.end_trip_summary') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -14,7 +14,7 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>End Trip Summary</strong>
+                                 <strong>{{ __('trips.end_trip_summary') }}</strong>
                                   <a href="{{ route('trips.index') }}" class="btn btn-light">Back</a>
                              </div>
                              <div class="card-body">
@@ -28,22 +28,22 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Product Sold</strong>
+                                 <strong>{{ __('trips.product_sold') }}</strong>
                                
                              </div>
                              <div class="card-body">
                                 <table class="table table-striped table-bordered dataTable" width="100%" role="grid" style="width: 100%;">
                                     <thead>
                                         <tr role="row">
-                                            <th>Product</th>
-                                            <th>Quantity</th>
-                                            <th>Price</th>
+                                            <th>{{ __('trips.product') }}</th>
+                                            <th>{{ __('trips.quantity') }}</th>
+                                            <th>{{ __('trips.price') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @if(count($trip->productsold['details']) == 0)
                                             <tr class="odd">
-                                                <td valign="top" colspan="10" class="dataTables_empty">No Product Sold</td>
+                                                <td valign="top" colspan="10" class="dataTables_empty">{{ __('trips.no_product_sold') }}</td>
                                             </tr>
                                         @endif
                                         @foreach($trip->productsold['details'] as $i=>$invoicedetail)
@@ -75,22 +75,22 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Product FOC</strong>
+                                 <strong>{{ __('trips.product_foc') }}</strong>
                                
                              </div>
                              <div class="card-body">
                                 <table class="table table-striped table-bordered dataTable" width="100%" role="grid" style="width: 100%;">
                                     <thead>
                                         <tr role="row">
-                                            <th>Product</th>
-                                            <th>Quantity</th>
-                                            <th>Price</th>
+                                            <th>{{ __('trips.product') }}</th>
+                                            <th>{{ __('trips.quantity') }}</th>
+                                            <th>{{ __('trips.price') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @if(count($trip->productfoc['details']) == 0)
                                             <tr class="odd">
-                                                <td valign="top" colspan="10" class="dataTables_empty">No Product FOC</td>
+                                                <td valign="top" colspan="10" class="dataTables_empty">{{ __('trips.no_product_foc') }}</td>
                                             </tr>
                                         @endif
                                         @foreach($trip->productfoc['details'] as $i=>$invoicedetail)
@@ -122,22 +122,22 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Wastage</strong>
+                                 <strong>{{ __('trips.wastage') }}</strong>
                                
                              </div>
                              <div class="card-body">
                                 <table class="table table-striped table-bordered dataTable" width="100%" role="grid" style="width: 100%;">
                                     <thead>
                                         <tr role="row">
-                                            <th>Product</th>
-                                            <th>Quantity</th>
-                                            <th>Price</th>
+                                            <th>{{ __('trips.product') }}</th>
+                                            <th>{{ __('trips.quantity') }}</th>
+                                            <th>{{ __('trips.price') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @if(count($trip->wastage) == 0)
                                             <tr class="odd">
-                                                <td valign="top" colspan="10" class="dataTables_empty">No Wastage</td>
+                                                <td valign="top" colspan="10" class="dataTables_empty">{{ __('trips.no_wastage') }}</td>
                                             </tr>
                                         @endif
                                         @foreach($trip->wastage as $i=>$invoicedetail)

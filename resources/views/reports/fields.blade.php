@@ -1,19 +1,21 @@
-<!-- Name Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('name', 'Report:') !!}<span class="asterisk"> *</span>
-    {!! Form::text('name', null, ['class' => 'form-control','maxlength' => 255,'maxlength' => 255,'autofocus']) !!}
+    {!! Form::label('name', __('report.name')) !!}<span class="asterisk"> *</span>
+    {!! Form::text('name', null, ['class' => 'form-control', 'maxlength' => 255, 'autofocus']) !!}
 </div>
 
 <!-- Sqlvalue Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('sqlvalue', 'SQL:') !!}<span class="asterisk"> *</span>
-    {!! Form::textarea('sqlvalue', null, ['class' => 'form-control','rows'=>'1']) !!}
+    {!! Form::label('sqlvalue', __('report.sql')) !!}<span class="asterisk"> *</span>
+    {!! Form::textarea('sqlvalue', null, ['class' => 'form-control', 'rows' => '1']) !!}
 </div>
 
 <!-- Status Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('status', 'Status:') !!}<span class="asterisk"> *</span>
-    {{ Form::select('status', array(1 => 'Active', 0 => 'Unactive'), null, ['class' => 'form-control']) }}
+    {!! Form::label('status', __('report.status')) !!}<span class="asterisk"> *</span>
+    {{ Form::select('status', [
+        1 => __('report.active'),
+        0 => __('report.unactive')
+    ], null, ['class' => 'form-control']) }}
 </div>
 
 <!-- Str Udf1 Field -->
@@ -51,11 +53,10 @@
     {!! Form::label('INT_UDF3', 'Integer UDF3:') !!}
     {!! Form::number('INT_UDF3', null, ['class' => 'form-control']) !!}
 </div>
-
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
-    {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
-    <a href="{{ route('reports.index') }}" class="btn btn-secondary">Cancel</a>
+    {!! Form::submit(__('report.save'), ['class' => 'btn btn-primary']) !!}
+    <a href="{{ route('reports.index') }}" class="btn btn-secondary">{{ __('report.cancel') }}</a>
 </div>
 
 @push('scripts')

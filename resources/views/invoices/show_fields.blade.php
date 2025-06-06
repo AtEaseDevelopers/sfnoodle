@@ -1,48 +1,48 @@
 <!-- Invoiceno Field -->
 <div class="form-group">
-    {!! Form::label('invoiceno', 'Invoice No:') !!}
+    {!! Form::label('invoiceno', __('invoices.invoice_no')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->invoiceno }}</p>
 </div>
 
 <!-- Date Field -->
 <div class="form-group">
-    {!! Form::label('date', 'Date:') !!}
+    {!! Form::label('date', __('invoices.date')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->date }}</p>
 </div>
 
 <!-- Customer Id Field -->
 <div class="form-group">
-    {!! Form::label('customer_id', 'Customer:') !!}
+    {!! Form::label('customer_id', __('invoices.customer')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->customer->company ?? '' }}</p>
 </div>
 
 <!-- Driver Id Field -->
 <div class="form-group">
-    {!! Form::label('driver_id', 'Driver:') !!}
+    {!! Form::label('driver_id', __('invoices.driver')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->driver->name ?? '' }}</p>
 </div>
 
 <!-- Kelindan Id Field -->
 <div class="form-group">
-    {!! Form::label('kelindan_id', 'Kelindan:') !!}
+    {!! Form::label('kelindan_id', __('invoices.kelindan')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->kelindan->name ?? '' }}</p>
 </div>
 
 <!-- Agent Id Field -->
 <div class="form-group">
-    {!! Form::label('agent_id', 'Agent:') !!}
+    {!! Form::label('agent_id', __('invoices.agent')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->agent->name ?? '' }}</p>
 </div>
 
 <!-- Supervisor Id Field -->
 <div class="form-group">
-    {!! Form::label('supervisor_id', 'Supervisor:') !!}
+    {!! Form::label('supervisor_id', __('invoices.supervisor')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->supervisor->name ?? '' }}</p>
 </div>
 
 <!-- Paymentterm Field -->
 <div class="form-group">
-    {!! Form::label('paymentterm', 'Payment Term:') !!}
+    {!! Form::label('paymentterm', __('invoices.payment_term')) !!}:<span class="asterisk"> *</span>
     @if($invoice->paymentterm == 1)
          <p>Cash</p>
     @elseif($invoice->paymentterm == 2)
@@ -60,13 +60,13 @@
 
 <!-- Status Field -->
 <div class="form-group">
-    {!! Form::label('status', 'Status:') !!}
+    {!! Form::label('status', __('invoices.status')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->status == 1 ? "Completed" : "New" }}</p>
 </div>
 
 <!-- Remark Field -->
 <div class="form-group">
-    {!! Form::label('remark', 'Remark:') !!}
+    {!! Form::label('remark', __('invoices.remark')) !!}:<span class="asterisk"> *</span>
     <p>{{ $invoice->remark }}</p>
 </div>
 

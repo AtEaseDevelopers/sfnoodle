@@ -1,66 +1,66 @@
 <!-- Invoice Id Field -->
 <div class="form-group">
-    {!! Form::label('invoice_id', 'Invoice:') !!}
+    {!! Form::label('invoice_id', __('invoice_payments.invoice')) !!}:
     <p>{{ $invoicePayment->invoice->invoiceno ?? '' }}</p>
 </div>
 
 <!-- Type Field -->
 <div class="form-group">
-    {!! Form::label('type', 'Type:') !!}
+    {!! Form::label('type', __('invoice_payments.type')) !!}:
     @if($invoicePayment->type == 1)
-         <p>Cash</p>
-    @elseif(invoicePayment->type == 2)
-        <p>Credit</p>
-    @elseif(invoicePayment->type == 3)
-        <p>Online BankIn</p>
-    @elseif(invoicePayment->type == 4)
-        <p>E-wallet</p>
-    @elseif(invoicePayment->type == 5)
-        <p>Cheque {{ '-' . $invoicePayment->chequeno}}</p>
+         <p>{{ __('invoice_payments.cash') }}</p>
+    @elseif($invoicePayment->type == 2)
+        <p>{{ __('invoice_payments.credit') }}</p>
+    @elseif($invoicePayment->type == 3)
+        <p>{{ __('invoice_payments.online_bankin') }}</p>
+    @elseif($invoicePayment->type == 4)
+        <p>{{ __('invoice_payments.ewallet') }}</p>
+    @elseif($invoicePayment->type == 5)
+        <p>{{ __('invoice_payments.cheque') }} {{ '-' . $invoicePayment->chequeno }}</p>
     @else
-        <p>Payment Term: Unknown</p>
+        <p>{{ __('invoice_payments.payment_term_unknown') }}</p>
     @endif
 </div>
 
 <!-- Customer Id Field -->
 <div class="form-group">
-    {!! Form::label('customer_id', 'Customer:') !!}
+    {!! Form::label('customer_id', __('invoice_payments.customer')) !!}:
     <p>{{ $invoicePayment->customer->name ?? '' }}</p>
 </div>
 
 <!-- Amount Field -->
 <div class="form-group">
-    {!! Form::label('amount', 'Amount:') !!}
-    <p>{{ number_format($invoicePayment->amount,2) }}</p>
+    {!! Form::label('amount', __('invoice_payments.amount')) !!}:
+    <p>{{ number_format($invoicePayment->amount, 2) }}</p>
 </div>
 
 <!-- Status Field -->
 <div class="form-group">
-    {!! Form::label('status', 'Status:') !!}
-    <p>{{ $invoicePayment->status == 1 ? "Completed" : "New" }}</p>
+    {!! Form::label('status', __('invoice_payments.status')) !!}:
+    <p>{{ $invoicePayment->status == 1 ? __('invoice_payments.completed') : __('invoice_payments.new') }}</p>
 </div>
 
 <!-- Attachment Field -->
 <div class="form-group">
-    {!! Form::label('attachment', 'Attachment:') !!}
+    {!! Form::label('attachment', __('invoice_payments.attachment')) !!}:
     <p>{{ $invoicePayment->attachment }}</p>
 </div>
 
 <!-- Approve By Field -->
 <div class="form-group">
-    {!! Form::label('approve_by', 'Approve By:') !!}
+    {!! Form::label('approve_by', __('invoice_payments.approve_by')) !!}:
     <p>{{ $invoicePayment->approve_by }}</p>
 </div>
 
 <!-- Approve At Field -->
 <div class="form-group">
-    {!! Form::label('approve_at', 'Approve At:') !!}
+    {!! Form::label('approve_at', __('invoice_payments.approve_at')) !!}:
     <p>{{ $invoicePayment->approve_at }}</p>
 </div>
 
 <!-- Remark Field -->
 <div class="form-group">
-    {!! Form::label('remark', 'Remark:') !!}
+    {!! Form::label('remark', __('invoice_payments.remark')) !!}:
     <p>{{ $invoicePayment->remark }}</p>
 </div>
 

@@ -72,7 +72,7 @@ class KelindanController extends AppBaseController
         }
         $kelindan = $this->kelindanRepository->create($input);
 
-        Flash::success($input['name'].' saved successfully.');
+        Flash::success($input['name'].__('kelindans.saved_successfully'));
 
         return redirect(route('kelindans.index'));
     }
@@ -90,7 +90,7 @@ class KelindanController extends AppBaseController
         $kelindan = $this->kelindanRepository->find($id);
 
         if (empty($kelindan)) {
-            Flash::error('Kelindan not found');
+            Flash::error(__('kelindans.kelindan_not_found'));
 
             return redirect(route('kelindans.index'));
         }
@@ -111,7 +111,7 @@ class KelindanController extends AppBaseController
         $kelindan = $this->kelindanRepository->find($id);
 
         if (empty($kelindan)) {
-            Flash::error('Kelindan not found');
+            Flash::error(__('kelindans.kelindan_not_found'));
 
             return redirect(route('kelindans.index'));
         }
@@ -133,7 +133,7 @@ class KelindanController extends AppBaseController
         $kelindan = $this->kelindanRepository->find($id);
 
         if (empty($kelindan)) {
-            Flash::error('Kelindan not found');
+            Flash::error(__('kelindans.kelindan_not_found'));
 
             return redirect(route('kelindans.index'));
         }
@@ -152,7 +152,7 @@ class KelindanController extends AppBaseController
 
         $kelindan = $this->kelindanRepository->update($input, $id);
 
-        Flash::success($kelindan->name.' updated successfully.');
+        Flash::success($kelindan->name.__('kelindans.updated_successfully'));
 
         return redirect(route('kelindans.index'));
     }
@@ -170,7 +170,7 @@ class KelindanController extends AppBaseController
         $kelindan = $this->kelindanRepository->find($id);
 
         if (empty($kelindan)) {
-            Flash::error('Kelindan not found');
+            Flash::error(__('kelindans.kelindan_not_found'));
 
             return redirect(route('kelindans.index'));
         }
@@ -198,7 +198,7 @@ class KelindanController extends AppBaseController
 
         $this->kelindanRepository->delete($id);
 
-        Flash::success($kelindan->name.' deleted successfully.');
+        Flash::success($kelindan->name.__('kelindans.deleted_successfully'));
 
         return redirect(route('kelindans.index'));
     }

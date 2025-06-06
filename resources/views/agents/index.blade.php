@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Agents</li>
+        <li class="breadcrumb-item">{{ __('agents.agents')}}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                     <div class="card">
                         <div class="card-header">
                             <i class="fa fa-align-justify"></i>
-                            Agents
+                            {{ __('agents.agents')}}
                             <a class="pull-right" href="{{ route('agents.create') }}"><i
                                     class="fa fa-plus-square fa-lg"></i></a>
                             <a class="pull-right text-danger pr-2" id="massdelete" href="#" alt="Mass delete"><i
@@ -37,7 +37,7 @@
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Attachment</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">{{ __('agents.attachment')}}</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -47,7 +47,7 @@
                         <thead>
                           <tr>
                             <th scope="col">#</th>
-                            <th scope="col">Attachment</th>
+                            <th scope="col">{{ __('agents.attachment')}}</th>
                           </tr>
                         </thead>
                         <tbody id="attachment_table">
@@ -57,12 +57,12 @@
                     <input type="hidden" name="id" id="id">
                     <div class="custom-file">
                         <input type="file" class="custom-file-input" id="attachment" name="attachment" accept="application/pdf,application/vnd.ms-excel,image/jpg,image/jpeg,image/png" required>
-                        <label id="attachment-label" class="custom-file-label" for="attachment">Add attachment...</label>
+                        <label id="attachment-label" class="custom-file-label" for="attachment">{{ __('agents.add_attachment')}}</label>
                     </div>
-                    <button type="button" class="btn btn-primary" onclick="add_attachment()">Upload</button>
+                    <button type="button" class="btn btn-primary" onclick="add_attachment()">{{ __('agents.upload')}}</button>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('agents.close')}}</button>
                 </div>
             </div>
         </div>

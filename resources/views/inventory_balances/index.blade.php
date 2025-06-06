@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Inventory Balances</li>
+        <li class="breadcrumb-item">{{ __('inventory_balances.inventory_balances') }}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                     <div class="card">
                         <div class="card-header">
                             <i class="fa fa-align-justify"></i>
-                            Inventory Balances
+                            {{ __('inventory_balances.inventory_balances') }}
                             <button class="border-0 bg-transparent pull-right text-danger" data-toggle="modal" data-target="#stockout"><i class="fa fa-cart-arrow-down fa-lg"></i></button>
                             <button class="border-0 bg-transparent pull-right text-success pr-2" data-toggle="modal" data-target="#stockin"><i class="fa fa-cart-plus fa-lg"></i></button>
                         </div>
@@ -32,17 +32,17 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title h6">Stock In</h4>
+                    <h4 class="modal-title h6">{{ __('inventory_balances.stock_in') }}</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
                 </div>
                 <div class="modal-body text-center">
                     {!! Form::open(['route' => 'inventoryBalances.stockin', 'enctype' => 'multipart/form-data']) !!}
                     <!-- Custom Dropdown with Checkboxes for Lorries -->
                     <div class="form-group">
-                        <label for="lorry_id" class="col-form-label">Lorry:</label>
+                        <label for="lorry_id" class="col-form-label">{{ __('inventory_balances.lorry') }}:</label>
                         <div class="dropdown">
                             <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownLorryStockIn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                Select Lorries
+                                {{ __('inventory_balances.select_lorry') }}
                             </button>
                             <div class="dropdown-menu p-3" aria-labelledby="dropdownLorryStockIn" style="width: 100%; max-height: 300px; overflow-y: auto;">
                                 <!-- Live search input -->
@@ -63,11 +63,11 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="product_id" class="col-form-label">Product:</label>
+                        <label for="product_id" class="col-form-label">{{ __('inventory_balances.product') }}:</label>
                         {{ Form::select('product_id', $productItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Product...']) }}
                     </div>
                     <div class="form-group">
-                        <label for="quantity" class="col-form-label">Transfer Quantity:</label>
+                        <label for="quantity" class="col-form-label">{{ __('inventory_balances.transfer_quantity') }}:</label>
                         <div class="input-group mb-3">
                             <div class="input-group-prepend">
                                 <span class="input-group-text" id="basic-addon1">+</span>
@@ -75,8 +75,8 @@
                             <input type="number" min="0" class="form-control" placeholder="Transfer Quantity" name="quantity">
                         </div>
                     </div>
-                    <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">Cancel</button>
-                    <button type="submit" name="button" class="btn btn-primary rounded-0 mt-2">Update</button>
+                    <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{ __('inventory_balances.cancel') }}</button>
+                    <button type="submit" name="button" class="btn btn-primary rounded-0 mt-2">{{ __('inventory_balances.update') }}</button>
                     {!! Form::close() !!}
                 </div>
             </div>
@@ -87,21 +87,21 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title h6">Stock Out</h4>
+                    <h4 class="modal-title h6">{{ __('inventory_balances.stock_out') }}</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
                 </div>
                 <div class="modal-body text-center">
                     {!! Form::open(['route' => 'inventoryBalances.stockout', 'enctype' => 'multipart/form-data']) !!}
                     <div class="form-group">
-                        <label for="lorry_id" class="col-form-label">Lorry:</label>
+                        <label for="lorry_id" class="col-form-label">{{ __('inventory_balances.lorry') }}:</label>
                         {{ Form::select('lorry_id', $lorryItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Lorry...']) }}
                     </div>
                     <div class="form-group">
-                        <label for="product_id" class="col-form-label">Product:</label>
+                        <label for="product_id" class="col-form-label">{{ __('inventory_balances.product') }}:</label>
                         {{ Form::select('product_id', $productItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Product...', 'id' => 'product_id']) }}
                     </div>
                     <div class="form-group">
-                        <label for="quantity" class="col-form-label">Transfer Quantity:</label>
+                        <label for="quantity" class="col-form-label">{{ __('inventory_balances.transfer_quantity') }}:</label>
                         <div class="input-group mb-3">
                             <div class="input-group-prepend">
                                 <span class="input-group-text" id="basic-addon1">-</span>
@@ -109,8 +109,8 @@
                             <input type="number" min="0" class="form-control" placeholder="Transfer Quantity" name="quantity" id="quantity">
                         </div>
                     </div>
-                    <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">Cancel</button>
-                    <button type="submit" name="button" class="btn btn-primary rounded-0 mt-2">Update</button>
+                    <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{ __('inventory_balances.cancel') }}</button>
+                    <button type="submit" name="button" class="btn btn-primary rounded-0 mt-2">{{ __('inventory_balances.update') }}</button>
                     {!! Form::close() !!}
                 </div>
             </div>

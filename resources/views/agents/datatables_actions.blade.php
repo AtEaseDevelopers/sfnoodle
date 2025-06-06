@@ -12,7 +12,7 @@
     {!! Form::button('<i class="fa fa-trash"></i>', [
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
-        'onclick' => "return confirm('Are you sure to delete the Agent?')"
+        'onclick' => "return confirm('".trans('agents.are_you_sure_to_delete_the_agent')."')"    
     ]) !!}
 </div>
 {!! Form::close() !!}

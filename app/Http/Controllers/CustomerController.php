@@ -67,7 +67,7 @@ class CustomerController extends AppBaseController
         $input['group'] = implode(",",$input['group'] ?? []);
         $customer = $this->customerRepository->create($input);
 
-        Flash::success('Customer saved successfully.');
+        Flash::success(__('customers.customer_saved_successfully'));
 
         return redirect(route('customers.index'));
     }
@@ -91,7 +91,7 @@ class CustomerController extends AppBaseController
         ->get()->first()->group_descr;
         
         if (empty($customer)) {
-            Flash::error('Customer not found');
+            Flash::error(__('customers.customer_not_found'));
 
             return redirect(route('customers.index'));
         }
@@ -112,7 +112,7 @@ class CustomerController extends AppBaseController
         $customer = $this->customerRepository->find($id);
 
         if (empty($customer)) {
-            Flash::error('Customer not found');
+            Flash::error(__('customers.customer_not_found'));
 
             return redirect(route('customers.index'));
         }
@@ -134,7 +134,7 @@ class CustomerController extends AppBaseController
         $customer = $this->customerRepository->find($id);
 
         if (empty($customer)) {
-            Flash::error('Customer not found');
+            Flash::error(__('customers.customer_not_found'));
 
             return redirect(route('customers.index'));
         }
@@ -144,7 +144,7 @@ class CustomerController extends AppBaseController
 
         $customer = $this->customerRepository->update($input, $id);
 
-        Flash::success('Customer updated successfully.');
+        Flash::success(__('customers.customer_updated_successfully'));
 
         return redirect(route('customers.index'));
     }
@@ -162,7 +162,7 @@ class CustomerController extends AppBaseController
         $customer = $this->customerRepository->find($id);
 
         if (empty($customer)) {
-            Flash::error('Customer not found');
+            Flash::error(__('customers.customer_not_found'));
 
             return redirect(route('customers.index'));
         }
@@ -197,7 +197,7 @@ class CustomerController extends AppBaseController
 
         $this->customerRepository->delete($id);
 
-        Flash::success($customer->company.' deleted successfully.');
+        Flash::success($customer->company.__('customers.deleted_successfully'));
 
         return redirect(route('customers.index'));
     }

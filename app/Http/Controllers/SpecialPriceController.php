@@ -60,8 +60,7 @@ class SpecialPriceController extends AppBaseController
         $input = $request->all();
 
         $specialPrice = $this->specialPriceRepository->create($input);
-
-        Flash::success('Special Price saved successfully.');
+        Flash::success(__('special_prices.special_price_saved_successfully'));
 
         return redirect(route('specialPrices.index'));
     }
@@ -79,7 +78,7 @@ class SpecialPriceController extends AppBaseController
         $specialPrice = $this->specialPriceRepository->find($id);
 
         if (empty($specialPrice)) {
-            Flash::error('Special Price not found');
+            Flash::error(__('special_prices.special_price_not_found'));
 
             return redirect(route('specialPrices.index'));
         }
@@ -100,7 +99,7 @@ class SpecialPriceController extends AppBaseController
         $specialPrice = $this->specialPriceRepository->find($id);
 
         if (empty($specialPrice)) {
-            Flash::error('Special Price not found');
+            Flash::error(__('special_prices.special_price_not_found'));
 
             return redirect(route('specialPrices.index'));
         }
@@ -122,7 +121,7 @@ class SpecialPriceController extends AppBaseController
         $specialPrice = $this->specialPriceRepository->find($id);
 
         if (empty($specialPrice)) {
-            Flash::error('Special Price not found');
+            Flash::error(__('special_prices.special_price_not_found'));
 
             return redirect(route('specialPrices.index'));
         }
@@ -131,7 +130,7 @@ class SpecialPriceController extends AppBaseController
 
         $specialPrice = $this->specialPriceRepository->update($input, $id);
 
-        Flash::success('Special Price updated successfully.');
+        Flash::success(__('special_prices.special_price_updated_successfully'));
 
         return redirect(route('specialPrices.index'));
     }
@@ -149,14 +148,14 @@ class SpecialPriceController extends AppBaseController
         $specialPrice = $this->specialPriceRepository->find($id);
 
         if (empty($specialPrice)) {
-            Flash::error('Special Price not found');
+            Flash::error(__('special_prices.special_price_not_found'));
 
             return redirect(route('specialPrices.index'));
         }
 
         $this->specialPriceRepository->delete($id);
 
-        Flash::success('Special Price deleted successfully.');
+        Flash::success(__('special_prices.special_price_deleted_successfully'));
 
         return redirect(route('specialPrices.index'));
     }

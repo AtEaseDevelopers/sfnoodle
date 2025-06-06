@@ -54,15 +54,39 @@ class InventoryBalanceDataTable extends DataTable
                 'processing' => false,
                 'order'     => [[0, 'desc']],
                 'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
-                'buttons'   => [
-                    // ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'excelHtml5','text'=>'<i class="fa fa-file-excel-o"></i> Excel','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'inventorybalance'.date('dmYHis')],
-                    ['extend' => 'pdfHtml5', 'orientation' => 'landscape', 'pageSize' => 'LEGAL','text'=>'<i class="fa fa-file-pdf-o"></i> PDF','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'inventorybalance'.date('dmYHis')],
-                    ['extend' => 'colvis', 'className' => 'btn btn-default btn-sm no-corner','text'=>'<i class="fa fa-columns"></i> Column',],
-                    ['extend' => 'pageLength','className' => 'btn btn-default btn-sm no-corner',],
+                'buttons' => [
+                    // ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.create')],
+                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.print')],
+                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.reset')],
+                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.reload')],
+                    [
+                        'extend' => 'excelHtml5',
+                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'pdfHtml5',
+                        'orientation' => 'landscape',
+                        'pageSize' => 'LEGAL',
+                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'colvis',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                    ],
+                    [
+                        'extend' => 'pageLength',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => trans('table_buttons.show_10_rows')
+                    ],
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
@@ -96,15 +120,15 @@ class InventoryBalanceDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'lorry_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Lorry',
+            'lorry_id'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('inventory_balances.lorry'),
             'data' => 'lorry.lorryno',
             'name' => 'lorry.lorryno']),
 
-            'product_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Product',
+            'product_id'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('inventory_balances.product'),
             'data' => 'product.name',
             'name' => 'product.name']),
 
-            'quantity'
+             trans('inventory_balances.quantity'),
         ];
     }
 

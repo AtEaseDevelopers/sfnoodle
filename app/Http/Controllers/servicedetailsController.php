@@ -71,7 +71,7 @@ class servicedetailsController extends AppBaseController
             $mailstatus = app('App\Http\Controllers\sender')->email('All',$de['value'],'','[Add] Lorry Service ('.$lorry->lorryno.'|'.$servicedetails->type . ') - ' . env('APP_URL'),$body);
         }
 
-        Flash::success('Lorry Service saved successfully.');
+        Flash::success(__('lorry_service.lorry_service_saved_successfully'));
 
         return redirect(route('servicedetails.index'));
     }
@@ -89,7 +89,7 @@ class servicedetailsController extends AppBaseController
         $servicedetails = $this->servicedetailsRepository->find($id);
 
         if (empty($servicedetails)) {
-            Flash::error('Lorry Service not found');
+            Flash::error(__('lorry_service.lorry_service_not_found'));
 
             return redirect(route('servicedetails.index'));
         }
@@ -110,7 +110,7 @@ class servicedetailsController extends AppBaseController
         $servicedetails = $this->servicedetailsRepository->find($id);
 
         if (empty($servicedetails)) {
-            Flash::error('Lorry Service not found');
+            Flash::error(__('lorry_service.lorry_service_not_found'));
 
             return redirect(route('servicedetails.index'));
         }
@@ -132,7 +132,7 @@ class servicedetailsController extends AppBaseController
         $servicedetails = $this->servicedetailsRepository->find($id);
 
         if (empty($servicedetails)) {
-            Flash::error('Lorry Service not found');
+            Flash::error(__('lorry_service.lorry_service_not_found'));
 
             return redirect(route('servicedetails.index'));
         }
@@ -143,7 +143,7 @@ class servicedetailsController extends AppBaseController
         $input['nextdate'] = date_create($input['nextdate']);
         $servicedetails = $this->servicedetailsRepository->update($input, $id);
 
-        Flash::success('Lorry Service updated successfully.');
+        Flash::success(__('lorry_service.lorry_service_updated_successfully'));
 
         return redirect(route('servicedetails.index'));
     }
@@ -161,14 +161,14 @@ class servicedetailsController extends AppBaseController
         $servicedetails = $this->servicedetailsRepository->find($id);
 
         if (empty($servicedetails)) {
-            Flash::error('Lorry Service not found');
+            Flash::error(__('lorry_service.lorry_service_not_found'));
 
             return redirect(route('servicedetails.index'));
         }
 
         $this->servicedetailsRepository->delete($id);
 
-        Flash::success('Lorry Service deleted successfully.');
+        Flash::success(__('lorry_service.lorry_service_deleted_successfully'));
 
         return redirect(route('servicedetails.index'));
     }

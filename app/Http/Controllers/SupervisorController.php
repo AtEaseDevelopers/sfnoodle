@@ -68,7 +68,7 @@ class SupervisorController extends AppBaseController
         }
         $supervisor = $this->supervisorRepository->create($input);
 
-        Flash::success($input['name'].' saved successfully.');
+        Flash::success($input['name'].__('operations.task_saved_successfully'));
 
         return redirect(route('supervisors.index'));
     }
@@ -86,7 +86,7 @@ class SupervisorController extends AppBaseController
         $supervisor = $this->supervisorRepository->find($id);
 
         if (empty($supervisor)) {
-            Flash::error('Supervisor not found');
+            Flash::error(__('operations.operation_not_found'));
 
             return redirect(route('supervisors.index'));
         }
@@ -107,7 +107,7 @@ class SupervisorController extends AppBaseController
         $supervisor = $this->supervisorRepository->find($id);
 
         if (empty($supervisor)) {
-            Flash::error('Supervisor not found');
+            Flash::error(__('operations.operation_not_found'));
 
             return redirect(route('supervisors.index'));
         }
@@ -129,7 +129,7 @@ class SupervisorController extends AppBaseController
         $supervisor = $this->supervisorRepository->find($id);
 
         if (empty($supervisor)) {
-            Flash::error('Supervisor not found');
+            Flash::error(__('operations.operation_not_found'));
 
             return redirect(route('supervisors.index'));
         }
@@ -145,7 +145,7 @@ class SupervisorController extends AppBaseController
 
         $supervisor = $this->supervisorRepository->update($input, $id);
 
-        Flash::success($supervisor->name.' updated successfully.');
+        Flash::success($supervisor->name.__('operations.updated_successfully'));
 
         return redirect(route('supervisors.index'));
     }
@@ -163,7 +163,7 @@ class SupervisorController extends AppBaseController
         $supervisor = $this->supervisorRepository->find($id);
 
         if (empty($supervisor)) {
-            Flash::error('Supervisor not found');
+            Flash::error(__('operations.operation_not_found'));
 
             return redirect(route('supervisors.index'));
         }
@@ -184,7 +184,7 @@ class SupervisorController extends AppBaseController
 
         $this->supervisorRepository->delete($id);
 
-        Flash::success($supervisor->name.' deleted successfully.');
+        Flash::success($supervisor->name.__('operations.deleted_successfully'));
 
         return redirect(route('supervisors.index'));
     }

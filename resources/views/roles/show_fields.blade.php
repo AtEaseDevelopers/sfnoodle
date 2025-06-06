@@ -1,11 +1,11 @@
 <!-- Name Field -->
 <div class="form-group">
-    {!! Form::label('name', 'Name:') !!}
+    {!! Form::label('name', __('role.name')) !!}
     <p>{{ $role->name }}</p>
 </div>
 
 <div class="form-group">
-    {!! Form::label('permission_id', 'Permission:') !!}
+    {!! Form::label('permission_id',  __('role.permissions')) !!}
     <p>{{ $role->permission_name }}</p>
 </div>
 

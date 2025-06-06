@@ -48,7 +48,8 @@ class UserController extends AppBaseController
         $c = $this->userRepository->all()->count();
         $s = intval(env('USERS_SUBSCRIBED'));
         if($c >= $s){
-            Flash::error('You have exceeded your user limit, please contact your vendor.');
+            Flash::error(__('user.you_have_exceeded_your_user_limit_please_contact_your_vendor'));
+
             return redirect(route('users.index'));
         }
         //$input = $request->all();
@@ -67,7 +68,7 @@ class UserController extends AppBaseController
         $c = $this->userRepository->all()->count();
         $s = intval(env('USERS_SUBSCRIBED'));
         if($c >= $s){
-            Flash::error('You have exceeded your user limit, please contact your vendor.');
+            Flash::error(__('user.you_have_exceeded_your_user_limit_please_contact_your_vendor'));
             return redirect(route('users.index'));
         }
         $input = $request->all();
@@ -83,7 +84,7 @@ class UserController extends AppBaseController
 
         $userHasRole = $this->userHasRoleRepository->create($userRole);
 
-        Flash::success('User saved successfully.');
+        Flash::success(__('user.user_saved_successfully'));
 
         return redirect(route('users.index'));
     }
@@ -101,7 +102,7 @@ class UserController extends AppBaseController
         $user = $this->userRepository->find($id);
 
         if (empty($user)) {
-            Flash::error('User not found');
+            Flash::error(__('user.user_not_found'));
 
             return redirect(route('users.index'));
         }
@@ -126,7 +127,7 @@ class UserController extends AppBaseController
         $user = $this->userRepository->find($id);
 
         if (empty($user)) {
-            Flash::error('User not found');
+            Flash::error(__('user.user_not_found'));
 
             return redirect(route('users.index'));
         }
@@ -153,7 +154,7 @@ class UserController extends AppBaseController
         $user = $this->userRepository->find($id);
 
         if (empty($user)) {
-            Flash::error('User not found');
+            Flash::error(__('user.user_not_found'));
 
             return redirect(route('users.index'));
         }
@@ -182,8 +183,7 @@ class UserController extends AppBaseController
             $userHasRole = $this->userHasRoleRepository->create($userRole);
         }
        
-
-        Flash::success('User updated successfully.');
+        Flash::success(__('user.user_updated_successfully'));
 
         return redirect(route('users.index'));
     }
@@ -201,14 +201,14 @@ class UserController extends AppBaseController
         $user = $this->userRepository->find($id);
 
         if (empty($user)) {
-            Flash::error('User not found');
+            Flash::error(__('user.user_not_found'));
 
             return redirect(route('users.index'));
         }
 
         $this->userRepository->delete($id);
 
-        Flash::success('User deleted successfully.');
+        Flash::success(__('user.user_deleted_successfully'));
 
         return redirect(route('users.index'));
     }

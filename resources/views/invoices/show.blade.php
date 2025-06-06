@@ -3,9 +3,9 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('invoices.index') }}">Invoice</a>
+                <a href="{{ route('invoices.index') }}">{{ __('invoices.invoices') }}</a>
             </li>
-            <li class="breadcrumb-item active">Detail</li>
+            <li class="breadcrumb-item active">{{ __('invoices.detail') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -28,19 +28,19 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Invoice Detail</strong>
+                                 <strong>{{ __('invoices.invoice_detail') }}</strong>
                                 <a class="pull-right" href="{{ route('invoices.detail', Crypt::encrypt($id)) }}"><i class="fa fa-plus-square fa-lg"></i></a>
                              </div>
                              <div class="card-body">
                                 <table class="table table-striped table-bordered dataTable" width="100%" role="grid" style="width: 100%;">
                                     <thead>
                                         <tr role="row">
-                                            <th>Product</th>
-                                            <th>Quantity</th>
-                                            <th>Price</th>
-                                            <th>Total Price</th>
-                                            <th>Remark</th>
-                                            <th>Action</th>
+                                            <th>{{ __('invoices.product') }}</th>
+                                            <th>{{ __('invoices.quantity') }}</th>
+                                            <th>{{ __('invoices.price') }}</th>
+                                            <th>{{ __('invoices.total_price') }}</th>
+                                            <th>{{ __('invoices.remark') }}</th>
+                                            <th>{{ __('invoices.action') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>

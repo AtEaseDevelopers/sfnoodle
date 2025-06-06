@@ -62,7 +62,7 @@ class InvoicePaymentDataTable extends DataTable
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->addAction(['width' => '120px', 'printable' => false])
+            ->addAction(['title' => trans('invoice_payments.action'), 'printable' => false])
             ->parameters([
                 'dom'       => '<"row"B><"row"<"dataTableBuilderDiv"t>><"row"ip>',
                 'stateSave' => true,
@@ -70,15 +70,55 @@ class InvoicePaymentDataTable extends DataTable
                 'processing' => false,
                 'order'     => [[1, 'desc']],
                 'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
-                'buttons'   => [
-                    ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'excelHtml5','text'=>'<i class="fa fa-file-excel-o"></i> Excel','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'invoicepayment'.date('dmYHis')],
-                    ['extend' => 'pdfHtml5', 'orientation' => 'landscape', 'pageSize' => 'LEGAL','text'=>'<i class="fa fa-file-pdf-o"></i> PDF','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'invoicepayment'.date('dmYHis')],
-                    ['extend' => 'colvis', 'className' => 'btn btn-default btn-sm no-corner','text'=>'<i class="fa fa-columns"></i> Column',],
-                    ['extend' => 'pageLength','className' => 'btn btn-default btn-sm no-corner',],
+                'buttons' => [
+                    [
+                        'extend' => 'create',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-plus"></i> ' . trans('table_buttons.create'),
+                    ],
+                    [
+                        'extend' => 'print',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-print"></i> ' . trans('table_buttons.print'),
+                    ],
+                    [
+                        'extend' => 'reset',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reset'),
+                    ],
+                    [
+                        'extend' => 'reload',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reload'),
+                    ],
+                    [
+                        'extend' => 'excelHtml5',
+                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'pdfHtml5',
+                        'orientation' => 'landscape',
+                        'pageSize' => 'LEGAL',
+                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'colvis',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                    ],
+                    [
+                        'extend' => 'pageLength',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => trans('table_buttons.show_10_rows')
+                    ],
                 ],
                 'columnDefs' => [
                     [
@@ -185,33 +225,33 @@ class InvoicePaymentDataTable extends DataTable
             'orderable' => false,
             'searchable' => false]),
 
-            'created_at'=> new \Yajra\DataTables\Html\Column(['title' => 'Date',
+            'created_at'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.date'),
             'data' => 'created_at',
             'name' => 'created_at']),
 
-            'customer_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Customer',
+            'customer_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.customer'),
             'data' => 'customer.company',
             'name' => 'customer.company']),
 
-            'type',
+            trans('invoice_payments.type'),
 
-            'payment_no'=> new \Yajra\DataTables\Html\Column(['title' => 'Payment No.',
+            'payment_no'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.payment_no'),
             'data' => 'payment_no',
             'name' => 'payment_no']),
             
-            'invoice_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Invoice No',
+            'invoice_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.invoice_no'),
             'data' => 'invoice.invoiceno',
             'name' => 'invoice.invoiceno']),
 
-            'amount',
-            'status',
-            'attachment',
+            trans('invoice_payments.amount'),
+            trans('invoice_payments.status'),
+            trans('invoice_payments.attachment'),
 
-            'approve_by'=> new \Yajra\DataTables\Html\Column(['title' => 'Approve By',
+            'approve_by'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('invoice_payments.approve_by'),
             'data' => 'approve_by',
             'name' => 'approve_by']),
 
-            'approve_at'=> new \Yajra\DataTables\Html\Column(['title' => 'Approve At',
+            'approve_at'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.approve_at'),
             'data' => 'approve_at',
             'name' => 'approve_at']),
             
@@ -221,7 +261,7 @@ class InvoicePaymentDataTable extends DataTable
 
             // 'remark',
 
-            'group'=> new \Yajra\DataTables\Html\Column(['title' => 'Group',
+            'group'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.group'),
             'data' => 'customer.GroupDescription',
             'name' => 'customer.group',
             'orderable' => false]),

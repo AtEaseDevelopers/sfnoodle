@@ -10,6 +10,8 @@
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
         'onclick' => "return confirm('Are you sure to delete the Commission?')"
+        'onclick' => "return confirm('".trans('commission.are_you_sure_to_delete_the_commission')."')"    
+
     ]) !!}
 </div>
 {!! Form::close() !!}

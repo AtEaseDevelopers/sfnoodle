@@ -75,7 +75,7 @@ class DriverController extends AppBaseController
         }
         $driver = $this->driverRepository->create($input);
 
-        Flash::success($input['name'].' saved successfully.');
+        Flash::success($input['name'].__('drivers.saved_successfully'));
 
         return redirect(route('drivers.index'));
     }
@@ -93,13 +93,12 @@ class DriverController extends AppBaseController
         $driver = $this->driverRepository->find($id);
 
         if (empty($driver)) {
-            Flash::error('Driver not found');
+            Flash::error(__('drivers.driver_not_found'));
 
             return redirect(route('drivers.index'));
         }
 
         $assign = Assign::with('customer')->where('driver_id',$id)->get()->toArray();
-
         return view('drivers.show')->with('driver', $driver)->with('assign',$assign)->with('id',$id);
     }
 
@@ -116,7 +115,7 @@ class DriverController extends AppBaseController
         $driver = $this->driverRepository->find($id);
 
         if (empty($driver)) {
-            Flash::error('Driver not found');
+            Flash::error(__('drivers.driver_not_found'));
 
             return redirect(route('drivers.index'));
         }
@@ -138,7 +137,7 @@ class DriverController extends AppBaseController
         $driver = $this->driverRepository->find($id);
 
         if (empty($driver)) {
-            Flash::error('Driver not found');
+            Flash::error(__('drivers.driver_not_found'));
 
             return redirect(route('drivers.index'));
         }
@@ -154,7 +153,7 @@ class DriverController extends AppBaseController
 
         $driver = $this->driverRepository->update($input, $id);
 
-        Flash::success($driver->name.' updated successfully.');
+        Flash::success($driver->name.__('drivers.updated_successfully'));
 
         return redirect(route('drivers.index'));
     }
@@ -172,7 +171,7 @@ class DriverController extends AppBaseController
         $driver = $this->driverRepository->find($id);
 
         if (empty($driver)) {
-            Flash::error('Driver not found');
+            Flash::error(__('drivers.driver_not_found'));
 
             return redirect(route('drivers.index'));
         }
@@ -228,7 +227,7 @@ class DriverController extends AppBaseController
 
         $this->driverRepository->delete($id);
 
-        Flash::success($driver->name.' deleted successfully.');
+        Flash::success($driver->name.__('drivers.deleted_successfully'));
 
         return redirect(route('drivers.index'));
     }
@@ -302,7 +301,7 @@ class DriverController extends AppBaseController
         $driver = $this->driverRepository->find($id);
 
         if (empty($driver)) {
-            Flash::error('Driver not found');
+            Flash::error(__('drivers.driver_not_found'));
 
             return redirect(route('drivers.index'));
         }
@@ -332,7 +331,7 @@ class DriverController extends AppBaseController
         $driver = $this->driverRepository->find($id);
 
         if (empty($driver)) {
-            Flash::error('Driver not found');
+            Flash::error(__('drivers.driver_not_found'));
 
             return redirect(route('drivers.index'));
         }
@@ -343,7 +342,7 @@ class DriverController extends AppBaseController
         $assign->sequence = $input['sequence'];
         $assign->save();
 
-        Flash::success('Assign saved successfully.');
+        Flash::success(__('drivers.assign_saved_successfully'));
 
         return redirect(route('drivers.show',encrypt($id)));
     }
@@ -355,14 +354,14 @@ class DriverController extends AppBaseController
         $assign = Assign::where('id',$id)->first();
 
         if (empty($assign)) {
-            Flash::error('Assign not found');
+            Flash::error(__('drivers.assign_not_found'));
 
             return redirect()->back();
         }
 
         $assign->delete($id);
 
-        Flash::success('Assign deleted successfully.');
+        Flash::success(__('drivers.assign_deleted_successfully'));
 
         return redirect(route('drivers.show',encrypt($assign->driver_id)));
     }

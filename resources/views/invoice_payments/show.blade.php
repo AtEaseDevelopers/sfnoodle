@@ -3,9 +3,9 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('invoicePayments.index') }}">Invoice Payment</a>
+                <a href="{{ route('invoicePayments.index') }}">{{ __('invoice_payments.invoice_payments') }}</a>
             </li>
-            <li class="breadcrumb-item active">Detail</li>
+            <li class="breadcrumb-item active">{{ __('invoice_payments.detail') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -14,7 +14,7 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Details</strong>
+                                 <strong>{{ __('invoice_payments.detail') }}</strong>
                                   <a href="{{ route('invoicePayments.index') }}" class="btn btn-light">Back</a>
                              </div>
                              <div class="card-body">

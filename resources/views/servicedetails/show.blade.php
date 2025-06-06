@@ -3,9 +3,9 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('servicedetails.index') }}">Lorry Service</a>
+                <a href="{{ route('servicedetails.index') }}">{{ __('lorry_service.lorry_service') }} </a>
             </li>
-            <li class="breadcrumb-item active">Detail</li>
+            <li class="breadcrumb-item active">{{ __('lorry_service.detail') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -14,7 +14,7 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Details</strong>
+                                 <strong>{{ __('lorry_service.detail') }}</strong>
                                   <a href="{{ route('servicedetails.index') }}" class="btn btn-light">Back</a>
                              </div>
                              <div class="card-body">

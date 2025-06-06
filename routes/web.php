@@ -308,9 +308,6 @@ Route::group(['middleware' => ['auth']], function() {
     //     Route::post('/commissionByVendors/masssave', [App\Http\Controllers\CommissionByVendorsController::class, 'masssave']);
     // });
 
-
-
-
     Route::group(['middleware' => ['permission:lorry']], function() {
         Route::resource('lorries', App\Http\Controllers\LorryController::class);
         Route::post('/lorries/massdestroy', [App\Http\Controllers\LorryController::class, 'massdestroy']);
@@ -436,6 +433,28 @@ Route::group(['middleware' => ['auth']], function() {
     Route::group(['middleware' => ['permission:code']], function() {
         Route::resource('codes', App\Http\Controllers\CodeController::class);
     });
+
+    Route::group(['middleware' => ['permission:code']], function() {
+        Route::prefix('language')->group(function() {
+            Route::get('/', [App\Http\Controllers\LanguageController::class, 'index'])->name('language.index');
+            Route::post('/change', [App\Http\Controllers\LanguageController::class, 'changeLanguage'])->name('language.change');
+            Route::post('/save', [App\Http\Controllers\LanguageController::class, 'saveTranslations'])->name('language.save');
+            Route::post('/import', [App\Http\Controllers\LanguageController::class, 'importLanguage'])->name('language.import');
+        });
+    });
+    
+    Route::group(['middleware' => ['permission:code']], function() {
+        Route::prefix('mobile_language')->group(function() {
+            Route::get('/', [App\Http\Controllers\MobileLanguageController::class, 'index'])->name('mobile_language.index');
+            Route::get('/edit/{id}', [App\Http\Controllers\MobileLanguageController::class, 'edit'])->name('mobile_language.edit');
+            Route::post('/save', [App\Http\Controllers\MobileLanguageController::class, 'saveTranslations'])->name('mobile_language.save');
+            Route::post('/delete/{id}', [App\Http\Controllers\MobileLanguageController::class, 'deleteLanguage'])->name('mobile_language.destroy');
+            Route::post('/import', [App\Http\Controllers\MobileLanguageController::class, 'importLanguage'])->name('mobile_language.import');
+        });
+    });
+
+    Route::get('/language/load', [LanguageController::class, 'loadTranslations'])->name('language.load');   
+    
     Route::group(['middleware' => ['permission:code']], function() {
         Route::resource('customer_group', App\Http\Controllers\CustomerGroupController::class);
     });

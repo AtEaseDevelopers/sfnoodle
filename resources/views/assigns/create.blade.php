@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-         <a href="{!! route('assigns.index') !!}">Assign</a>
+         <a href="{!! route('assigns.index') !!}">{{ __('assign.assigns') }}</a>
       </li>
-      <li class="breadcrumb-item active">Create</li>
+      <li class="breadcrumb-item active">{{ __('assign.create') }}</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <i class="fa fa-plus-square-o fa-lg"></i>
-                                <strong>Create Assign</strong>
+                                <strong>{{ __('assign.create_assigns') }}</strong>
                             </div>
                             <div class="card-body">
                                 {!! Form::open(['route' => 'assigns.store']) !!}

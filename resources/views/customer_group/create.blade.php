@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-         <a href="{!! route('customer_group.index') !!}">Customer Group</a>
+         <a href="{!! route('customer_group.index') !!}">{{ __('customer_group.customer_group') }}</a>
       </li>
-      <li class="breadcrumb-item active">Create</li>
+      <li class="breadcrumb-item active">{{ __('customer_group.create') }}</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <i class="fa fa-plus-square-o fa-lg"></i>
-                                <strong>Create Customer Group</strong>
+                                <strong>{{ __('customer_group.create_customer_group') }}</strong>
                             </div>
                             <div class="card-body">
                                 {!! Form::open(['route' => 'customer_group.store']) !!}

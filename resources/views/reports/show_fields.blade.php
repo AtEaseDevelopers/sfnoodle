@@ -1,19 +1,19 @@
 <!-- Name Field -->
 <div class="form-group">
-    {!! Form::label('name', 'Report:') !!}
+    {!! Form::label('name',  __('report.name')) !!}
     <p>{{ $report->name }}</p>
 </div>
 
 <!-- Sqlvalue Field -->
 <div class="form-group">
-    {!! Form::label('sqlvalue', 'SQL:') !!}
+    {!! Form::label('sqlvalue', __('report.sql')) !!}
     <p>{{ $report->sqlvalue }}</p>
 </div>
 
 <!-- Status Field -->
 <div class="form-group">
-    {!! Form::label('status', 'Status:') !!}
-    <p>{{ $report->status == 1 ? "Active" : "Unactive" }}</p>
+    {!! Form::label('status', __('report.status')) !!}
+    <p>{{ $report->status == 1 ? __('report.active') : __('report.inactive') }}</p>
 </div>
 
 <!-- Str Udf1 Field -->

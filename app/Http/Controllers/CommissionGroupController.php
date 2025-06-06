@@ -57,7 +57,7 @@ class CommissionGroupController extends AppBaseController
 
         $code = $this->codeRepository->create($input);
 
-        Flash::success('Code saved successfully.');
+        Flash::success(__('commission.customer_group_saved_successfully'));
 
         return redirect(route('commission_group.index'));
     }
@@ -75,7 +75,7 @@ class CommissionGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('commission.commission_group_not_found'));
 
             return redirect(route('commission_group.index'));
         }
@@ -96,7 +96,7 @@ class CommissionGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('commission.commission_group_not_found'));
 
             return redirect(route('commission_group.index'));
         }
@@ -118,14 +118,14 @@ class CommissionGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('commission.commission_group_not_found'));
 
             return redirect(route('commission_group.index'));
         }
 
         $code = $this->codeRepository->update($request->all(), $id);
 
-        Flash::success('Code updated successfully.');
+        Flash::success(__('commission.customer_group_updated_successfully'));
 
         return redirect(route('commission_group.index'));
     }
@@ -143,14 +143,14 @@ class CommissionGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('commission.commission_group_not_found'));
 
             return redirect(route('commission_group.index'));
         }
 
         $this->codeRepository->delete($id);
 
-        Flash::success('Commission Group deleted successfully.');
+        Flash::success(__('commission.customer_group_deleted_successfully'));
 
         return redirect(route('commission_group.index'));
     }

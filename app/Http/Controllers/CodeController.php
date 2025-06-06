@@ -57,7 +57,7 @@ class CodeController extends AppBaseController
 
         $code = $this->codeRepository->create($input);
 
-        Flash::success('Code saved successfully.');
+        Flash::success(__('codes.code_saved_successfully'));
 
         return redirect(route('codes.index'));
     }
@@ -75,7 +75,7 @@ class CodeController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('codes.code_not_found'));
 
             return redirect(route('codes.index'));
         }
@@ -96,7 +96,7 @@ class CodeController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('codes.code_not_found'));
 
             return redirect(route('codes.index'));
         }
@@ -118,14 +118,14 @@ class CodeController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('codes.code_not_found'));
 
             return redirect(route('codes.index'));
         }
 
         $code = $this->codeRepository->update($request->all(), $id);
 
-        Flash::success('Code updated successfully.');
+        Flash::success(__('codes.code_updated_successfully'));
 
         return redirect(route('codes.index'));
     }
@@ -143,14 +143,14 @@ class CodeController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('codes.code_not_found'));
 
             return redirect(route('codes.index'));
         }
 
         $this->codeRepository->delete($id);
 
-        Flash::success('Code deleted successfully.');
+        Flash::success(__('codes.code_deleted_successfully'));
 
         return redirect(route('codes.index'));
     }

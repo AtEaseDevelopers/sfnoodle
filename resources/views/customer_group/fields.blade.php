@@ -5,14 +5,13 @@
 
 <!-- Description Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('description', 'Customer Group Name:') !!}<span class="asterisk"> *</span>
-    {!! Form::text('description', null, ['class' => 'form-control','autofocus']) !!}
+    {!! Form::label('description', __('customer_group.description')) !!}<span class="asterisk"> *</span>
+    {!! Form::text('description', null, ['class' => 'form-control', 'autofocus']) !!}
 </div>
 
 <!-- Value Field -->
 <div class="form-group col-sm-6">
-   
-    {!! Form::hidden('value',$value ?? '9999999', ['class' => 'form-control']) !!}
+    {!! Form::hidden('value', $value ?? '9999999', ['class' => 'form-control']) !!}
 </div>
 
 <!-- Sequence Field -->
@@ -58,8 +57,8 @@
 
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
-    {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
-    <a href="{{ route('customer_group.index') }}" class="btn btn-secondary">Cancel</a>
+    {!! Form::submit(__('customer_group.save'), ['class' => 'btn btn-primary']) !!}
+    <a href="{{ route('customer_group.index') }}" class="btn btn-secondary">{{ __('customer_group.cancel') }}</a>
 </div>
 
 @push('scripts')

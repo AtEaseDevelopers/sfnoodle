@@ -3,9 +3,9 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('kelindans.index') }}">Kelindan</a>
+                <a href="{{ route('kelindans.index') }}">{{ __('kelindans.kelindans') }}</a>
             </li>
-            <li class="breadcrumb-item active">Detail</li>
+            <li class="breadcrumb-item active">{{ __('kelindans.detail') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -14,7 +14,7 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Details</strong>
+                                 <strong>{{ __('kelindans.detail') }}</strong>
                                   <a href="{{ route('kelindans.index') }}" class="btn btn-light">Back</a>
                              </div>
                              <div class="card-body">

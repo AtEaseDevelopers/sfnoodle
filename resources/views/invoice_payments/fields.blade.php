@@ -1,47 +1,44 @@
 <!-- Invoice Id Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('invoice_id', 'Invoice:') !!}
-    {!! Form::select('invoice_id', $invoiceItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Invoice...','autofocus']) !!}
+    {!! Form::label('invoice_id', __('invoice_payments.invoice')) !!}
+    {!! Form::select('invoice_id', $invoiceItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Invoice...', 'autofocus']) !!}
 </div>
-
 
 <!-- Type Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('type', 'Type:') !!}<span class="asterisk"> *</span>
-    {{ Form::select('type', array(1 => 'Cash' , 3 => 'Online BankIn' , 4 => 'E-wallet', 5 => 'Cheque'), null, ['class' => 'form-control']) }}
+    {!! Form::label('type', __('invoice_payments.type')) !!}<span class="asterisk"> *</span>
+    {{ Form::select('type', array(1 => 'Cash', 3 => 'Online BankIn', 4 => 'E-wallet', 5 => 'Cheque'), null, ['class' => 'form-control']) }}
 </div>
 
 <!-- ChequeNo Field -->
 <div class="form-group col-sm-6" id='cheque-container' style='display:none;'>
-    {!! Form::label('chequeno', 'Cheque No.:') !!}
-    {!! Form::text('chequeno', null, ['class' => 'form-control','maxlength' => 20,'maxlength' => 20]) !!}
+    {!! Form::label('chequeno', __('invoice_payments.cheque_no')) !!}
+    {!! Form::text('chequeno', null, ['class' => 'form-control', 'maxlength' => 20]) !!} <!-- Removed duplicate maxlength -->
 </div>
 
 <!-- Customer Id Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('customer_id', 'Customer:') !!}<span class="asterisk"> *</span>
+    {!! Form::label('customer_id', __('invoice_payments.customer')) !!}<span class="asterisk"> *</span>
     {!! Form::select('customer_id', $customerItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Customer...']) !!}
 </div>
 
-
 <!-- Amount Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('amount', 'Amount:') !!}<span class="asterisk"> *</span>
-    {!! Form::text('amount', null, ['class' => 'form-control','min' => 0, 'step' => 0.01]) !!}
+    {!! Form::label('amount', __('invoice_payments.amount')) !!}<span class="asterisk"> *</span>
+    {!! Form::text('amount', null, ['class' => 'form-control', 'min' => 0, 'step' => 0.01]) !!}
 </div>
-
 
 @can('paymentapprove')
 <!-- Status Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('status', 'Status:') !!}
+    {!! Form::label('status', __('invoice_payments.status')) !!}
     {{ Form::select('status', array(0 => 'New', 1 => 'Completed', 2 => 'Canceled'), null, ['class' => 'form-control']) }}
 </div>
 @endcan
 
 <!-- Attachment Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('attachment', 'Attachment:') !!}
+    {!! Form::label('attachment', __('invoice_payments.attachment')) !!}
     <div class="custom-file">
         <input type="file" class="custom-file-input" name="attachment" id="attachment" enctype="multipart/form-data" accept=".jpg, .jpeg, .png, .pdf">
         <label id="attachment-label" class="custom-file-label" for="attachment" accept=".jpg, .jpeg, .png, .pdf">Choose file</label>
@@ -74,17 +71,16 @@
        </script>
 @endpush -->
 
-
 <!-- Remark Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('remark', 'Remark:') !!}
-    {!! Form::text('remark', null, ['class' => 'form-control','maxlength' => 255,'maxlength' => 255]) !!}
+    {!! Form::label('remark', __('invoice_payments.remark')) !!}
+    {!! Form::text('remark', null, ['class' => 'form-control', 'maxlength' => 255]) !!} <!-- Removed duplicate maxlength -->
 </div>
 
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
-    {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
-    <a href="{{ route('invoicePayments.index') }}" class="btn btn-secondary">Cancel</a>
+    {!! Form::submit(__('invoice_payments.save'), ['class' => 'btn btn-primary']) !!}
+    <a href="{{ route('invoicePayments.index') }}" class="btn btn-secondary">{{ __('invoice_payments.cancel') }}</a>
 </div>
 
 @push('scripts')
@@ -131,11 +127,9 @@
                         HideLoad();
                     }
                 }); 
-
             }
         }
         $('#type').change(function(){
-      
             if($(this).val() == "5")
             {
                 $('#cheque-container').show();

@@ -56,8 +56,7 @@ class TaskTransferController extends AppBaseController
 
         $taskTransfer = $this->taskTransferRepository->create($input);
 
-        Flash::success('Task Transfer saved successfully.');
-
+        Flash::success(__('task_transfers.task_transfer_saved_successfully'));
         return redirect(route('taskTransfers.index'));
     }
 
@@ -73,7 +72,7 @@ class TaskTransferController extends AppBaseController
         $taskTransfer = $this->taskTransferRepository->find($id);
 
         if (empty($taskTransfer)) {
-            Flash::error('Task Transfer not found');
+            Flash::error(__('task_transfers.task_transfer_not_found'));
 
             return redirect(route('taskTransfers.index'));
         }
@@ -93,7 +92,7 @@ class TaskTransferController extends AppBaseController
         $taskTransfer = $this->taskTransferRepository->find($id);
 
         if (empty($taskTransfer)) {
-            Flash::error('Task Transfer not found');
+            Flash::error(__('task_transfers.task_transfer_not_found'));
 
             return redirect(route('taskTransfers.index'));
         }
@@ -114,14 +113,13 @@ class TaskTransferController extends AppBaseController
         $taskTransfer = $this->taskTransferRepository->find($id);
 
         if (empty($taskTransfer)) {
-            Flash::error('Task Transfer not found');
+            Flash::error(__('task_transfers.task_transfer_not_found'));
 
             return redirect(route('taskTransfers.index'));
         }
 
         $taskTransfer = $this->taskTransferRepository->update($request->all(), $id);
-
-        Flash::success('Task Transfer updated successfully.');
+        Flash::success(__('task_transfers.task_transfer_updated_successfully'));    
 
         return redirect(route('taskTransfers.index'));
     }
@@ -138,15 +136,15 @@ class TaskTransferController extends AppBaseController
         $taskTransfer = $this->taskTransferRepository->find($id);
 
         if (empty($taskTransfer)) {
-            Flash::error('Task Transfer not found');
+            Flash::error(__('task_transfers.task_transfer_not_found'));
 
             return redirect(route('taskTransfers.index'));
         }
 
         $this->taskTransferRepository->delete($id);
 
-        Flash::success('Task Transfer deleted successfully.');
-
+        Flash::success(__('task_transfers.task_transfer_deleted_successfully'));
+        
         return redirect(route('taskTransfers.index'));
     }
 }

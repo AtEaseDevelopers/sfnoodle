@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
           <li class="breadcrumb-item">
-             <a href="{!! route('roles.index') !!}">Role</a>
+             <a href="{!! route('roles.index') !!}">{{ __('role.roles') }}</a>
           </li>
-          <li class="breadcrumb-item active">Edit</li>
+          <li class="breadcrumb-item active">{{ __('role.edit') }}</li>
         </ol>
     <div class="container-fluid">
          <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                       <div class="card">
                           <div class="card-header">
                               <i class="fa fa-edit fa-lg"></i>
-                              <strong>Edit Role</strong>
+                              <strong>{{ __('role.edit_role') }}</strong>
                           </div>
                           <div class="card-body">
                               {!! Form::model($role, ['route' => ['roles.update', Crypt::encrypt($role->id)], 'method' => 'patch']) !!}

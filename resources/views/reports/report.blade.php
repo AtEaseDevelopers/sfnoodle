@@ -7,12 +7,12 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('reports.index') }}">Report</a>
+                <a href="{{ route('reports.index') }}">{{ __('report.reports') }}</a>
             </li>
             <li class="breadcrumb-item">
                 <a href="{{ route('reports.show', $report->id) }}">{{ $report->name }}</a>
             </li>
-            <li class="breadcrumb-item active">Run</li>
+            <li class="breadcrumb-item active">{{ __('report.run') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">

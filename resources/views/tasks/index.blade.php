@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Tasks</li>
+        <li class="breadcrumb-item">{{ __('tasks.tasks') }}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                      <div class="card">
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
-                             Tasks
+                             {{ __('tasks.tasks') }}
                              <a class="pull-right text-secondary" href="{{ route('taskTransfers.index') }}"><i class="fa fa-history fa-lg"></i></a>
                              <a class="pull-right" href="{{ route('tasks.create') }}"><i class="fa fa-plus-square fa-lg pr-2"></i></a>
                          </div>

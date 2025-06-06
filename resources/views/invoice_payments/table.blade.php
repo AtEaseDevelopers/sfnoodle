@@ -196,7 +196,7 @@
     <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="infoModelLabel">Select a date range</h5>
+          <h5 class="modal-title" id="infoModelLabel">{{ __('invoice_payments.select_a_date_range') }}</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -206,7 +206,7 @@
             <input id="datefrommodel" type="hidden" value="">
             <input id="datetomodel" type="hidden" value="">
             <div class="form-group col-sm-12">
-                <label for="datefrommodel">Date:</label>
+                <label for="datefrommodel">{{ __('invoice_payments.date') }}:</label>
                 <div id="reportrange" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
                     <i class="fa fa-calendar"></i>&nbsp;
                     <span></span> <i class="fa fa-caret-down"></i>
@@ -214,8 +214,8 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-primary" onclick="dateRange();">Search</button>
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="dateRange();">{{ __('invoice_payments.search') }}</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('invoice_payments.close') }}</button>
         </div>
       </div>
     </div>

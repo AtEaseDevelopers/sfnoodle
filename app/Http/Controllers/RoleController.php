@@ -71,7 +71,7 @@ class RoleController extends AppBaseController
             ]);
         }
 
-        Flash::success('Role saved successfully.');
+        Flash::success(__('role.role_saved_successfully'));
 
         return redirect(route('roles.index'));
     }
@@ -89,7 +89,7 @@ class RoleController extends AppBaseController
         $role = $this->roleRepository->find($id);
 
         if (empty($role)) {
-            Flash::error('Role not found');
+            Flash::error(__('role.role_not_found'));
 
             return redirect(route('roles.index'));
         }
@@ -115,7 +115,7 @@ class RoleController extends AppBaseController
         $role = $this->roleRepository->find($id);
 
         if (empty($role)) {
-            Flash::error('Role not found');
+            Flash::error(__('role.role_not_found'));
 
             return redirect(route('roles.index'));
         }
@@ -141,7 +141,7 @@ class RoleController extends AppBaseController
         $role = $this->roleRepository->find($id);
 
         if (empty($role)) {
-            Flash::error('Role not found');
+            Flash::error(__('role.role_not_found'));
 
             return redirect(route('roles.index'));
         }
@@ -158,7 +158,7 @@ class RoleController extends AppBaseController
             ]);
         }
 
-        Flash::success('Role updated successfully.');
+        Flash::success(__('role.role_updated_successfully'));
 
         return redirect(route('roles.index'));
     }
@@ -176,7 +176,7 @@ class RoleController extends AppBaseController
         $role = $this->roleRepository->find($id);
 
         if (empty($role)) {
-            Flash::error('Role not found');
+            Flash::error(__('role.role_not_found'));
 
             return redirect(route('roles.index'));
         }
@@ -185,7 +185,7 @@ class RoleController extends AppBaseController
 
         DB::table('role_has_permissions')->where('role_id', $id)->delete();
 
-        Flash::success('Role deleted successfully.');
+        Flash::success(__('role.role_deleted_successfully'));
 
         return redirect(route('roles.index'));
     }

@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Trips</li>
+        <li class="breadcrumb-item">{{ __('trips.trips') }}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                      <div class="card">
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
-                             Trips
+                             {{ __('trips.trips') }}
                          </div>
                          <div class="card-body">
                              @include('trips.table')

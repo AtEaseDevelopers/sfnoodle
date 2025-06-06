@@ -2,7 +2,7 @@
 
 @section('content')
 <ol class="breadcrumb">
-    <li class="breadcrumb-item">Dashboard</li>
+    <li class="breadcrumb-item">{{ __('dashboard.dashboard') }}</li>
 </ol>
   <div class="container-fluid">
        <div class="animated fadeIn">
@@ -10,20 +10,20 @@
                <div class="col">
                    <div class="card mb-4">
                        <div class="card-header">
-                           <strong>Total Sales (RM)</strong>
+                           <strong>{{ __('dashboard.total_sales_rm') }}</strong>
                            <div class="float-right px-2">
                                <button type="button" class="btn btn-sm btn-primary" onclick="getTotalSales();"><i class="icon-reload icons d-block mt-1" style="font-size:21px;"></i></button>
                            </div>
                            <div class="float-right px-2">
                                <div class="btn-group">
                                    <button id="total-sales-by" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                   By DAY
+                                   {{ __('dashboard.by_day') }}
                                    </button>
                                    <div class="dropdown-menu">
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('DAY');">DAY</a>
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('WEEK');">WEEK</a>
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('MONTH');">MONTH</a>
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('YEAR');">YEAR</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('DAY');">{{ __('dashboard.day') }}</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('WEEK');">{{ __('dashboard.week') }}</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('MONTH');">{{ __('dashboard.month') }}</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesBy('YEAR');">{{ __('dashboard.year') }}</a>
                                    </div>
                                </div>
                            </div>
@@ -53,20 +53,20 @@
                <div class="col">
                    <div class="card mb-4">
                        <div class="card-header">
-                           <strong>Total Sales (Quantity)</strong>
+                           <strong>{{ __('dashboard.total_sales_quantity') }}</strong>
                            <div class="float-right px-2">
                                <button type="button" class="btn btn-sm btn-primary" <!--onclick="getTotalSalesQty();"><i class="icon-reload icons d-block mt-1" style="font-size:21px;"></i></button>
                            </div>
                            <div class="float-right px-2">
                                <div class="btn-group">
                                    <button id="total-sales-by" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                   By DAY
+                                   {{ __('dashboard.by_day') }}
                                    </button>
                                    <div class="dropdown-menu">
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('DAY');">DAY</a>
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('WEEK');">WEEK</a>
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('MONTH');">MONTH</a>
-                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('YEAR');">YEAR</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('DAY');">{{ __('dashboard.day') }}</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('WEEK');">{{ __('dashboard.week') }}</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('MONTH');">{{ __('dashboard.month') }}</a>
+                                   <a class="dropdown-item" href="#" onclick="setTotalSalesQtyBy('YEAR');">{{ __('dashboard.year') }}</a>
                                    </div>
                                </div>
                            </div>

@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Driver Locations</li>
+        <li class="breadcrumb-item">{{ __('driver_locations.driver_locations')}}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                     <div class="card">
                         <div class="card-header">
                             <i class="fa fa-align-justify"></i>
-                            Summary
+                            {{ __('driver_locations.summary')}}
                         </div>
                         <div class="card-body">
                             <div id="map"></div>
@@ -21,12 +21,12 @@
                      <div class="card">
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
-                             Transactions
+                             {{ __('driver_locations.transactions')}}
                              {{-- <a class="pull-right" href="{{ route('driverLocations.create') }}"><i class="fa fa-plus-square fa-lg"></i></a> --}}
                          </div>
                          <div class="card-body">
                              <div class="pull-right mr-3">
-                                <button id="findDriversOnMap" class="btn btn-primary">Find Drivers on Map</button>
+                                <button id="findDriversOnMap" class="btn btn-primary">{{ __('driver_locations.find_drivers_on_map')}}</button>
                             </div>
                              @include('driver_locations.table')
                               <div class="pull-right mr-3">

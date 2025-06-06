@@ -1,29 +1,31 @@
 <!-- Driver Id Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('driver_id', 'Driver:') !!}<span class="asterisk"> *</span>
+    {!! Form::label('driver_id', __('assign.driver')) !!}<span class="asterisk"> *</span>
     {!! Form::select('driver_id', $driverItems, null, [
         'class' => 'form-control',
-        'placeholder' => 'Pick a Driver...',
+        'placeholder' => __('assign.placeholder_pick_driver'),
         'autofocus',
         'required' => true
     ]) !!}
 </div>
 
-
 <!-- Customer Id Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('group', 'Group:') !!}<span class="asterisk"> *</span>
-    {!! Form::select('group', $groups, null, ['class' => 'form-control', 'placeholder' => 'Pick a Group...', 'required' => true]) !!}
+    {!! Form::label('group', __('assign.group')) !!}<span class="asterisk"> *</span>
+    {!! Form::select('group', $groups, null, [
+        'class' => 'form-control',
+        'placeholder' => __('assign.placeholder_pick_group'),
+        'required' => true
+    ]) !!}
 </div>
 
 <div class="form-group col-sm-6" id="sequence_details">
 </div>
 
-
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
-    {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
-    <a href="{{ route('assigns.index') }}" class="btn btn-secondary">Cancel</a>
+    {!! Form::submit(__('assign.save'), ['class' => 'btn btn-primary']) !!}
+    <a href="{{ route('assigns.index') }}" class="btn btn-secondary">{{ __('assign.cancel') }}</a>
 </div>
 
 @push('scripts')
@@ -42,10 +44,9 @@
             insert();
         });
 
-        function insert()
-        {
+        function insert() {
             var group_id = $('#group').val();
-            if(group_id == null || group_id == '') {
+            if (group_id == null || group_id == '') {
                 return;
             }
             ShowLoad();
@@ -61,19 +62,20 @@
                 success: function(response) {
                     if (response.status) {
                         var result = `
-                                    <table class="table table-striped table-bordered dataTable" width="100%" style="width: 100%;">
-                                        <thead>
-                                            <tr role="row">
-                                                <th>
-                                                    Company
-                                                </th>
-                                                <th>
-                                                    Sequence
-                                                </th>
-                                        </thead>
-                                        <tbody>
-                                    `;
-                        $.each(response.data, function(v,k) {
+                            <table class="table table-striped table-bordered dataTable" width="100%" style="width: 100%;">
+                                <thead>
+                                    <tr role="row">
+                                        <th>
+                                            {{ __('assign.company') }}
+                                        </th>
+                                        <th>
+                                            {{ __('assign.sequence') }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        $.each(response.data, function(v, k) {
                             result = result + generateTr(k['id'], k['company']);
                         });
                         result = result + `
@@ -93,13 +95,12 @@
             });
         }
 
-        function generateTr(customer_id,customer_name)
-        {
+        function generateTr(customer_id, customer_name) {
             return `
             <tr role="row" class="odd">
                 <td>
                     <select class="form-control" name="customer[]">
-                        <option selected="selected" value="`+customer_id+`">`+customer_name+`</option>
+                        <option selected="selected" value="` + customer_id + `">` + customer_name + `</option>
                     </select>
                 </td>
                 <td>

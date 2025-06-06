@@ -56,15 +56,50 @@ class InventoryTransferDataTable extends DataTable
                 'processing' => false,
                 'order'     => [[0, 'desc']],
                 'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
-                'buttons'   => [
-                    // ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'excelHtml5','text'=>'<i class="fa fa-file-excel-o"></i> Excel','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'inventorytransfer'.date('dmYHis')],
-                    ['extend' => 'pdfHtml5', 'orientation' => 'landscape', 'pageSize' => 'LEGAL','text'=>'<i class="fa fa-file-pdf-o"></i> PDF','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'inventorytransfer'.date('dmYHis')],
-                    ['extend' => 'colvis', 'className' => 'btn btn-default btn-sm no-corner','text'=>'<i class="fa fa-columns"></i> Column',],
-                    ['extend' => 'pageLength','className' => 'btn btn-default btn-sm no-corner',],
+                'buttons' => [
+                    [
+                        'extend' => 'print',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-print"></i> ' . trans('table_buttons.print'),
+                    ],
+                    [
+                        'extend' => 'reset',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reset'),
+                    ],
+                    [
+                        'extend' => 'reload',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reload'),
+                    ],
+                    [
+                        'extend' => 'excelHtml5',
+                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'pdfHtml5',
+                        'orientation' => 'landscape',
+                        'pageSize' => 'LEGAL',
+                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'colvis',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                    ],
+                    [
+                        'extend' => 'pageLength',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => trans('table_buttons.show_10_rows')
+                    ],
                 ],
                 'columnDefs' => [
                     [
@@ -114,33 +149,33 @@ class InventoryTransferDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'date'=> new \Yajra\DataTables\Html\Column(['title' => 'Date',
+            'date'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transfers.date'),
             'data' => 'date',
             'name' => 'date']),
 
-            'from_driver_id'=> new \Yajra\DataTables\Html\Column(['title' => 'From Driver',
+            'from_driver_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transfers.from_driver'),
             'data' => 'fromdriver.name',
             'name' => 'fromdriver.name']),
 
-            'from_lorry_id'=> new \Yajra\DataTables\Html\Column(['title' => 'From Lorry',
+            'from_lorry_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transfers.from_lorry'),
             'data' => 'fromlorry.lorryno',
             'name' => 'fromlorry.lorryno']),
 
-            'to_driver_id'=> new \Yajra\DataTables\Html\Column(['title' => 'To Driver',
+            'to_driver_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transfers.to_driver'),
             'data' => 'todriver.name',
             'name' => 'todriver.name']),
 
-            'to_lorry_id'=> new \Yajra\DataTables\Html\Column(['title' => 'To Lorry',
+            'to_lorry_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transfers.to_lorry'),
             'data' => 'tolorry.lorryno',
             'name' => 'tolorry.lorryno']),
 
-            'product_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Product',
+            'product_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transfers.product'),
             'data' => 'product.name',
             'name' => 'product.name']),
 
-            'quantity',
-            'status',
-            'remark'
+            trans('inventory_transfers.quantity'),
+            trans('inventory_transfers.status'),
+            trans('inventory_transfers.remark'),
         ];
     }
 

@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Customers</li>
+        <li class="breadcrumb-item">{{ __('customers.customers')}}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                      <div class="card">
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
-                             Customers
+                             {{ __('customers.customers')}}
                             <a class="pull-right" href="{{ route('customers.create') }}"><i class="fa fa-plus-square fa-lg"></i></a>
                             <!--<a class="pull-right pr-2" id="masssyncxero" href="#" alt="Mass Sync to Xero"><i class="fa fa-refresh fa-lg"></i></a>-->
                          </div>

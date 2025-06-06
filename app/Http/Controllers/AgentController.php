@@ -69,7 +69,7 @@ class AgentController extends AppBaseController
         }
         $kelindan = $this->agentRepository->create($input);
 
-        Flash::success($input['name'].' saved successfully.');
+        Flash::success($input['name'].__('agents.saved_successfully'));
 
         return redirect(route('agents.index'));
     }
@@ -87,7 +87,7 @@ class AgentController extends AppBaseController
         $agent = $this->agentRepository->find($id);
 
         if (empty($agent)) {
-            Flash::error('Agent not found');
+            Flash::error(__('agents.agent_not_found'));
 
             return redirect(route('agents.index'));
         }
@@ -108,7 +108,7 @@ class AgentController extends AppBaseController
         $agent = $this->agentRepository->find($id);
 
         if (empty($agent)) {
-            Flash::error('Agent not found');
+            Flash::error(__('agents.agent_not_found'));
 
             return redirect(route('agents.index'));
         }
@@ -130,7 +130,7 @@ class AgentController extends AppBaseController
         $agent = $this->agentRepository->find($id);
 
         if (empty($agent)) {
-            Flash::error('Agent not found');
+            Flash::error(__('agents.agent_not_found'));
 
             return redirect(route('agents.index'));
         }
@@ -146,7 +146,7 @@ class AgentController extends AppBaseController
 
         $agent = $this->agentRepository->update($input, $id);
 
-        Flash::success('Agent updated successfully.');
+        Flash::success(__('agents.agent_updated_successfully'));
 
         return redirect(route('agents.index'));
     }
@@ -164,7 +164,7 @@ class AgentController extends AppBaseController
         $agent = $this->agentRepository->find($id);
 
         if (empty($agent)) {
-            Flash::error('Agent not found');
+            Flash::error(__('agents.agent_not_found'));
 
             return redirect(route('agents.index'));
         }
@@ -185,7 +185,7 @@ class AgentController extends AppBaseController
 
         $this->agentRepository->delete($id);
 
-        Flash::success($agent->name.' deleted successfully.');
+        Flash::success($agent->name.__('agents.deleted_successfully'));
 
         return redirect(route('agents.index'));
     }

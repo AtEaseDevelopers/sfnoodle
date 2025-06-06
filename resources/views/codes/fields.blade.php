@@ -1,24 +1,24 @@
 <!-- Code Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('code', 'Code:') !!}<span class="asterisk"> *</span>
-    {!! Form::text('code', null, ['class' => 'form-control','autofocus']) !!}
+    {!! Form::label('code', __('codes.code')) !!}<span class="asterisk"> *</span>
+    {!! Form::text('code', null, ['class' => 'form-control', 'autofocus']) !!}
 </div>
 
 <!-- Description Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('description', 'Description:') !!}
+    {!! Form::label('description', __('codes.description')) !!}
     {!! Form::text('description', null, ['class' => 'form-control']) !!}
 </div>
 
 <!-- Value Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('value', 'Value:') !!}<span class="asterisk"> *</span>
+    {!! Form::label('value', __('codes.value')) !!}<span class="asterisk"> *</span>
     {!! Form::text('value', null, ['class' => 'form-control']) !!}
 </div>
 
 <!-- Sequence Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('sequence', 'Sequence:') !!}<span class="asterisk"> *</span>
+    {!! Form::label('sequence', __('codes.sequence')) !!}<span class="asterisk"> *</span>
     {!! Form::number('sequence', null, ['class' => 'form-control']) !!}
 </div>
 
@@ -60,8 +60,8 @@
 
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
-    {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
-    <a href="{{ route('codes.index') }}" class="btn btn-secondary">Cancel</a>
+    {!! Form::submit(__('codes.save'), ['class' => 'btn btn-primary']) !!}
+    <a href="{{ route('codes.index') }}" class="btn btn-secondary">{{ __('codes.cancel') }}</a>
 </div>
 
 @push('scripts')

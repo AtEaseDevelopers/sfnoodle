@@ -123,7 +123,7 @@ class InvoicePaymentController extends AppBaseController
         $invoicePayment = $this->invoicePaymentRepository->find($id);
 
         if (empty($invoicePayment)) {
-            Flash::error('Payment not found');
+            Flash::error(__('invoice_payments.payment_not_found'));
 
             return redirect(route('invoicePayments.index'));
         }
@@ -144,7 +144,7 @@ class InvoicePaymentController extends AppBaseController
         $invoicePayment = $this->invoicePaymentRepository->find($id);
 
         if (empty($invoicePayment)) {
-            Flash::error('Payment not found');
+            Flash::error(__('invoice_payments.payment_not_found'));
 
             return redirect(route('invoicePayments.index'));
         }
@@ -172,7 +172,7 @@ class InvoicePaymentController extends AppBaseController
         $invoicePayment = $this->invoicePaymentRepository->find($id);
 
         if (empty($invoicePayment)) {
-            Flash::error('Payment not found');
+            Flash::error(__('invoice_payments.payment_not_found'));
 
             return redirect(route('invoicePayments.index'));
         }
@@ -235,20 +235,20 @@ class InvoicePaymentController extends AppBaseController
         $invoicePayment = $this->invoicePaymentRepository->find($id);
 
         if (empty($invoicePayment)) {
-            Flash::error('Payment not found');
+            Flash::error(__('invoice_payments.payment_not_found'));
 
             return redirect(route('invoicePayments.index'));
         }
 
         if($invoicePayment->status == 1){
-            Flash::error('Cannot delete completed Payment!');
+            Flash::error(__('invoice_payments.cannot_delete_completed_payment'));
 
             return redirect(route('invoicePayments.index'));
         }
 
         $this->invoicePaymentRepository->delete($id);
 
-        Flash::success('Payment deleted successfully.');
+        Flash::success(__('invoice_payments.payment_deleted_successfully'));
 
         return redirect(route('invoicePayments.index'));
     }
@@ -290,12 +290,12 @@ class InvoicePaymentController extends AppBaseController
         $invoicePayment = $this->invoicePaymentRepository->find($id);
 
         if (empty($invoicePayment)) {
-            Flash::error('Payment not found');
+            Flash::error(__('invoice_payments.payment_not_found'));
             return redirect(route('invoicePayments.index'));
         }
 
         if($invoicePayment->status != 0){
-            Flash::error('Payment had been completed!');
+            Flash::error(__('invoice_payments.payment_had_been_completed'));
 
             return redirect(route('invoicePayments.index'));
         }
@@ -310,7 +310,7 @@ class InvoicePaymentController extends AppBaseController
         $invoicePayment->remark = $input['remark'];
         $invoicePayment->save();
 
-        Flash::success('Payment udpated successfully.');
+        Flash::success(__('invoice_payments.payment_updated_successfully'));
 
         return redirect(route('invoicePayments.index'));
     }
@@ -433,15 +433,16 @@ class InvoicePaymentController extends AppBaseController
                 report($th);
 
                 $xero_has_err = true;
-                Flash::error('Something went wrong. Please contact administator.');
+                Flash::error(__('invoice_payments.something_went_wrong'));
+
             }
         }
         
         if (!$xero_has_err) {
             if ($is_store == true) {
-                Flash::success('Payment saved successfully.');
+                Flash::success(__('invoice_payments.payment_saved_successfully'));
             } else {
-                Flash::success('Payment updated successfully.');
+                Flash::success(__('invoice_payments.payment_updated_successfully'));
             }
 
             DB::commit();

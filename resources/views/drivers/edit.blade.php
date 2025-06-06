@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
           <li class="breadcrumb-item">
-             <a href="{!! route('drivers.index') !!}">Driver</a>
+             <a href="{!! route('drivers.index') !!}">{{ __('drivers.drivers') }}</a>
           </li>
-          <li class="breadcrumb-item active">Edit</li>
+          <li class="breadcrumb-item active">{{ __('drivers.edit') }}</li>
         </ol>
     <div class="container-fluid">
          <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                       <div class="card">
                           <div class="card-header">
                               <i class="fa fa-edit fa-lg"></i>
-                              <strong>Edit Driver</strong>
+                              <strong>{{ __('drivers.edit_driver') }}</strong>
                           </div>
                           <div class="card-body">
                               {!! Form::model($driver, ['route' => ['drivers.update',Crypt::encrypt($driver->id)], 'method' => 'patch']) !!}

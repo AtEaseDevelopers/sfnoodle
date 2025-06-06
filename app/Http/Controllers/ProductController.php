@@ -76,7 +76,7 @@ class ProductController extends AppBaseController
 
         $product = $this->productRepository->create($input);
 
-        Flash::success($input['code'].' saved successfully.');;
+        Flash::success($input['code'].__('products.saved_successfully'));
 
         return redirect(route('products.index'));
     }
@@ -94,7 +94,7 @@ class ProductController extends AppBaseController
         $product = $this->productRepository->find($id);
 
         if (empty($product)) {
-            Flash::error('Product not found');
+            Flash::error(__('products.product_not_found'));
 
             return redirect(route('products.index'));
         }
@@ -115,7 +115,7 @@ class ProductController extends AppBaseController
         $product = $this->productRepository->find($id);
 
         if (empty($product)) {
-            Flash::error('Product not found');
+            Flash::error(__('products.product_not_found'));
 
             return redirect(route('products.index'));
         }
@@ -137,7 +137,7 @@ class ProductController extends AppBaseController
         $product = $this->productRepository->find($id);
 
         if (empty($product)) {
-            Flash::error('Product not found');
+            Flash::error(__('products.product_not_found'));
 
             return redirect(route('products.index'));
         }
@@ -154,7 +154,7 @@ class ProductController extends AppBaseController
 
         $product = $this->productRepository->update($input, $id);
 
-        Flash::success($product->code.' updated successfully.');
+        Flash::success($product->code.__('products.updated_successfully'));
 
         return redirect(route('products.index'));
     }
@@ -172,7 +172,7 @@ class ProductController extends AppBaseController
         $product = $this->productRepository->find($id);
 
         if (empty($product)) {
-            Flash::error('Product not found');
+            Flash::error(__('products.product_not_found'));
 
             return redirect(route('products.index'));
         }
@@ -200,7 +200,7 @@ class ProductController extends AppBaseController
 
         $this->productRepository->delete($id);
 
-        Flash::success($product->code.' deleted successfully.');
+        Flash::success($product->code.__('products.deleted_successfully'));
 
         return redirect(route('products.index'));
     }

@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'kelindans' => 'Kelindans',
+    'create' => 'Create',
+    'edit' => 'Edit',
+    'detail' => 'Detail',
+    'create_kelindan' => 'Create kelindan',
+    'edit_kelindan' => 'Edit kelindan',
+    'save' => 'Save',
+    'cancel' => 'Cancel',
+    'status' => 'Status',
+    'remark' => 'Remark',
+    'are_you_sure_to_delete_the_kelindan' => 'Are you sure to delete the kelindan',
+    'employee_id' => 'Employee id',
+    'name' => 'Name',
+    'ic' => 'Ic',
+    'phone' => 'Phone',
+    'bank_details_1' => 'Bank details 1',
+    'bank_details_2' => 'Bank details 2',
+    'permit_date' => 'Permit date',
+    'active' => 'Active',
+    'unactive' => 'Unactive',
+    'saved_successfully' => 'Saved successfully',
+    'updated_successfully' => 'Updated successfully',
+    'deleted_successfully' => 'Deleted successfully',
+    'kelindan_not_found' => 'Kelindan not found',
+];

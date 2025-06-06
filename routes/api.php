@@ -18,6 +18,10 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/testconnection', function (Request $request) {
         return 'OK';
     });
+    //language
+    Route::get('/supported-languages', [App\Http\Controllers\Api\V1\DriverController::class, 'getAllLanguages']);
+    Route::post('/language', [App\Http\Controllers\Api\V1\DriverController::class, 'getTranslations']);
+
     //Auth
     Route::post('/driver/login', [App\Http\Controllers\Api\V1\DriverController::class, 'login']);
     Route::post('/driver/location', [App\Http\Controllers\Api\V1\DriverController::class, 'location']);

@@ -1,49 +1,49 @@
 <!-- EmployeeId Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('employeeid', 'Employee ID:') !!}<span class="asterisk"> *</span>
-    {!! Form::text('employeeid', null, ['class' => 'form-control','maxlength' => 20,'autofocus']) !!}
+    {!! Form::label('employeeid', __('operations.employee_id')) !!}<span class="asterisk"> *</span>
+    {!! Form::text('employeeid', null, ['class' => 'form-control', 'maxlength' => 20, 'autofocus']) !!}
 </div>
 
 <!-- Name Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('name', 'Name:') !!}<span class="asterisk"> *</span>
-    {!! Form::text('name', null, ['class' => 'form-control','maxlength' => 255,'autofocus']) !!}
+    {!! Form::label('name', __('operations.name')) !!}<span class="asterisk"> *</span>
+    {!! Form::text('name', null, ['class' => 'form-control', 'maxlength' => 255, 'autofocus']) !!}
 </div>
 
 <!-- Ic Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('ic', 'IC:') !!}
-    {!! Form::text('ic', null, ['class' => 'form-control','maxlength' => 20]) !!}
+    {!! Form::label('ic', __('operations.ic')) !!}
+    {!! Form::text('ic', null, ['class' => 'form-control', 'maxlength' => 20]) !!}
 </div>
 
 <!-- Phone Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('phone', 'Phone:') !!}
-    {!! Form::text('phone', null, ['class' => 'form-control','maxlength' => 255]) !!}
+    {!! Form::label('phone', __('operations.phone')) !!}
+    {!! Form::text('phone', null, ['class' => 'form-control', 'maxlength' => 255]) !!}
 </div>
 
-{{-- <!-- CommissionRate Field -->
-<div class="form-group col-sm-6">
+<!-- CommissionRate Field -->
+<!-- <div class="form-group col-sm-6">
     {!! Form::label('commissionrate', 'Commission Rate:') !!}<span class="asterisk"> *</span>
-    {!! Form::number('commissionrate', null, ['class' => 'form-control','step'=>'0.01','min'=>'0', 'required'=> 'true']) !!}
-</div> --}}
+    {!! Form::number('commissionrate', null, ['class' => 'form-control', 'step' => '0.01', 'min' => '0', 'required' => 'true']) !!}
+</div> -->
 
 <!-- bankdetails1 Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('bankdetails1', 'Bank Details 1:') !!}
-    {!! Form::text('bankdetails1', null, ['class' => 'form-control','maxlength' => 255,'maxlength' => 255]) !!}
+    {!! Form::label('bankdetails1', __('operations.bank_details_1')) !!}
+    {!! Form::text('bankdetails1', null, ['class' => 'form-control', 'maxlength' => 255]) !!} <!-- Removed duplicate maxlength -->
 </div>
 
 <!-- bankdetails2 Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('bankdetails2', 'Bank Details 2:') !!}
-    {!! Form::text('bankdetails2', null, ['class' => 'form-control','maxlength' => 255,'maxlength' => 255]) !!}
+    {!! Form::label('bankdetails2', __('operations.bank_details_2')) !!}
+    {!! Form::text('bankdetails2', null, ['class' => 'form-control', 'maxlength' => 255]) !!} <!-- Removed duplicate maxlength -->
 </div>
 
 <!-- firstvaccine Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('firstvaccine', '1st Vaccine Date:') !!}
-    {!! Form::text('firstvaccine', null, ['class' => 'form-control','id'=>'firstvaccine']) !!}
+    {!! Form::label('firstvaccine', __('operations.first_vaccine_date')) !!}
+    {!! Form::text('firstvaccine', null, ['class' => 'form-control', 'id' => 'firstvaccine']) !!}
 </div>
 
 @push('scripts')
@@ -68,8 +68,8 @@
 
 <!-- secondvaccine Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('secondvaccine', '2nd Vaccine Date:') !!}
-    {!! Form::text('secondvaccine', null, ['class' => 'form-control','id'=>'secondvaccine']) !!}
+    {!! Form::label('secondvaccine', __('operations.second_vaccine_date')) !!}
+    {!! Form::text('secondvaccine', null, ['class' => 'form-control', 'id' => 'secondvaccine']) !!}
 </div>
 
 @push('scripts')
@@ -94,26 +94,29 @@
 
 <!-- temperature Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('temperature', 'Body Temperature:') !!}
-    {!! Form::number('temperature', null, ['class' => 'form-control','step'=>'0.1','min'=>'0']) !!}
+    {!! Form::label('temperature', __('operations.body_temperature')) !!}
+    {!! Form::number('temperature', null, ['class' => 'form-control', 'step' => '0.1', 'min' => '0']) !!}
 </div>
 
 <!-- Status Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('status', 'Status:') !!}<span class="asterisk"> *</span>
-    {{ Form::select('status', array(1 => 'Active', 0 => 'Unactive'), null, ['class' => 'form-control']) }}
+    {!! Form::label('status', __('operations.status')) !!}<span class="asterisk"> *</span>
+    {{ Form::select('status', [
+        1 => __('operations.active'),
+        0 => __('operations.unactive'),
+    ], null, ['class' => 'form-control']) }}
 </div>
 
 <!-- Remark Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('remark', 'Remark:') !!}
-    {!! Form::text('remark', null, ['class' => 'form-control','maxlength' => 255,'maxlength' => 255]) !!}
+    {!! Form::label('remark', __('operations.remark')) !!}
+    {!! Form::text('remark', null, ['class' => 'form-control', 'maxlength' => 255]) !!} <!-- Removed duplicate maxlength -->
 </div>
 
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
-    {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
-    <a href="{{ route('supervisors.index') }}" class="btn btn-secondary">Cancel</a>
+    {!! Form::submit(__('operations.save'), ['class' => 'btn btn-primary']) !!}
+    <a href="{{ route('supervisors.index') }}" class="btn btn-secondary">{{ __('operations.cancel') }}</a>
 </div>
 
 @push('scripts')

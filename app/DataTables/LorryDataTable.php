@@ -81,7 +81,7 @@ class LorryDataTable extends DataTable
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->addAction(['width' => '120px', 'printable' => false])
+            ->addAction(['title' => trans('invoices.action'), 'printable' => false])
             ->parameters([
                 'dom'       => '<"row"B><"row"<"dataTableBuilderDiv"t>><"row"ip>',
                 'stateSave' => true,
@@ -89,15 +89,55 @@ class LorryDataTable extends DataTable
                 'processing' => false,
                 'order'     => [[1, 'desc']],
                 'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
-                'buttons'   => [
-                    ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'excelHtml5','text'=>'<i class="fa fa-file-excel-o"></i> Excel','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'Lorry'.date('dmYHis')],
-                    ['extend' => 'pdfHtml5', 'orientation' => 'landscape', 'pageSize' => 'LEGAL','text'=>'<i class="fa fa-file-pdf-o"></i> PDF','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'Lorry'.date('dmYHis')],
-                    ['extend' => 'colvis', 'className' => 'btn btn-default btn-sm no-corner','text'=>'<i class="fa fa-columns"></i> Column',],
-                    ['extend' => 'pageLength','className' => 'btn btn-default btn-sm no-corner',],
+                'buttons' => [
+                    [
+                        'extend' => 'create',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-plus"></i> ' . trans('table_buttons.create'),
+                    ],
+                    [
+                        'extend' => 'print',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-print"></i> ' . trans('table_buttons.print'),
+                    ],
+                    [
+                        'extend' => 'reset',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reset'),
+                    ],
+                    [
+                        'extend' => 'reload',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reload'),
+                    ],
+                    [
+                        'extend' => 'excelHtml5',
+                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'pdfHtml5',
+                        'orientation' => 'landscape',
+                        'pageSize' => 'LEGAL',
+                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'colvis',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                    ],
+                    [
+                        'extend' => 'pageLength',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => trans('table_buttons.show_10_rows')
+                    ],
                 ],
                 'columnDefs' => [
                     [
@@ -192,7 +232,7 @@ class LorryDataTable extends DataTable
             'orderable' => false,
             'searchable' => false]),
 
-            'lorryno'=> new \Yajra\DataTables\Html\Column(['title' => 'Lorry#',
+            'lorryno'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoices.lorry_no'),
             'data' => 'lorryno',
             'name' => 'lorryno']),
 
@@ -216,36 +256,37 @@ class LorryDataTable extends DataTable
             // 'data' => 'permitholder',
             // 'name' => 'permitholder']),
 
-            'tyre'=> new \Yajra\DataTables\Html\Column(['title' => 'Tyre Next Date',
+            'tyre'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.tyre_next_date'),
             'data' => 'tyrenextdateshow',
             'name' => 'tyrenextdate']),
 
-            'insurance'=> new \Yajra\DataTables\Html\Column(['title' => 'Insurance Next Date',
+            'insurance'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.insurance_next_date'),
             'data' => 'insurancenextdateshow',
             'name' => 'insurancenextdate']),
 
-            'permit'=> new \Yajra\DataTables\Html\Column(['title' => 'Permit Next Date',
+            'permit'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.permit_next_date'),
             'data' => 'permitnextdateshow',
             'name' => 'permitnextdate']),
 
-            'roadtax'=> new \Yajra\DataTables\Html\Column(['title' => 'Road Tax Next Date',
+            'roadtax'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.road_tax_next_date'),
             'data' => 'roadtaxnextdateshow',
             'name' => 'roadtaxnextdate']),
 
-            'inspection'=> new \Yajra\DataTables\Html\Column(['title' => 'Inspection Next Date',
+            'inspection'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.inspection_next_date'),
             'data' => 'inspectionnextdateshow',
             'name' => 'inspectionnextdate']),
 
-            'other'=> new \Yajra\DataTables\Html\Column(['title' => 'Other Next Date',
+            'other'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('lorries.other_next_date'),
             'data' => 'othernextdateshow',
             'name' => 'othernextdate']),
 
-            'fireextinguisher'=> new \Yajra\DataTables\Html\Column(['title' => 'Fire Extinguisher',
+            'fireextinguisher'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.fire_extinguisher'),
             'data' => 'fireextinguishernextdateshow',
             'name' => 'fireextinguisher']),
 
-            'status',
-            'remark',
+            trans('lorries.status'),
+            trans('lorries.remark'),
+            
             // 'STR_UDF1'=> new \Yajra\DataTables\Html\Column(['title' => 'String UDF1',
             // 'data' => 'STR_UDF1',
             // 'name' => 'STR_UDF1']),

@@ -46,7 +46,7 @@ class TaskDataTable extends DataTable
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->addAction(['width' => '120px', 'printable' => false])
+            ->addAction(['title' => trans('tasks.action'), 'printable' => false])
             ->parameters([
                 'dom'       => '<"row"B><"row"<"dataTableBuilderDiv"t>><"row"ip>',
                 'stateSave' => true,
@@ -54,15 +54,55 @@ class TaskDataTable extends DataTable
                 'processing' => false,
                 'order'     => [[1, 'desc']],
                 'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
-                'buttons'   => [
-                    ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'excelHtml5','text'=>'<i class="fa fa-file-excel-o"></i> Excel','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'task'.date('dmYHis')],
-                    ['extend' => 'pdfHtml5', 'orientation' => 'landscape', 'pageSize' => 'LEGAL','text'=>'<i class="fa fa-file-pdf-o"></i> PDF','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'task'.date('dmYHis')],
-                    ['extend' => 'colvis', 'className' => 'btn btn-default btn-sm no-corner','text'=>'<i class="fa fa-columns"></i> Column',],
-                    ['extend' => 'pageLength','className' => 'btn btn-default btn-sm no-corner',],
+                'buttons' => [
+                    [
+                        'extend' => 'create',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-plus"></i> ' . trans('table_buttons.create'),
+                    ],
+                    [
+                        'extend' => 'print',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-print"></i> ' . trans('table_buttons.print'),
+                    ],
+                    [
+                        'extend' => 'reset',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reset'),
+                    ],
+                    [
+                        'extend' => 'reload',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reload'),
+                    ],
+                    [
+                        'extend' => 'excelHtml5',
+                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'pdfHtml5',
+                        'orientation' => 'landscape',
+                        'pageSize' => 'LEGAL',
+                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'colvis',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                    ],
+                    [
+                        'extend' => 'pageLength',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => trans('table_buttons.show_10_rows')
+                    ],
                 ],
                 'columnDefs' => [
                     [
@@ -135,27 +175,26 @@ class TaskDataTable extends DataTable
             'orderable' => false,
             'searchable' => false]),
 
-            'trip_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Trip ID',
-            'data' => 'trip_id',
+            'trip_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.trip_id'),
             'name' => 'trip_id']),
 
-            'date',
+            trans('tasks.date'),
 
-            'driver_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Driver',
+            'driver_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.driver'),
             'data' => 'driver.name',
             'name' => 'driver.name']),
 
-            'customer_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Customer',
+            'customer_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.customer'),
             'data' => 'customer.company',
             'name' => 'customer.company']),
 
-            'sequence',
+            trans('tasks.sequence'),
 
-            'invoice_id'=> new \Yajra\DataTables\Html\Column(['title' => 'Invoice No',
+            'invoice_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.invoice_no'),
             'data' => 'invoice.invoiceno',
             'name' => 'invoice.invoiceno']),
 
-            'status'
+            trans('tasks.status'),
         ];
     }
 

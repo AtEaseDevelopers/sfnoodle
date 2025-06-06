@@ -3,9 +3,9 @@
 @section('content')
      <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('drivers.index') }}">Driver</a>
+                <a href="{{ route('drivers.index') }}">{{ __('drivers.drivers') }}</a>
             </li>
-            <li class="breadcrumb-item active">Detail</li>
+            <li class="breadcrumb-item active">{{ __('drivers.detail') }}</li>
      </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Details</strong>
+                                 <strong>{{ __('drivers.detail') }}</strong>
                                   <a href="{{ route('drivers.index') }}" class="btn btn-light">Back</a>
                              </div>
                              <div class="card-body">
@@ -28,25 +28,25 @@
                      <div class="col-lg-12">
                          <div class="card">
                              <div class="card-header">
-                                 <strong>Customer</strong>
+                                 <strong>{{ __('drivers.customer') }}</strong>
                                 <a class="pull-right" href="{{ route('drivers.assign', Crypt::encrypt($id)) }}"><i class="fa fa-plus-square fa-lg"></i></a>
                              </div>
                              <div class="card-body">
                                 <table class="table table-striped table-bordered dataTable" width="100%" role="grid" style="width: 100%;">
                                     <thead>
                                         <tr role="row">
-                                            <th>Code</th>
-                                            <th>Company</th>
-                                            <th>Phone</th>
-                                            <th>Address</th>
-                                            <th>Sequence</th>
-                                            <th>Action</th>
+                                            <th>{{ __('drivers.code') }}</th>
+                                            <th>{{ __('drivers.company') }}</th>
+                                            <th>{{ __('drivers.phone') }}</th>
+                                            <th>{{ __('drivers.address') }}</th>
+                                            <th>{{ __('drivers.sequence') }}</th>
+                                            <th>{{ __('drivers.action') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @if(count($assign) == 0)
                                             <tr class="odd">
-                                                <td valign="top" colspan="10" class="dataTables_empty">No matching records found</td>
+                                                <td valign="top" colspan="10" class="dataTables_empty">{{ __('drivers.no_matching_records_found') }}</td>
                                             </tr>
                                         @endif
                                         @foreach($assign as $i=>$ass)

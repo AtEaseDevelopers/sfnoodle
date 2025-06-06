@@ -1,18 +1,18 @@
 <!-- Lorryno Field -->
 <div class="form-group">
-    {!! Form::label('lorryno', 'Lorry#:') !!}
+    {!! Form::label('lorryno',  __('lorries.lorry_no')) !!}:
     <p>{{ $lorry->lorryno }}</p>
 </div>
 
 <!-- Status Field -->
 <div class="form-group">
-    {!! Form::label('status', 'Status:') !!}
+    {!! Form::label('status',  __('lorries.status')) !!}:
     <p>{{ $lorry->status == 1 ? "Active" : "Unactive" }}</p>
 </div>
 
 <!-- remark Field -->
 <div class="form-group">
-    {!! Form::label('remark', 'Remark:') !!}
+    {!! Form::label('remark', __('lorries.remark')) !!}:
     <p>{{ $lorry->remark }}</p>
 </div>
 

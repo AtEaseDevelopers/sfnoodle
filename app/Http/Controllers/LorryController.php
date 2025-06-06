@@ -67,7 +67,7 @@ class LorryController extends AppBaseController
 
         $lorry = $this->lorryRepository->create($input);
 
-        Flash::success($input['lorryno'].' saved successfully.');
+        Flash::success($input['lorryno'].__('lorries.saved_successfully'));
 
         return redirect(route('lorries.index'));
     }
@@ -85,7 +85,7 @@ class LorryController extends AppBaseController
         $lorry = $this->lorryRepository->find($id);
 
         if (empty($lorry)) {
-            Flash::error('Lorry not found');
+            Flash::error(__('lorries.lorry_not_found'));
 
             return redirect(route('lorries.index'));
         }
@@ -106,7 +106,7 @@ class LorryController extends AppBaseController
         $lorry = $this->lorryRepository->find($id);
 
         if (empty($lorry)) {
-            Flash::error('Lorry not found');
+            Flash::error(__('lorries.lorry_not_found'));
 
             return redirect(route('lorries.index'));
         }
@@ -128,14 +128,14 @@ class LorryController extends AppBaseController
         $lorry = $this->lorryRepository->find($id);
 
         if (empty($lorry)) {
-            Flash::error('Lorry not found');
+            Flash::error(__('lorries.lorry_not_found'));
 
             return redirect(route('lorries.index'));
         }
 
         $lorry = $this->lorryRepository->update($request->all(), $id);
 
-        Flash::success($lorry->lorryno.' updated successfully.');
+        Flash::success($lorry->lorryno.__('lorries.updated_successfully'));
 
         return redirect(route('lorries.index'));
     }
@@ -153,7 +153,7 @@ class LorryController extends AppBaseController
         $lorry = $this->lorryRepository->find($id);
 
         if (empty($lorry)) {
-            Flash::error('Lorry not found');
+            Flash::error(__('lorries.lorry_not_found'));
 
             return redirect(route('lorries.index'));
         }
@@ -202,7 +202,7 @@ class LorryController extends AppBaseController
 
         $this->lorryRepository->delete($id);
 
-        Flash::success($lorry->lorryno.' deleted successfully.');
+        Flash::success($lorry->lorryno.__('lorries.deleted_successfully'));
 
         return redirect(route('lorries.index'));
     }

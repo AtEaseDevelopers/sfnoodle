@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-         <a href="{!! route('specialPrices.index') !!}">Special Price</a>
+         <a href="{!! route('specialPrices.index') !!}">{{ __('special_prices.special_price')}}</a>
       </li>
-      <li class="breadcrumb-item active">Create</li>
+      <li class="breadcrumb-item active">{{ __('special_prices.create')}}</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <i class="fa fa-plus-square-o fa-lg"></i>
-                                <strong>Create Special Price</strong>
+                                <strong>{{ __('special_prices.create_special_price')}}</strong>
                             </div>
                             <div class="card-body">
                                 {!! Form::open(['route' => 'specialPrices.store']) !!}

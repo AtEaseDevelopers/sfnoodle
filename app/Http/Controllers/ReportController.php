@@ -84,7 +84,7 @@ class ReportController extends AppBaseController
 
         $report = $this->reportRepository->create($input);
 
-        Flash::success('Report saved successfully.');
+        Flash::success(__('report.report_saved_successfully'));
 
         return redirect(route('reports.index'));
     }
@@ -101,7 +101,7 @@ class ReportController extends AppBaseController
         $report = $this->reportRepository->find($id);
 
         if (empty($report)) {
-            Flash::error('Report not found');
+            Flash::error(__('report.report_not_found'));
 
             return redirect(route('reports.index'));
         }
@@ -166,7 +166,7 @@ class ReportController extends AppBaseController
         $report = $this->reportRepository->find($id);
 
         if (empty($report)) {
-            Flash::error('Report not found');
+            Flash::error(__('report.report_not_found'));
 
             return redirect(route('reports.index'));
         }
@@ -187,14 +187,14 @@ class ReportController extends AppBaseController
         $report = $this->reportRepository->find($id);
 
         if (empty($report)) {
-            Flash::error('Report not found');
+            Flash::error(__('report.report_not_found'));
 
             return redirect(route('reports.index'));
         }
 
         $report = $this->reportRepository->update($request->all(), $id);
 
-        Flash::success('Report updated successfully.');
+        Flash::error(__('report.report_updated_successfully'));
 
         return redirect(route('reports.index'));
     }
@@ -211,14 +211,14 @@ class ReportController extends AppBaseController
         $report = $this->reportRepository->find($id);
 
         if (empty($report)) {
-            Flash::error('Report not found');
+            Flash::error(__('report.report_not_found'));
 
             return redirect(route('reports.index'));
         }
 
         $this->reportRepository->delete($id);
 
-        Flash::success('Report deleted successfully.');
+        Flash::error(__('report.report_deleted_successfully'));
 
         return redirect(route('reports.index'));
     }

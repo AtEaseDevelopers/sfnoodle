@@ -9,7 +9,7 @@
     {!! Form::button('<i class="fa fa-trash"></i>', [
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
-        'onclick' => "return confirm('Are you sure?')"
+        'onclick' => "return confirm('".trans('inventory_balances.are_you_sure)."')"   
     ]) !!}
 </div>
 {!! Form::close() !!} --}}

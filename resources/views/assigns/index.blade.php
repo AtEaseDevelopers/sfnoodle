@@ -2,7 +2,7 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Assigns</li>
+        <li class="breadcrumb-item">{{ __('assign.assigns') }}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
@@ -12,7 +12,7 @@
                      <div class="card">
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
-                             Assigns
+                             {{ __('assign.assigns') }}
                              <a class="pull-right" href="{{ route('assigns.create') }}"><i class="fa fa-plus-square fa-lg"></i></a>
                              <a class="pull-right text-success pr-2" href="{{ route('assigns.masscreate') }}"><i class="fa fa-window-restore fa-lg"></i></a>
                              <a class="pull-right text-danger pr-2" id="massdelete" href="#" alt="Mass delete"><i class="fa fa-trash fa-lg"></i></a>

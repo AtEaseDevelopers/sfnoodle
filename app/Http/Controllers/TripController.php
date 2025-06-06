@@ -77,7 +77,7 @@ class TripController extends AppBaseController
         $trip = $this->tripRepository->find($id);
 
         if (empty($trip)) {
-            Flash::error('Trip not found');
+            Flash::error(__('trips.trip_not_found'));
 
             return redirect(route('trip.index'));
         }
@@ -158,7 +158,7 @@ class TripController extends AppBaseController
         $trip = $this->tripRepository->find($id);
 
         if (empty($trip)) {
-            Flash::error('Trip not found');
+            Flash::error(__('trips.trip_not_found'));
 
             return redirect(route('trips.index'));
         }
@@ -179,7 +179,7 @@ class TripController extends AppBaseController
         $trip = $this->tripRepository->find($id);
 
         if (empty($trip)) {
-            Flash::error('Trip not found');
+            Flash::error(__('trips.trip_not_found'));
 
             return redirect(route('trips.index'));
         }
@@ -203,7 +203,7 @@ class TripController extends AppBaseController
         $trip = $this->tripRepository->find($id);
 
         if (empty($trip)) {
-            Flash::error('Trip not found');
+            Flash::error(__('trips.trip_not_found'));
 
             return redirect(route('trips.index'));
         }

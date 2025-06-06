@@ -64,7 +64,7 @@ class TaskController extends AppBaseController
 
         $task = $this->taskRepository->create($input);
 
-        Flash::success('Task saved successfully.');
+        Flash::success(__('tasks.task_saved_successfully'));
 
         return redirect(route('tasks.index'));
     }
@@ -82,7 +82,7 @@ class TaskController extends AppBaseController
         $task = $this->taskRepository->find($id);
 
         if (empty($task)) {
-            Flash::error('Task not found');
+            Flash::error(__('tasks.task_not_found'));
 
             return redirect(route('tasks.index'));
         }
@@ -103,7 +103,7 @@ class TaskController extends AppBaseController
         $task = $this->taskRepository->find($id);
 
         if (empty($task)) {
-            Flash::error('Task not found');
+            Flash::error(__('tasks.task_not_found'));
 
             return redirect(route('tasks.index'));
         }
@@ -125,7 +125,7 @@ class TaskController extends AppBaseController
         $task = $this->taskRepository->find($id);
 
         if (empty($task)) {
-            Flash::error('Task not found');
+            Flash::error(__('tasks.task_not_found'));
 
             return redirect(route('tasks.index'));
         }
@@ -136,7 +136,7 @@ class TaskController extends AppBaseController
 
         $task = $this->taskRepository->update($input, $id);
 
-        Flash::success('Task updated successfully.');
+        Flash::success(__('tasks.task_updated_successfully'));
 
         return redirect(route('tasks.index'));
     }
@@ -154,14 +154,14 @@ class TaskController extends AppBaseController
         $task = $this->taskRepository->find($id);
 
         if (empty($task)) {
-            Flash::error('Task not found');
+            Flash::error(__('tasks.task_not_found'));
 
             return redirect(route('tasks.index'));
         }
 
         $this->taskRepository->delete($id);
 
-        Flash::success('Task deleted successfully.');
+        Flash::success(__('tasks.task_deleted_successfully'));
 
         return redirect(route('tasks.index'));
     }

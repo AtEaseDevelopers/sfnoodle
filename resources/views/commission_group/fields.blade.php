@@ -1,32 +1,27 @@
 <!-- Code Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('code', 'Commission Type:') !!}
-    {{ Form::select('code', array(
-        "agent_commission_product_type" => 'Agent Commission',
-        "kelindan_commission_product_type" => 'Kelindan Commission',
-        "driver_commission_product_type" => 'Driver Commission',
-        "operation_commission_product_type" => 'Operation Commission'
-    ), null, ['class' => 'form-control']) }}
+    {!! Form::label('code', __('commission.commission_type')) !!}
+    {{ Form::select('code', [
+        'agent_commission_product_type' => __('commission.agent_commission'),
+        'kelindan_commission_product_type' => __('commission.kelindan_commission'),
+        'driver_commission_product_type' => __('commission.driver_commission'),
+        'operation_commission_product_type' => __('commission.operation_commission')
+    ], null, ['class' => 'form-control']) }}
 </div>
 
-
+<!-- Description Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('description', 'Product Type:') !!}
-    {{ Form::select('description', array(0 => 'Ice'), null, ['class' => 'form-control']) }}
+    {!! Form::label('description', __('commission.product_type')) !!}
+    {{ Form::select('description', [
+        0 => __('commission.ice')
+    ], null, ['class' => 'form-control']) }}
 </div>
-
-<!-- Description Field 
-<div class="form-group col-sm-6">
-    {!! Form::label('description', 'Description:') !!}
-    {!! Form::text('description', null, ['class' => 'form-control','autofocus']) !!}
-</div>-->
 
 <!-- Value Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('value', 'Value:') !!}<span class="asterisk"> *</span>
+    {!! Form::label('value', __('commission.value')) !!}<span class="asterisk"> *</span>
     {!! Form::text('value', null, ['class' => 'form-control']) !!}
 </div>
-
 
 <!-- Sequence Field -->
 <div class="form-group col-sm-6">
@@ -71,8 +66,8 @@
 
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
-    {!! Form::submit('Save', ['class' => 'btn btn-primary']) !!}
-    <a href="{{ route('commission_group.index') }}" class="btn btn-secondary">Cancel</a>
+    {!! Form::submit(__('commission.save'), ['class' => 'btn btn-primary']) !!}
+    <a href="{{ route('commission_group.index') }}" class="btn btn-secondary">{{ __('commission.cancel') }}</a>
 </div>
 
 @push('scripts')

@@ -2,17 +2,17 @@
 
 @section('content')
     <ol class="breadcrumb">
-        <li class="breadcrumb-item">Invoice Details</li>
+        <li class="breadcrumb-item">{{ __('invoice_details.invoice_details') }}</li>
     </ol>
     <div class="container-fluid">
         <div class="animated fadeIn">
              @include('flash::message')
-             <div class="row">
+            <div class="row">
                  <div class="col-lg-12">
                      <div class="card">
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
-                             InvoiceDetails
+                             {{ __('invoice_details.invoice_details') }}
                              <a class="pull-right" href="{{ route('invoiceDetails.create') }}"><i class="fa fa-plus-square fa-lg"></i></a>
                              <a class="pull-right text-danger pr-2" id="massdelete" href="#" alt="Mass delete"><i class="fa fa-trash fa-lg"></i></a>
                          </div>

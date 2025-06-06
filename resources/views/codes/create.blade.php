@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-         <a href="{!! route('codes.index') !!}">Code</a>
+         <a href="{!! route('codes.index') !!}">{{ __('codes.codes') }}</a>
       </li>
-      <li class="breadcrumb-item active">Create</li>
+      <li class="breadcrumb-item active">{{ __('codes.create') }}</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">

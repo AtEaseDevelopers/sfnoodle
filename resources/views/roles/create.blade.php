@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-         <a href="{!! route('roles.index') !!}">Role</a>
+         <a href="{!! route('roles.index') !!}">{{ __('role.roles') }}</a>
       </li>
-      <li class="breadcrumb-item active">Create</li>
+      <li class="breadcrumb-item active">{{ __('role.create') }}</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <i class="fa fa-plus-square-o fa-lg"></i>
-                                <strong>Create Role</strong>
+                                <strong>{{ __('role.create_role') }}</strong>
                             </div>
                             <div class="card-body">
                                 {!! Form::open(['route' => 'roles.store']) !!}

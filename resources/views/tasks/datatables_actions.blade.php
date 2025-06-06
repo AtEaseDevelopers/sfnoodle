@@ -9,7 +9,7 @@
     {!! Form::button('<i class="fa fa-trash"></i>', [
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
-        'onclick' => "return confirm('Are you sure to delete the Task?')"
+        'onclick' => "return confirm('".trans('tasks.are_you_sure_to_delete_the_task')."')"   
     ]) !!}
 </div>
 {!! Form::close() !!}

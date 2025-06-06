@@ -43,7 +43,7 @@ class DriverDataTable extends DataTable
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->addAction(['width' => '120px', 'printable' => false])
+            ->addAction(['title' => trans('drivers.action'), 'printable' => false])
             ->parameters([
                 'dom'       => '<"row"B><"row"<"dataTableBuilderDiv"t>><"row"ip>',
                 'stateSave' => true,
@@ -51,15 +51,55 @@ class DriverDataTable extends DataTable
                 'processing' => false,
                 'order'     => [[1, 'desc']],
                 'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
-                'buttons'   => [
-                    ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner',],
-                    ['extend' => 'excelHtml5','text'=>'<i class="fa fa-file-excel-o"></i> Excel','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'Driver'.date('dmYHis')],
-                    ['extend' => 'pdfHtml5', 'orientation' => 'landscape', 'pageSize' => 'LEGAL','text'=>'<i class="fa fa-file-pdf-o"></i> PDF','exportOptions'=> ['columns'=>':visible:not(:last-child)'], 'className' => 'btn btn-default btn-sm no-corner','title'=>null,'filename'=>'Driver'.date('dmYHis')],
-                    ['extend' => 'colvis', 'className' => 'btn btn-default btn-sm no-corner','text'=>'<i class="fa fa-columns"></i> Column',],
-                    ['extend' => 'pageLength','className' => 'btn btn-default btn-sm no-corner',],
+                'buttons' => [
+                    [
+                        'extend' => 'create',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-plus"></i> ' . trans('table_buttons.create'),
+                    ],
+                    [
+                        'extend' => 'print',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-print"></i> ' . trans('table_buttons.print'),
+                    ],
+                    [
+                        'extend' => 'reset',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reset'),
+                    ],
+                    [
+                        'extend' => 'reload',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reload'),
+                    ],
+                    [
+                        'extend' => 'excelHtml5',
+                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'pdfHtml5',
+                        'orientation' => 'landscape',
+                        'pageSize' => 'LEGAL',
+                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'title' => null,
+                        'filename' => 'invoice' . date('dmYHis')
+                    ],
+                    [
+                        'extend' => 'colvis',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                    ],
+                    [
+                        'extend' => 'pageLength',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => trans('table_buttons.show_10_rows')
+                    ],
                 ],
                 'columnDefs' => [
                     [
@@ -115,7 +155,7 @@ class DriverDataTable extends DataTable
             'orderable' => false,
             'searchable' => false]),
 
-            'employeeid'=> new \Yajra\DataTables\Html\Column(['title' => 'Employee ID',
+            'employeeid'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('drivers.employee_id'),
             'data' => 'employeeid',
             'name' => 'drivers.employeeid']),
 
@@ -124,11 +164,11 @@ class DriverDataTable extends DataTable
             'name' => 'drivers.password']),*/
 
 
-            'name'=> new \Yajra\DataTables\Html\Column(['title' => 'Name',
+            'name'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('drivers.name'),
             'data' => 'name',
             'name' => 'drivers.name']),
-            'ic',
-            'phone',
+            trans('drivers.ic'),
+            trans('drivers.phone'),
             // 'commissionrate'=> new \Yajra\DataTables\Html\Column(['title' => 'Commission Rate',
             // 'data' => 'commissionrate',
             // 'name' => 'commissionrate']),
@@ -153,11 +193,11 @@ class DriverDataTable extends DataTable
             'data' => 'temperature',
             'name' => 'temperature']),*/
 
-            'status'=> new \Yajra\DataTables\Html\Column(['title' => 'Status',
+            'status'=> new \Yajra\DataTables\Html\Column(['title' => trans('drivers.status'),
             'data' => 'status',
             'name' => 'drivers.status']),
 
-            'remark'=> new \Yajra\DataTables\Html\Column(['title' => 'Remark',
+            'remark'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('drivers.remark'),
             'data' => 'remark',
             'name' => 'drivers.remark'])
         ];

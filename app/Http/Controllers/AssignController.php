@@ -68,7 +68,7 @@ class AssignController extends AppBaseController
 
         $assign = $this->assignRepository->create($input);
 
-        Flash::success('Assign saved successfully.');
+        Flash::success(__('assign.assign_saved_successfully'));
 
         return redirect(route('assigns.index'));
     }
@@ -107,7 +107,7 @@ class AssignController extends AppBaseController
         $assign = $this->assignRepository->find($id);
 
         if (empty($assign)) {
-            Flash::error('Assign not found');
+            Flash::error(__('assign.assign_not_found'));
 
             return redirect(route('assigns.index'));
         }
@@ -128,7 +128,7 @@ class AssignController extends AppBaseController
         $assign = $this->assignRepository->find($id);
 
         if (empty($assign)) {
-            Flash::error('Assign not found');
+            Flash::error(__('assign.assign_not_found'));
 
             return redirect(route('assigns.index'));
         }
@@ -150,7 +150,7 @@ class AssignController extends AppBaseController
         $assign = $this->assignRepository->find($id);
 
         if (empty($assign)) {
-            Flash::error('Assign not found');
+            Flash::error(__('assign.assign_not_found'));
 
             return redirect(route('assigns.index'));
         }
@@ -159,7 +159,7 @@ class AssignController extends AppBaseController
 
         $assign = $this->assignRepository->update($input, $id);
 
-        Flash::success('Assign updated successfully.');
+        Flash::success(__('assign.assign_updated_successfully'));
 
         return redirect(route('assigns.index'));
     }
@@ -177,14 +177,14 @@ class AssignController extends AppBaseController
         $assign = $this->assignRepository->find($id);
 
         if (empty($assign)) {
-            Flash::error('Assign not found');
+            Flash::error(__('assign.assign_not_found'));
 
             return redirect(route('assigns.index'));
         }
 
         $this->assignRepository->delete($id);
 
-        Flash::success('Assign deleted successfully.');
+        Flash::success(__('assign.assign_deleted_successfully'));
 
         return redirect(route('assigns.index'));
     }

@@ -1,47 +1,47 @@
 <!-- Code Field -->
 <div class="form-group">
-    {!! Form::label('code', 'Code:') !!}
+    {!! Form::label('code', __('products.code')) !!}:
     <p>{{ $product->code }}</p>
 </div>
 
 <!-- Name Field -->
 <div class="form-group">
-    {!! Form::label('name', 'Name:') !!}
+    {!! Form::label('name', __('products.name')) !!}:
     <p>{{ $product->name }}</p>
 </div>
 
 <!-- Price Field -->
 <div class="form-group">
-    {!! Form::label('price', 'Price:') !!}
-    <p>{{ number_format($product->price,2) }}</p>
+    {!! Form::label('price', __('products.price')) !!}:
+    <p>{{ number_format($product->price, 2) }}</p>
 </div>
 
 <!-- Type Field -->
 <div class="form-group">
-    {!! Form::label('type', 'Type:') !!}
+    {!! Form::label('type', __('products.type')) !!}:
     @switch($product->type)
         @case(1)
-            <p>Coffee</p>
+            <p>{{ __('products.type_coffee') }}</p>
             @break
         @case(2)
-            <p>Tea</p>
+            <p>{{ __('products.type_tea') }}</p>
             @break
         @case(3)
-            <p>Cocoa</p>
+            <p>{{ __('products.type_cocoa') }}</p>
             @break
         @case(4)
-            <p>Ice</p>
+            <p>{{ __('products.type_ice') }}</p>
             @break
         @default
-            <p>Other</p>
+            <p>{{ __('products.type_other') }}</p>
     @endswitch
     <!--<p>{{ $product->status == 1 ? "Ice" : "Other" }}</p>-->
 </div>
 
 <!-- Status Field -->
 <div class="form-group">
-    {!! Form::label('status', 'Status:') !!}
-    <p>{{ $product->status == 1 ? "Active" : "Unactive" }}</p>
+    {!! Form::label('status', __('products.status')) !!}:
+    <p>{{ $product->status == 1 ? __('products.active') : __('products.unactive') }}</p>
 </div>
 
 @push('scripts')

@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
           <li class="breadcrumb-item">
-             <a href="{!! route('assigns.index') !!}">Assign</a>
+             <a href="{!! route('assigns.index') !!}">{{ __('assign.assigns') }}</a>
           </li>
-          <li class="breadcrumb-item active">Edit</li>
+          <li class="breadcrumb-item active">{{ __('assign.edit') }}</li>
         </ol>
     <div class="container-fluid">
          <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                       <div class="card">
                           <div class="card-header">
                               <i class="fa fa-edit fa-lg"></i>
-                              <strong>Edit Assign</strong>
+                              <strong>{{ __('assign.edit_assigns') }}</strong>
                           </div>
                           <div class="card-body">
                               {!! Form::model($assign, ['route' => ['assigns.update', encrypt($assign->id)], 'method' => 'patch']) !!}

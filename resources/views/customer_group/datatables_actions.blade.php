@@ -9,7 +9,8 @@
     {!! Form::button('<i class="fa fa-trash"></i>', [
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
-        'onclick' => "return confirm('Are you sure to delete the Group?')"
+        'onclick' => "return confirm('".trans('customer_group.are_you_sure_to_delete_the_group')."')"    
+
     ]) !!}
 </div>
 {!! Form::close() !!}

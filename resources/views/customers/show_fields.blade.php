@@ -1,78 +1,80 @@
 <!-- Code Field -->
 <div class="form-group">
-    {!! Form::label('code', 'Code:') !!}
+    {!! Form::label('code', __('customers.code')) !!}:
     <p>{{ $customer->code }}</p>
 </div>
 
-<!-- company Field -->
+<!-- Company Field -->
 <div class="form-group">
-    {!! Form::label('company', 'Company:') !!}
+    {!! Form::label('company', __('customers.company')) !!}:
     <p>{{ $customer->company }}</p>
 </div>
+
 @php
     if($customer->paymentterm == 1){
-        $paymentterm = "Cash";
+        $paymentterm = __('customers.payment_term_cash');
     }
     if($customer->paymentterm == 2){
-        $paymentterm = "Bankin";
+        $paymentterm = __('customers.payment_term_bankin');
     }
     if($customer->paymentterm == 3){
-        $paymentterm = "Credit Note";
+        $paymentterm = __('customers.payment_term_credit_note');
     }
 @endphp
+
 <!-- Paymentterm Field -->
 <div class="form-group">
-    {!! Form::label('paymentterm', 'Payment Term:') !!}
+    {!! Form::label('paymentterm', __('customers.payment_term')) !!}:
     <p>{{ $paymentterm }}</p>
 </div>
 
 <!-- Group Field -->
 <div class="form-group">
-    {!! Form::label('group', 'Group:') !!}
-    <p>{{ $customer->group ?? ''}}</p>
+    {!! Form::label('group', __('customers.group')) !!}:
+    <p>{{ $customer->group ?? '' }}</p>
 </div>
 
 <!-- Agent Id Field -->
 <div class="form-group">
-    {!! Form::label('agent_id', 'Agent:') !!}
+    {!! Form::label('agent_id', __('customers.agent')) !!}:
     <p>{{ $customer->agent->name ?? '' }}</p>
 </div>
 
 <!-- Supervisor Id Field -->
 <div class="form-group">
-    {!! Form::label('supervisor_id', 'Operation:') !!}
+    {!! Form::label('supervisor_id', __('customers.operation')) !!}:
     <p>{{ $customer->supervisor->name ?? '' }}</p>
 </div>
 
 <!-- Phone Field -->
 <div class="form-group">
-    {!! Form::label('phone', 'Phone:') !!}
+    {!! Form::label('phone', __('customers.phone')) !!}:
     <p>{{ $customer->phone }}</p>
 </div>
 
 <!-- Address Field -->
 <div class="form-group">
-    {!! Form::label('address', 'Address:') !!}
+    {!! Form::label('address', __('customers.address')) !!}:
     <p>{{ $customer->address }}</p>
 </div>
 
 <!-- Sst Field -->
 <div class="form-group">
-    {!! Form::label('sst', 'Sst:') !!}
+    {!! Form::label('sst', __('customers.sst')) !!}:
     <p>{{ $customer->sst }}</p>
 </div>
 
 <!-- Tin Field -->
 <div class="form-group">
-    {!! Form::label('tin', 'Tin:') !!}
+    {!! Form::label('tin', __('customers.tin')) !!}:
     <p>{{ $customer->tin }}</p>
 </div>
+
 <!-- Status Field -->
 <div class="form-group">
-    {!! Form::label('status', 'Status:') !!}
-    <p>{{ $customer->status == 1 ? "Active" : "Unactive" }}</p>
+    {!! Form::label('status', __('customers.status')) !!}:
+    <p>{{ $customer->status == 1 ? __('customers.active') : __('customers.unactive') }}</p>
 </div>
-
 
 @push('scripts')
     <script>

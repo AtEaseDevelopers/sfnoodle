@@ -57,7 +57,7 @@ class CustomerGroupController extends AppBaseController
 
         $code = $this->codeRepository->create($input);
 
-        Flash::success('Code saved successfully.');
+        Flash::success(__('customer_group.customer_group_saved_successfully'));
 
         return redirect(route('customer_group.index'));
     }
@@ -75,7 +75,7 @@ class CustomerGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('customer_group.customer_group_not_found'));
 
             return redirect(route('customer_group.index'));
         }
@@ -96,7 +96,7 @@ class CustomerGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('customer_group.customer_group_not_found'));
 
             return redirect(route('customer_group.index'));
         }
@@ -118,14 +118,14 @@ class CustomerGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('customer_group.customer_group_not_found'));
 
             return redirect(route('customer_group.index'));
         }
 
         $code = $this->codeRepository->update($request->all(), $id);
 
-        Flash::success('Code updated successfully.');
+        Flash::success(__('customer_group.customer_group_updated_successfully'));
 
         return redirect(route('customer_group.index'));
     }
@@ -143,14 +143,14 @@ class CustomerGroupController extends AppBaseController
         $code = $this->codeRepository->find($id);
 
         if (empty($code)) {
-            Flash::error('Code not found');
+            Flash::error(__('customer_group.customer_group_not_found'));
 
             return redirect(route('customer_group.index'));
         }
 
         $this->codeRepository->delete($id);
 
-        Flash::success('Customer Group deleted successfully.');
+        Flash::success(__('customer_group.customer_group_deleted_successfully'));
 
         return redirect(route('customer_group.index'));
     }

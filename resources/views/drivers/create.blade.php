@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-         <a href="{!! route('drivers.index') !!}">Driver</a>
+         <a href="{!! route('drivers.index') !!}">{{ __('drivers.drivers') }}</a>
       </li>
-      <li class="breadcrumb-item active">Create</li>
+      <li class="breadcrumb-item active">{{ __('drivers.create') }}</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -15,7 +15,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <i class="fa fa-plus-square-o fa-lg"></i>
-                                <strong>Create Driver</strong>
+                                <strong>{{ __('drivers.create_driver') }}</strong>
                             </div>
                             <div class="card-body">
                                 {!! Form::open(['route' => 'drivers.store']) !!}
