@@ -3,60 +3,105 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\CustomerGroupDataTable;
-use App\Http\Requests;
-use App\Http\Requests\CreateCodeRequest;
-use App\Http\Requests\UpdateCodeRequest;
-use App\Repositories\CodeRepository;
+use App\Repositories\CustomerGroupRepository;
+use App\Repositories\CustomerRepository;
 use Flash;
 use App\Http\Controllers\AppBaseController;
 use Response;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Http\Request;
 
 class CustomerGroupController extends AppBaseController
 {
-    /** @var CodeRepository $codeRepository*/
-    private $codeRepository;
+    /** @var CustomerGroupRepository $customerGroupRepository*/
+    private $customerGroupRepository;
+    
+    /** @var CustomerRepository $customerRepository*/
+    private $customerRepository;
 
-    public function __construct(CodeRepository $codeRepo)
+    public function __construct(CustomerGroupRepository $customerGroupRepo, CustomerRepository $customerRepo)
     {
-        $this->codeRepository = $codeRepo;
+        $this->customerGroupRepository = $customerGroupRepo;
+        $this->customerRepository = $customerRepo;
     }
 
     /**
-     * Display a listing of the Code.
+     * Display a listing of the CustomerGroup.
      *
-     * @param CodeDataTable $codeDataTable
+     * @param CustomerGroupDataTable $customerGroupDataTable
      *
      * @return Response
      */
-    public function index(CustomerGroupDataTable $codeDataTable)
+    public function index(CustomerGroupDataTable $customerGroupDataTable)
     {
-        return $codeDataTable->render('customer_group.index');
+        return $customerGroupDataTable->render('customer_group.index');
     }
 
     /**
-     * Show the form for creating a new Code.
+     * Show the form for creating a new CustomerGroup.
      *
      * @return Response
      */
     public function create()
     {
-        return view('customer_group.create');
+        $customers = $this->customerRepository->all()->pluck('company', 'id');
+        return view('customer_group.create', compact('customers'));
     }
 
     /**
-     * Store a newly created Code in storage.
+     * Store a newly created CustomerGroup in storage.
      *
-     * @param CreateCodeRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function store(CreateCodeRequest $request)
+    public function store(Request $request)
     {
+        // Simple validation
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'customer_ids' => 'nullable|array',
+            'customer_ids.*.id' => 'required|integer|exists:customers,id',
+            'customer_ids.*.sequence' => 'nullable|integer|min:1'
+        ]);
+        
         $input = $request->all();
-        $input['value'] = rand(); //random number since it is not important if got code with same value then will occur error
-
-        $code = $this->codeRepository->create($input);
+        
+        // Format customer_ids with sequence
+        if (isset($input['customer_ids']) && is_array($input['customer_ids'])) {
+            $formattedCustomers = [];
+            $sequence = 1;
+            
+            foreach ($input['customer_ids'] as $customerData) {
+                if (is_array($customerData) && isset($customerData['id'])) {
+                    $formattedCustomers[] = [
+                        'id' => (int) $customerData['id'],
+                        'sequence' => isset($customerData['sequence']) ? (int) $customerData['sequence'] : $sequence
+                    ];
+                    $sequence++;
+                } elseif (is_numeric($customerData)) {
+                    // Backward compatibility - just ID provided
+                    $formattedCustomers[] = [
+                        'id' => (int) $customerData,
+                        'sequence' => $sequence
+                    ];
+                    $sequence++;
+                }
+            }
+            
+            // Sort by sequence
+            usort($formattedCustomers, function($a, $b) {
+                return $a['sequence'] <=> $b['sequence'];
+            });
+            
+            $input['customer_ids'] = $formattedCustomers;
+        } else {
+            $input['customer_ids'] = [];
+        }
+        
+        // Create the customer group
+        $customerGroup = $this->customerGroupRepository->create($input);
 
         Flash::success(__('customer_group.customer_group_saved_successfully'));
 
@@ -64,7 +109,7 @@ class CustomerGroupController extends AppBaseController
     }
 
     /**
-     * Display the specified Code.
+     * Display the specified CustomerGroup.
      *
      * @param int $id
      *
@@ -73,19 +118,19 @@ class CustomerGroupController extends AppBaseController
     public function show($id)
     {
         $id = Crypt::decrypt($id);
-        $code = $this->codeRepository->find($id);
+        $customerGroup = $this->customerGroupRepository->find($id);
 
-        if (empty($code)) {
+        if (empty($customerGroup)) {
             Flash::error(__('customer_group.customer_group_not_found'));
 
-            return redirect(route('customer_group.index'));
+            return redirect(route('customer_groups.index'));
         }
 
-        return view('customer_group.show')->with('code', $code);
+        return view('customer_group.show')->with('customerGroup', $customerGroup);
     }
 
     /**
-     * Show the form for editing the specified Code.
+     * Show the form for editing the specified CustomerGroup.
      *
      * @param int $id
      *
@@ -94,40 +139,84 @@ class CustomerGroupController extends AppBaseController
     public function edit($id)
     {
         $id = Crypt::decrypt($id);
-        $code = $this->codeRepository->find($id);
+        $customerGroup = $this->customerGroupRepository->find($id);
 
-        if (empty($code)) {
+        if (empty($customerGroup)) {
             Flash::error(__('customer_group.customer_group_not_found'));
 
             return redirect(route('customer_group.index'));
         }
+        
+        $customers = $this->customerRepository->all()->pluck('company', 'id');
+        $selectedCustomers = $customerGroup->customer_ids ?? [];
 
-        return view('customer_group.edit')->with('code', $code);
+        return view('customer_group.edit', compact('customerGroup', 'customers', 'selectedCustomers'));
     }
 
     /**
-     * Update the specified Code in storage.
+     * Update the specified CustomerGroup in storage.
      *
      * @param int $id
-     * @param UpdateCodeRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function update($id, UpdateCodeRequest $request)
+    public function update($id, Request $request)
     {
         $id = Crypt::decrypt($id);
-        $code = $this->codeRepository->find($id);
+        $customerGroup = $this->customerGroupRepository->find($id);
 
-        if (empty($code)) {
+        if (empty($customerGroup)) {
             Flash::error(__('customer_group.customer_group_not_found'));
 
             return redirect(route('customer_group.index'));
         }
 
-        $data = $request->all();
-        $data['value'] = rand(); //random number since it is not important if got code with same value then will occur error
+        // Simple validation
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'customer_ids' => 'nullable|array',
+            'customer_ids.*.id' => 'required|integer|exists:customers,id',
+            'customer_ids.*.sequence' => 'nullable|integer|min:1'
+        ]);
 
-        $code = $this->codeRepository->update($data, $id);
+        $input = $request->all();
+        
+        // Format customer_ids with sequence
+        if (isset($input['customer_ids']) && is_array($input['customer_ids'])) {
+            $formattedCustomers = [];
+            $sequence = 1;
+            
+            foreach ($input['customer_ids'] as $customerData) {
+                if (is_array($customerData) && isset($customerData['id'])) {
+                    $formattedCustomers[] = [
+                        'id' => (int) $customerData['id'],
+                        'sequence' => isset($customerData['sequence']) ? (int) $customerData['sequence'] : $sequence
+                    ];
+                    $sequence++;
+                } elseif (is_numeric($customerData)) {
+                    // Backward compatibility - just ID provided
+                    $formattedCustomers[] = [
+                        'id' => (int) $customerData,
+                        'sequence' => $sequence
+                    ];
+                    $sequence++;
+                }
+            }
+            
+            // Sort by sequence
+            usort($formattedCustomers, function($a, $b) {
+                return $a['sequence'] <=> $b['sequence'];
+            });
+            
+            $input['customer_ids'] = $formattedCustomers;
+        } else {
+            $input['customer_ids'] = [];
+        }
+        
+        // Update the customer group
+        $customerGroup = $this->customerGroupRepository->update($input, $id);
 
         Flash::success(__('customer_group.customer_group_updated_successfully'));
 
@@ -135,7 +224,7 @@ class CustomerGroupController extends AppBaseController
     }
 
     /**
-     * Remove the specified Code from storage.
+     * Remove the specified CustomerGroup from storage.
      *
      * @param int $id
      *
@@ -144,18 +233,77 @@ class CustomerGroupController extends AppBaseController
     public function destroy($id)
     {
         $id = Crypt::decrypt($id);
-        $code = $this->codeRepository->find($id);
+        $customerGroup = $this->customerGroupRepository->find($id);
 
-        if (empty($code)) {
+        if (empty($customerGroup)) {
             Flash::error(__('customer_group.customer_group_not_found'));
 
             return redirect(route('customer_group.index'));
         }
-
-        $this->codeRepository->delete($id);
+        
+        $this->customerGroupRepository->delete($id);
 
         Flash::success(__('customer_group.customer_group_deleted_successfully'));
 
         return redirect(route('customer_group.index'));
+    }
+
+    /**
+     * Get customers for a specific group (sorted by sequence)
+     */
+    public function getGroupCustomers($groupId)
+    {
+        try {
+            $customerGroup = $this->customerGroupRepository->find($groupId);
+            
+            if (empty($customerGroup)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Customer group not found'
+                ], 200);
+            }
+            
+            // Get customer details sorted by sequence
+            $customerData = $customerGroup->customer_ids ?? [];
+            if (empty($customerData)) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'OK',
+                    'data' => []
+                ], 200);
+            }
+            
+            // Sort by sequence
+            usort($customerData, function($a, $b) {
+                return $a['sequence'] <=> $b['sequence'];
+            });
+            
+            // Get customer details
+            $customerIds = array_column($customerData, 'id');
+            $customers = $this->customerRepository->findWhereIn('id', $customerIds, ['id', 'company']);
+            
+            // Add sequence to customers
+            $customerMap = [];
+            foreach ($customerData as $data) {
+                $customerMap[$data['id']] = $data['sequence'];
+            }
+            
+            $customersWithSequence = $customers->map(function($customer) use ($customerMap) {
+                $customer->sequence = $customerMap[$customer->id] ?? 0;
+                return $customer;
+            })->sortBy('sequence');
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'OK',
+                'data' => $customersWithSequence->values()
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => "Something went wrong"
+            ], 400);
+        }
     }
 }

@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Crypt;
 
 class UpdateUserRequest extends FormRequest
 {
-
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -27,12 +26,30 @@ class UpdateUserRequest extends FormRequest
     {
         $id = $this->route('user');
         $rules = [
-          'name'     => 'required',
-          'email'    => 'required|email|unique:users,email,'.Crypt::decrypt($id),
-          'password' => 'confirmed',
-          'role_id'  => 'required'
+            'name'          => 'required',
+            'email'         => 'required|email|unique:users,email,'.Crypt::decrypt($id),
+            'invoice_code'  => 'nullable|string|max:255|unique:users,invoice_code,'.Crypt::decrypt($id),
+            'role_id'       => 'required',
+            'update_password' => 'boolean' // Add this rule
         ];
         
+        // Conditionally add password rules if update_password is checked
+        if ($this->input('update_password')) {
+            $rules['password'] = 'required|confirmed|min:8';
+        }
+        
         return $rules;
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'password.required_if' => 'The password field is required when updating password.',
+        ];
     }
 }

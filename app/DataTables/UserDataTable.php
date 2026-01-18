@@ -39,6 +39,7 @@ class UserDataTable extends DataTable
             ->select(
                 'users.id',
                 'users.name',
+                'users.invoice_code',
                 'users.email',
                 'roles.name as role_name'
             );
@@ -151,6 +152,7 @@ class UserDataTable extends DataTable
                 'data'  => 'name',
                 'name'  => 'users.name'
             ]),
+            'invoice_code',
             'email',
             'role' => new \Yajra\DataTables\Html\Column([
                 'title' => trans('user.role'),

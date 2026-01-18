@@ -3,9 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\CustomerDataTable;
-use App\Http\Requests;
-use App\Http\Requests\CreateCustomerRequest;
-use App\Http\Requests\UpdateCustomerRequest;
 use App\Repositories\CustomerRepository;
 use Flash;
 use App\Http\Controllers\AppBaseController;
@@ -15,12 +12,13 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Invoice;
+use App\Models\SalesInvoice;
 use App\Models\SpecialPrice;
 use App\Models\foc;
 use App\Models\Assign;
 use Illuminate\Support\Facades\Session;
 use Exception;
+use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends AppBaseController
 {
@@ -57,17 +55,25 @@ class CustomerController extends AppBaseController
     /**
      * Store a newly created Customer in storage.
      *
-     * @param CreateCustomerRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function store(CreateCustomerRequest $request)
+    public function store(Request $request)
     {
+        // Validate using model rules
+        $validator = Validator::make($request->all(), Customer::$rules);
+        
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
         $input = $request->all();
-        $input['group'] = implode(",",$input['group'] ?? []);
         $customer = $this->customerRepository->create($input);
 
-        Flash::success(__('customers.customer_saved_successfully'));
+        Flash::success('Customer saved successfully.');
 
         return redirect(route('customers.index'));
     }
@@ -84,14 +90,8 @@ class CustomerController extends AppBaseController
         $id = Crypt::decrypt($id);
         $customer = $this->customerRepository->find($id);
 
-        $customer->group = DB::table('codes')
-        ->where('codes.code', '=', 'customer_group')
-        ->whereRaw('find_in_set(codes.value, "'.$customer->group.'")')
-        ->selectRaw('GROUP_CONCAT(codes.description) as group_descr')
-        ->get()->first()->group_descr;
-        
         if (empty($customer)) {
-            Flash::error(__('customers.customer_not_found'));
+            Flash::error('Customer not found.');
 
             return redirect(route('customers.index'));
         }
@@ -112,7 +112,7 @@ class CustomerController extends AppBaseController
         $customer = $this->customerRepository->find($id);
 
         if (empty($customer)) {
-            Flash::error(__('customers.customer_not_found'));
+            Flash::error('Customer not found.');
 
             return redirect(route('customers.index'));
         }
@@ -124,27 +124,43 @@ class CustomerController extends AppBaseController
      * Update the specified Customer in storage.
      *
      * @param int $id
-     * @param UpdateCustomerRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function update($id, UpdateCustomerRequest $request)
+    public function update($id, Request $request)
     {
         $id = Crypt::decrypt($id);
         $customer = $this->customerRepository->find($id);
 
         if (empty($customer)) {
-            Flash::error(__('customers.customer_not_found'));
+            Flash::error('Customer not found.');
 
             return redirect(route('customers.index'));
         }
+        $rules = [
+            'code' => 'required|string|max:255|unique:customers,code,'.$id,
+            'company' => 'required|string|max:255|string|max:255',
+            'paymentterm' => 'required',
+            'phone' => 'nullable|string|max:20|nullable|string|max:20',
+            'address' => 'nullable|string|max:65535|nullable|string|max:65535',
+            'status' => 'required',
+            'created_at' => 'nullable|nullable',
+            'updated_at' => 'nullable|nullable'
+        ];
+        // Validate using model rules
+        $validator = Validator::make($request->all(), $rules);
+        
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
 
         $input = $request->all();
-        $input['group'] = implode(",",$input['group'] ?? []);
-
         $customer = $this->customerRepository->update($input, $id);
 
-        Flash::success(__('customers.customer_updated_successfully'));
+        Flash::success('Customer updated successfully.');
 
         return redirect(route('customers.index'));
     }
@@ -162,42 +178,42 @@ class CustomerController extends AppBaseController
         $customer = $this->customerRepository->find($id);
 
         if (empty($customer)) {
-            Flash::error(__('customers.customer_not_found'));
+            Flash::error('Customer not found.');
 
             return redirect(route('customers.index'));
         }
 
-        $Invoice = Invoice::where('customer_id',$id)->get()->toArray();
-        if(count($Invoice)>0){
-            Flash::error('Unable to delete '.$customer->name.', '.$customer->name.' is being used in Invoice');
+        $salesInvoice = SalesInvoice::where('customer_id',$id)->get()->toArray();
+        if(count($salesInvoice) > 0){
+            Flash::error('Unable to delete '.$customer->company.', '.$customer->company.' is being used in Sales Invoice');
 
             return redirect(route('customers.index'));
         }
 
-        $SpecialPrice = SpecialPrice::where('customer_id',$id)->get()->toArray();
-        if(count($SpecialPrice)>0){
-            Flash::error('Unable to delete '.$customer->name.', '.$customer->name.' is being used in Special Price');
+        $specialPrice = SpecialPrice::where('customer_id',$id)->get()->toArray();
+        if(count($specialPrice) > 0){
+            Flash::error('Unable to delete '.$customer->company.', '.$customer->company.' is being used in Special Price');
 
             return redirect(route('customers.index'));
         }
 
         $foc = foc::where('customer_id',$id)->get()->toArray();
-        if(count($foc)>0){
-            Flash::error('Unable to delete '.$customer->name.', '.$customer->name.' is being used in Foc');
+        if(count($foc) > 0){
+            Flash::error('Unable to delete '.$customer->company.', '.$customer->company.' is being used in FOC');
 
             return redirect(route('customers.index'));
         }
 
-        $Assign = Assign::where('customer_id',$id)->get()->toArray();
-        if(count($Assign)>0){
-            Flash::error('Unable to delete '.$customer->name.', '.$customer->name.' is being used in Assign');
+        $assign = Assign::where('customer_id',$id)->get()->toArray();
+        if(count($assign) > 0){
+            Flash::error('Unable to delete '.$customer->company.', '.$customer->company.' is being used in Assign');
 
             return redirect(route('customers.index'));
         }
 
         $this->customerRepository->delete($id);
 
-        Flash::success($customer->company.__('customers.deleted_successfully'));
+        Flash::success($customer->company . ' deleted successfully.');
 
         return redirect(route('customers.index'));
     }
@@ -211,23 +227,23 @@ class CustomerController extends AppBaseController
 
         foreach ($ids as $id) {
 
-            $Invoice = Invoice::where('customer_id',$id)->get()->toArray();
-            if(count($Invoice)>0){
+            $salesInvoice = SalesInvoice::where('customer_id',$id)->get()->toArray();
+            if(count($salesInvoice) > 0){
                 continue;
             }
 
-            $SpecialPrice = SpecialPrice::where('customer_id',$id)->get()->toArray();
-            if(count($SpecialPrice)>0){
+            $specialPrice = SpecialPrice::where('customer_id',$id)->get()->toArray();
+            if(count($specialPrice) > 0){
                 continue;
             }
 
             $foc = foc::where('customer_id',$id)->get()->toArray();
-            if(count($foc)>0){
+            if(count($foc) > 0){
                 continue;
             }
 
-            $Assign = Assign::where('customer_id',$id)->get()->toArray();
-            if(count($Assign)>0){
+            $assign = Assign::where('customer_id',$id)->get()->toArray();
+            if(count($assign) > 0){
                 continue;
             }
 
@@ -274,7 +290,7 @@ class CustomerController extends AppBaseController
             }
             // Sync customers
             $ids = Session::get('ids_to_sync_xero');
-            $customers = (new CustomerDataTable)->query(new Customer)->whereIn('customers.id', $ids)->get();
+            $customers = Customer::whereIn('id', $ids)->get();
             for ($i = 0; $i < count($customers) ;$i++) {
                 $res = $xero->createContact($customers[$i]->company);
 
@@ -288,7 +304,7 @@ class CustomerController extends AppBaseController
         } catch (\Throwable $th) {
             report($th);
 
-            Flash::error('Something went wrong. Please contact administator.');
+            Flash::error('Something went wrong. Please contact administrator.');
             return redirect(route('customers.index'));
         }
     }

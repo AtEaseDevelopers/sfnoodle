@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\ProductDataTable;
-use App\Http\Requests;
 use App\Http\Requests\CreateProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Repositories\ProductRepository;
@@ -14,14 +13,16 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\ProductCategory; // Add this
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Invoice;
 use App\Models\InvoiceDetail;
 use App\Models\SpecialPrice;
-use App\Models\foc;
+use App\Models\Foc; // Fixed case (should be Foc not foc)
 use Illuminate\Support\Facades\Session;
 use Exception;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends AppBaseController
 {
@@ -52,7 +53,12 @@ class ProductController extends AppBaseController
      */
     public function create()
     {
-        return view('products.create');
+        // Get active categories for dropdown
+        $categories = ProductCategory::active()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        
+        return view('products.create', compact('categories'));
     }
 
     /**
@@ -99,6 +105,9 @@ class ProductController extends AppBaseController
             return redirect(route('products.index'));
         }
 
+        // Load category relationship
+        $product->load('category');
+
         return view('products.show')->with('product', $product);
     }
 
@@ -112,6 +121,7 @@ class ProductController extends AppBaseController
     public function edit($id)
     {
         $id = Crypt::decrypt($id);
+        
         $product = $this->productRepository->find($id);
 
         if (empty($product)) {
@@ -120,7 +130,12 @@ class ProductController extends AppBaseController
             return redirect(route('products.index'));
         }
 
-        return view('products.edit')->with('product', $product);
+        // Get active categories for dropdown
+        $categories = ProductCategory::active()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('products.edit', compact('product', 'categories'));
     }
 
     /**
@@ -131,15 +146,43 @@ class ProductController extends AppBaseController
      *
      * @return Response
      */
-    public function update($id, UpdateProductRequest $request)
+    public function update($id, Request $request)
     {
         $id = Crypt::decrypt($id);
         $product = $this->productRepository->find($id);
 
         if (empty($product)) {
             Flash::error(__('products.product_not_found'));
-
             return redirect(route('products.index'));
+        }
+
+        // Define validation rules
+        $rules = [
+            'code' => 'required|string|max:255|unique:products,code,' . $id, 
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'category_id' => 'required|exists:product_categories,id',
+            'status' => 'required|integer|in:0,1',
+        ];
+
+        // Validate the request
+        $validator = Validator::make($request->all(), $rules, [
+            'code.required' => 'Product code is required',
+            'code.unique' => 'This product code already exists',
+            'name.required' => 'Product name is required',
+            'price.required' => 'Product price is required',
+            'price.numeric' => 'Price must be a number',
+            'price.min' => 'Price cannot be negative',
+            'category_id.required' => 'Product category is required',
+            'category_id.exists' => 'Selected category does not exist',
+            'status.required' => 'Status is required',
+            'status.in' => 'Invalid status value',
+        ]);
+
+        if ($validator->fails()) {
+            return Redirect::back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
         $input = $request->all();
@@ -158,7 +201,6 @@ class ProductController extends AppBaseController
 
         return redirect(route('products.index'));
     }
-
     /**
      * Remove the specified Product from storage.
      *
@@ -180,21 +222,18 @@ class ProductController extends AppBaseController
         // $Invoice = Invoice::where('product_id',$id)->get()->toArray();
         // if(count($Invoice)>0){
         //     Flash::error('Unable to delete '.$product->name.', '.$product->name.' is being used in Invoice');
-
         //     return redirect(route('products.index'));
         // }
 
         $SpecialPrice = SpecialPrice::where('product_id',$id)->get()->toArray();
         if(count($SpecialPrice)>0){
             Flash::error('Unable to delete '.$product->name.', '.$product->name.' is being used in Special Price');
-
             return redirect(route('products.index'));
         }
 
-        $foc = foc::where('product_id',$id)->get()->toArray();
+        $foc = Foc::where('product_id',$id)->get()->toArray(); // Fixed case
         if(count($foc)>0){
             Flash::error('Unable to delete '.$product->name.', '.$product->name.' is being used in Foc');
-
             return redirect(route('products.index'));
         }
 
@@ -224,7 +263,7 @@ class ProductController extends AppBaseController
                 continue;
             }
 
-            $foc = foc::where('product_id',$id)->get()->toArray();
+            $foc = Foc::where('product_id',$id)->get()->toArray(); // Fixed case
             if(count($foc)>0){
                 continue;
             }

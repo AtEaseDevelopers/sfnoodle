@@ -62,10 +62,123 @@
             </div>
         </div>
     </div>
+    <!-- Attachment Modal -->
+    <div class="modal fade" id="attachmentModal" tabindex="-1" role="dialog" aria-labelledby="attachmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="attachmentModalLabel">Payment Attachment</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="imagePreview" style="display: none;">
+                        <img id="attachmentImage" src="" alt="Attachment" class="img-fluid" style="max-height: 70vh;">
+                        <div class="mt-2">
+                            <small class="text-muted" id="imageFileName"></small>
+                        </div>
+                    </div>
+                    <div id="pdfPreview" style="display: none;">
+                        <iframe id="attachmentPdf" src="" width="100%" height="600px" style="border: none;"></iframe>
+                        <div class="mt-2">
+                            <small class="text-muted" id="pdfFileName"></small>
+                        </div>
+                    </div>
+                    <div id="otherFilePreview" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i> <span id="otherFileName"></span>
+                            <br>
+                            <a href="#" id="attachmentDownloadLink" class="btn btn-primary mt-2">
+                                <i class="fa fa-download"></i> Download File
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" id="modalDownloadLink" class="btn btn-primary" download>
+                        <i class="fa fa-download"></i> Download
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
-    <script>
+    <script>    
+        $(document).ready(function () {
+        // Handle attachment view buttons in the table
+            $(document).on('click', '.view-attachment', function() {
+                var fileUrl = $(this).data('file');
+                var fileName = $(this).data('filename');
+                var fileType = $(this).data('filetype');
+                
+                // Set download link
+                $('#modalDownloadLink').attr('href', fileUrl);
+                $('#modalDownloadLink').attr('download', fileName);
+                $('#attachmentDownloadLink').attr('href', fileUrl);
+                $('#attachmentDownloadLink').attr('download', fileName);
+                
+                // Hide all previews
+                $('#imagePreview').hide();
+                $('#pdfPreview').hide();
+                $('#otherFilePreview').hide();
+                
+                // Show appropriate preview
+                if (fileType === 'image') {
+                    // First, reset the image preview area
+                    $('#imagePreview').html(`
+                        <img id="attachmentImage" src="" alt="Attachment" class="img-fluid" style="max-height: 70vh;">
+                        <div class="mt-2">
+                            <small class="text-muted" id="imageFileName"></small>
+                        </div>
+                    `);
+                    
+                    // Set the image source
+                    $('#attachmentImage').attr('src', fileUrl);
+                    $('#imageFileName').text(fileName);
+                    $('#imagePreview').show();
+                    
+                    // Add error handling for image - replace with download link if fails
+                    $('#attachmentImage').on('error', function() {
+                        $(this).replaceWith(
+                            '<div class="alert alert-warning">' +
+                            '<i class="fa fa-exclamation-triangle"></i> Image could not be loaded in preview.<br>' +
+                            '<a href="' + fileUrl + '" class="btn btn-primary mt-2" download="' + fileName + '">' +
+                            '<i class="fa fa-download"></i> Download Image</a>' +
+                            '</div>'
+                        );
+                    });
+                    
+                } else if (fileName.toLowerCase().endsWith('.pdf')) {
+                    $('#attachmentPdf').attr('src', fileUrl + '#toolbar=0');
+                    $('#pdfFileName').text(fileName);
+                    $('#pdfPreview').show();
+                } else {
+                    $('#otherFileName').text('File: ' + fileName);
+                    $('#otherFilePreview').show();
+                }
+                
+                // Update modal title
+                $('#attachmentModalLabel').text('Attachment: ' + fileName);
+            });
+            
+            // Clear modal content when closed
+            $('#attachmentModal').on('hidden.bs.modal', function () {
+                // Reset all previews
+                $('#imagePreview').hide().html(`
+                    <img id="attachmentImage" src="" alt="Attachment" class="img-fluid" style="max-height: 70vh;">
+                    <div class="mt-2">
+                        <small class="text-muted" id="imageFileName"></small>
+                    </div>
+                `);
+                $('#pdfPreview').hide();
+                $('#attachmentPdf').attr('src', '');
+                $('#otherFilePreview').hide();
+            });
+        });
         $(document).keyup(function(e) {
             if(e.altKey && e.keyCode == 78){
                 $('.card .card-header a')[0].click();

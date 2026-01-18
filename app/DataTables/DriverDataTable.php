@@ -5,7 +5,6 @@ namespace App\DataTables;
 use App\Models\Driver;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
-use Illuminate\Support\Facades\DB;
 
 class DriverDataTable extends DataTable
 {
@@ -78,7 +77,7 @@ class DriverDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'drivers_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'pdfHtml5',
@@ -88,7 +87,7 @@ class DriverDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'drivers_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'colvis',
@@ -112,8 +111,9 @@ class DriverDataTable extends DataTable
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
                     [
-                    'targets' => 5,
-                    'render' => 'function(data, type){return data == 1 ? "Active" : "Unactive";}'],
+                        'targets' => 4,
+                        'render' => 'function(data, type){return data == 1 ? "Active" : "Unactive";}'
+                    ],
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
@@ -124,10 +124,6 @@ class DriverDataTable extends DataTable
                         if(columns[index].searchable){
                             if(columns[index].title == \'Status\'){
                                 var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Unactive</option></select>\';
-                            }else if(columns[index].title == \'1st Vaccine Date\'){
-                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
-                            }else if(columns[index].title == \'2nd Vaccine Date\'){
-                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
                             }else{
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
@@ -159,39 +155,13 @@ class DriverDataTable extends DataTable
             'data' => 'employeeid',
             'name' => 'drivers.employeeid']),
 
-            /*'password'=> new \Yajra\DataTables\Html\Column(['title' => 'Employee Password',
-            'data' => 'password',
-            'name' => 'drivers.password']),*/
-
-
             'name'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('drivers.name'),
             'data' => 'name',
             'name' => 'drivers.name']),
-            trans('drivers.ic'),
-            trans('drivers.phone'),
-            // 'commissionrate'=> new \Yajra\DataTables\Html\Column(['title' => 'Commission Rate',
-            // 'data' => 'commissionrate',
-            // 'name' => 'commissionrate']),
 
-            /*'bankdetails1'=> new \Yajra\DataTables\Html\Column(['title' => 'Bank Details 1',
-            'data' => 'bankdetails1',
-            'name' => 'bankdetails1']),
-
-            'bankdetails2'=> new \Yajra\DataTables\Html\Column(['title' => 'Bank Details 2',
-            'data' => 'bankdetails2',
-            'name' => 'bankdetails2']),*/
-
-           /* 'firstvaccine'=> new \Yajra\DataTables\Html\Column(['title' => '1st Vaccine Date',
-            'data' => 'firstvaccine',
-            'name' => 'firstvaccine']),
-
-            'secondvaccine'=> new \Yajra\DataTables\Html\Column(['title' => '2nd Vaccine Date',
-            'data' => 'secondvaccine',
-            'name' => 'secondvaccine']),
-
-            'temperature'=> new \Yajra\DataTables\Html\Column(['title' => 'Body Temperature',
-            'data' => 'temperature',
-            'name' => 'temperature']),*/
+            'invoice_code'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('Invoice Code'),
+            'data' => 'invoice_code',
+            'name' => 'drivers.invoice_code']),
 
             'status'=> new \Yajra\DataTables\Html\Column(['title' => trans('drivers.status'),
             'data' => 'status',

@@ -45,6 +45,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/product', [App\Http\Controllers\Api\V1\DriverController::class, 'getproduct']);
     //Customer
     Route::get('/driver/customer', [App\Http\Controllers\Api\V1\DriverController::class, 'getcustomer']);
+    Route::get('/driver/customers', [App\Http\Controllers\Api\V1\DriverController::class, 'getcustomers']);
     Route::post('/driver/customer/detail', [App\Http\Controllers\Api\V1\DriverController::class, 'customerdetail']);
     Route::post('/driver/customer/makepayment', [App\Http\Controllers\Api\V1\DriverController::class, 'customermakepayment']);
     Route::post('/driver/customer/invoice', [App\Http\Controllers\Api\V1\DriverController::class, 'customerinvoice']);
@@ -61,7 +62,6 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/driver/stock', [App\Http\Controllers\Api\V1\DriverController::class, 'getstock']);
     Route::get('/driver/stock/listdriver', [App\Http\Controllers\Api\V1\DriverController::class, 'listotherdriver']);
     Route::post('/driver/stock/transfer', [App\Http\Controllers\Api\V1\DriverController::class, 'transferstock']);
-    Route::post('/driver/stock/transaction', [App\Http\Controllers\Api\V1\DriverController::class, 'getstocktransaction']);
     Route::get('/driver/stock/transfer', [App\Http\Controllers\Api\V1\DriverController::class, 'gettransfer']);
     Route::get('/driver/stock/transfer/update', [App\Http\Controllers\Api\V1\DriverController::class, 'updatetransfer']);
     //Task transfer
@@ -73,6 +73,51 @@ Route::group(['prefix' => 'v1'], function () {
     //dashboard
     Route::post('/driver/dashboard', [App\Http\Controllers\Api\V1\DriverController::class, 'dashboard']);
 
+    //sales Order
+    Route::get('/driver/get-sales-order-fields', [App\Http\Controllers\Api\V1\DriverController::class, 'getsalesorderFields']);
+    Route::post('/driver/create-sales-order', [App\Http\Controllers\Api\V1\DriverController::class, 'createSalesOrder']);
+    Route::post('/driver/cancel-sales-order', [App\Http\Controllers\Api\V1\DriverController::class, 'cancelSalesOrder']);
+    Route::get('/driver/get-sales-order-list/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverSalesInvoices']);
+    Route::get('/driver/get-sales-order-detail/{id}', [App\Http\Controllers\Api\V1\DriverController::class, 'getSalesOrderById']);
+    Route::post('/driver/sales-order/{id}/convert', [App\Http\Controllers\Api\V1\DriverController::class, 'convertSalesInvoice']);
+
+    //invoice
+    Route::get('/driver/get-invoice-fields', [App\Http\Controllers\Api\V1\DriverController::class, 'getInvoiceFields']);
+    Route::post('/driver/create-invoice', [App\Http\Controllers\Api\V1\DriverController::class, 'createInvoice']);
+    Route::get('/driver/get-invoice-list/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverInvoices']);
+    Route::get('/driver/get-invoice-detail/{id}', [App\Http\Controllers\Api\V1\DriverController::class, 'getInvoiceById']);
+    Route::post('/driver/invoice/{id}/cancel', [App\Http\Controllers\Api\V1\DriverController::class, 'cancelInvoice']);
+    Route::post('/driver/check-in-out', [App\Http\Controllers\Api\V1\DriverController::class, 'checkInOut']);
+
+    //stock
+    Route::get('/driver/get-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getAllProduct']);
+    Route::post('/driver/stock-request', [App\Http\Controllers\Api\V1\DriverController::class, 'StockRequest']);
+    Route::post('/driver/stock-count', [App\Http\Controllers\Api\V1\DriverController::class, 'StockCount']);
+    Route::get('/driver/stock-count-status', [App\Http\Controllers\Api\V1\DriverController::class, 'StockCountStatus']);
+    Route::get('/driver/driver-stock-request-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockRequestRecord']);
+    Route::get('/driver/stock-return-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockReturnRecord']);
+
+    Route::get('/driver/stock-count-report', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountPdf']);
+
+    Route::get('/driver/inventory-balance', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryBalance']);
+    Route::post('/driver/stock/transaction', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryTransaction']);
+
+    //trip
+    Route::get('/driver/start-trip', [App\Http\Controllers\Api\V1\DriverController::class, 'TripStart']);
+    Route::get('/driver/end-trip', [App\Http\Controllers\Api\V1\DriverController::class, 'TripEnd']);
+    Route::get('/driver/get-lasttrip-summary', [App\Http\Controllers\Api\V1\DriverController::class, 'getLastTripSummary']);
+
+    //driver
+    Route::get('/driver/get-driver-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverProduct']);
+    Route::get('/driver/stock-request-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockRequest']);
+    Route::post('/driver/stock-request-approve', [App\Http\Controllers\Api\V1\DriverController::class, 'approveStockRequest']);
+    Route::post('/driver/stock-request-reject', [App\Http\Controllers\Api\V1\DriverController::class, 'rejectStockRequest']);
+    Route::get('/driver/stock-count-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCount']);
+    Route::post('/driver/stock-count-approve', [App\Http\Controllers\Api\V1\DriverController::class, 'approveStockCount']);
+    Route::post('/driver/stock-return', [App\Http\Controllers\Api\V1\DriverController::class, 'StockReturn']);
+
+    Route::post('/driver/manager-login', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogin']);
+    Route::post('/driver/manager-logout', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogout']);
 
 });
 

@@ -21,7 +21,7 @@ class InventoryBalance extends Model
 
 
     public $fillable = [
-        'lorry_id',
+        'driver_id',
         'product_id',
         'quantity'
     ];
@@ -33,7 +33,7 @@ class InventoryBalance extends Model
      */
     protected $casts = [
         'id' => 'integer',
-        'lorry_id' => 'integer',
+        'driver_id' => 'integer',
         'product_id' => 'integer',
         'quantity' => 'integer'
     ];
@@ -44,16 +44,16 @@ class InventoryBalance extends Model
      * @var array
      */
     public static $rules = [
-        'lorry_id' => 'required',
+        'driver_id' => 'required',
         'product_id' => 'required',
         'quantity' => 'required',
         'created_at' => 'nullable|nullable',
         'updated_at' => 'nullable|nullable'
     ];
 
-    public function lorry()
+    public function driver()
     {
-        return $this->belongsTo(\App\Models\Lorry::class, 'lorry_id', 'id');
+        return $this->belongsTo(\App\Models\Driver::class, 'driver_id', 'id');
     }
 
     public function product()

@@ -15,7 +15,14 @@
                          <div class="card">
                              <div class="card-header">
                                  <strong>{{ __('assign.detail') }}</strong>
-                                  <a href="{{ route('assigns.index') }}" class="btn btn-light">Back</a>
+                                  <div class="float-right">
+                                      <a href="{{ route('assigns.edit', Crypt::encrypt($assign->id)) }}" class="btn btn-primary">
+                                          <i class="fa fa-edit"></i> {{ __('assign.edit') }}
+                                      </a>
+                                      <a href="{{ route('assigns.index') }}" class="btn btn-light">
+                                          <i class="fa fa-arrow-left"></i> {{ __('Back') }}
+                                      </a>
+                                  </div>
                              </div>
                              <div class="card-body">
                                  @include('assigns.show_fields')
@@ -26,3 +33,11 @@
           </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).ready(function () {
+            HideLoad();
+        });
+    </script>
+@endpush

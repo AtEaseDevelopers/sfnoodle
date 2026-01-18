@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <title>{{config('app.name')}}</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
-    <link rel="icon" type="image/x-icon" href="{{config('app.url')}}/favicon.ico">
+    <link rel="icon" type="image/png" href="{{config('app.url')}}/logo.png">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- Bootstrap 4.1.1 -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.css">
@@ -494,17 +496,70 @@
     </button>
 
     <ul class="nav navbar-nav ml-auto">
+    {{-- Notification Icon --}}
+        @if(Auth::user()->hasRole('admin'))
+        <li class="nav-item dropdown notification-dropdown">
+            <a class="nav-link" style="margin-right: 15px" data-toggle="dropdown" href="#" role="button"
+            aria-haspopup="true" aria-expanded="false" id="notification-icon">
+                <i class="fa fa-bell"></i>
+                @php
+                    $unreadCount = $unreadCount ?? 0;
+                    $notifications = $notifications ?? collect([]);
+                @endphp
+                @if($unreadCount > 0)
+                    <span class="badge badge-danger notification-badge">{{ $unreadCount }}</span>
+                @endif
+            </a>
+            <div class="dropdown-menu dropdown-menu-right notification-dropdown-menu" style="width: 350px;">
+                <div class="dropdown-header text-center">
+                    <strong>Notifications</strong>
+                </div>
+                <div class="notification-list">
+                    @forelse($notifications as $notification)
+                        @php
+                            $tripId = $notification->trip_id ?? null;
+                            $reportUrl = $tripId ? route('tripsummaries', $tripId) . '?notification_id=' . $notification->id : '#';  
+                        @endphp
+                        
+                        <a href="{{ $reportUrl }}" 
+                            target="_blank"
+                            class="dropdown-item notification-item {{ !$notification->is_read ? 'unread' : '' }}">
+                                <div class="notification-content">
+                                    <div class="notification-title">
+                                        {{ $notification->title }}
+                                        @if(!$notification->is_read)
+                                            <span class="badge badge-success badge-sm">New</span>
+                                        @endif
+                                    </div>
+                                    <div class="notification-message small text-muted">
+                                        {{ $notification->message }}
+                                    </div>
+                                    <div class="notification-time small text-muted">
+                                        {{ $notification->created_at->diffForHumans() }}
+                                    </div>
+                                </div>
+                            </a>
+                    @empty
+                        <div class="dropdown-item text-center text-muted">
+                            No notifications
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </li>
+        @endif
+        {{-- User Profile Dropdown --}}
         <li class="nav-item dropdown">
             <a class="nav-link" style="margin-right: 10px" data-toggle="dropdown" href="#" role="button"
-               aria-haspopup="true" aria-expanded="false">
-                {{ Auth::user()->name }}
+            aria-haspopup="true" aria-expanded="false">
+                {{ Auth::user()->name ?? 'User' }}
             </a>
             <div class="dropdown-menu dropdown-menu-right">
                 <div class="dropdown-header text-center">
                     <strong>Account</strong>
                 </div>
                 <a href="{{ url('/logout') }}" class="dropdown-item btn btn-default btn-flat"
-                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fa fa-lock"></i>Logout
                 </a>
                 <form id="logout-form" action="{{ url('/logout') }}" method="POST" style="display: none;">
@@ -608,7 +663,207 @@
         }
     });
 
+    class NotificationManager {
+        constructor() {
+            this.pollingInterval = null;
+            this.pollingDelay = 30000; // 30 seconds
+            this.init();
+        }
+
+        init() {
+        this.startPolling();
+    }
+
+        startPolling() {
+            this.pollingInterval = setInterval(() => {
+                this.checkNewNotifications();
+            }, this.pollingDelay);
+        }
+
+        stopPolling() {
+            if (this.pollingInterval) {
+                clearInterval(this.pollingInterval);
+                this.pollingInterval = null;
+            }
+        }
+
+        async checkNewNotifications() {
+            try {
+                const response = await fetch('/notifications/unread-count');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.updateNotificationBadge(data.unread_count);
+                }
+            } catch (error) {
+                console.error('Error checking notifications:', error);
+            }
+        }
+
+        updateNotificationBadge(count) {
+            const badge = document.querySelector('.notification-badge');
+            const currentCount = parseInt(badge?.textContent || 0);
+            
+            if (count > currentCount && count > 0) {
+                // Show toast for new notification
+                this.showNewNotificationToast(count - currentCount);
+            }
+            
+            if (count > 0) {
+                if (badge) {
+                    badge.textContent = count;
+                } else {
+                    this.createBadge(count);
+                }
+            } else {
+                this.removeBadge();
+            }
+        }
+
+        createBadge(count) {
+            const icon = document.querySelector('#notification-icon i');
+            if (icon) {
+                const badge = document.createElement('span');
+                badge.className = 'badge badge-danger notification-badge';
+                badge.textContent = count;
+                icon.parentNode.appendChild(badge);
+            }
+        }
+
+        removeBadge() {
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                badge.remove();
+            }
+        }
+
+        showNewNotificationToast(newCount) {
+            // Use your preferred toast library or create a simple one
+            if (typeof Toast !== 'undefined') {
+                Toast.fire({
+                    icon: 'info',
+                    title: `You have ${newCount} new notification${newCount > 1 ? 's' : ''}!`
+                });
+            } else {
+                // Simple alert alternative
+                console.log(`New notification: ${newCount}`);
+            }
+        }
+
+        updateUnreadCount() {
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                const currentCount = parseInt(badge.textContent);
+                if (currentCount > 1) {
+                    badge.textContent = currentCount - 1;
+                } else {
+                    this.removeBadge();
+                }
+            }
+        }
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        window.notificationManager = new NotificationManager();
+    });
 </script>
+<style>
+    /* Notification Styles */
+.notification-dropdown .dropdown-menu {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 10px;
+    padding: 2px 5px;
+}
+
+.notification-item {
+    padding: 10px 15px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.notification-item.unread {
+    border-left-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.notification-item:hover {
+    background-color: #e9ecef;
+    text-decoration: none;
+}
+
+.notification-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.notification-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notification-message {
+    font-size: 12px;
+    margin-bottom: 2px;
+    line-height: 1.3;
+}
+
+.notification-time {
+    font-size: 11px;
+    text-align: right;
+}
+
+.badge-sm {
+    font-size: 8px;
+    padding: 1px 4px;
+}
+
+.mark-all-read {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.mark-all-read:hover {
+    text-decoration: underline;
+}
+
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 15px;
+    min-width: 300px;
+    border-left: 4px solid #007bff;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
 @stack('scripts')
 
 </html>

@@ -30,8 +30,8 @@ class InventoryBalanceDataTable extends DataTable
     public function query(InventoryBalance $model)
     {
         return $model->newQuery()
-        ->with('lorry:id,lorryno')
         ->with('product:id,name')
+        ->with('driver:id,name')
         ->select('inventory_balances.*')
         ->where('inventory_balances.quantity','<>','0');
     }
@@ -120,15 +120,29 @@ class InventoryBalanceDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'lorry_id'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('inventory_balances.lorry'),
-            'data' => 'lorry.lorryno',
-            'name' => 'lorry.lorryno']),
-
-            'product_id'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('inventory_balances.product'),
-            'data' => 'product.name',
-            'name' => 'product.name']),
-
-             trans('inventory_balances.quantity'),
+            'driver' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Driver',
+                'data' => 'driver.name',
+                'name' => 'driver.name',
+                'orderable' => true,
+                'searchable' => true
+            ]),
+            
+            'product' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Product',
+                'data' => 'product.name',
+                'name' => 'product.name',
+                'orderable' => true,
+                'searchable' => true
+            ]),
+            
+            'quantity' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Quantity',
+                'data' => 'quantity',
+                'name' => 'quantity',
+                'orderable' => true,
+                'searchable' => true,
+            ]),
         ];
     }
 

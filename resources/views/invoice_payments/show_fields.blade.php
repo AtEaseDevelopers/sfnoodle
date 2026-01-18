@@ -25,7 +25,7 @@
 <!-- Customer Id Field -->
 <div class="form-group">
     {!! Form::label('customer_id', __('invoice_payments.customer')) !!}:
-    <p>{{ $invoicePayment->customer->name ?? '' }}</p>
+    <p>{{ $invoicePayment->customer->company ?? '' }}</p>
 </div>
 
 <!-- Amount Field -->
@@ -37,31 +37,47 @@
 <!-- Status Field -->
 <div class="form-group">
     {!! Form::label('status', __('invoice_payments.status')) !!}:
-    <p>{{ $invoicePayment->status == 1 ? __('invoice_payments.completed') : __('invoice_payments.new') }}</p>
+    @if($invoicePayment->status == 0)
+        <p>{{ __('invoice_payments.new') }}</p>
+    @elseif($invoicePayment->status == 1)
+        <p>{{ __('invoice_payments.completed') }}</p>
+    @elseif($invoicePayment->status == 2)
+        <p>{{ __('invoice_payments.cancelled') }}</p>
+    @else
+        <p>{{ $invoicePayment->status }}</p>
+    @endif
 </div>
 
 <!-- Attachment Field -->
 <div class="form-group">
     {!! Form::label('attachment', __('invoice_payments.attachment')) !!}:
-    <p>{{ $invoicePayment->attachment }}</p>
+    @if($invoicePayment->attachment)
+        <p>
+            <a href="{{ asset('/' . $invoicePayment->attachment) }}" target="_blank" class="btn btn-link">
+                <i class="fa fa-paperclip"></i> {{ __('View Attachment') }}
+            </a>
+        </p>
+    @else
+        <p>-</p>
+    @endif
 </div>
 
 <!-- Approve By Field -->
 <div class="form-group">
     {!! Form::label('approve_by', __('invoice_payments.approve_by')) !!}:
-    <p>{{ $invoicePayment->approve_by }}</p>
+    <p>{{ $invoicePayment->approve_by ?: '-' }}</p>
 </div>
 
 <!-- Approve At Field -->
 <div class="form-group">
     {!! Form::label('approve_at', __('invoice_payments.approve_at')) !!}:
-    <p>{{ $invoicePayment->approve_at }}</p>
+    <p>{{ $invoicePayment->approve_at ?: '-' }}</p>
 </div>
 
 <!-- Remark Field -->
 <div class="form-group">
     {!! Form::label('remark', __('invoice_payments.remark')) !!}:
-    <p>{{ $invoicePayment->remark }}</p>
+    <p>{{ $invoicePayment->remark ?: '-' }}</p>
 </div>
 
 @push('scripts')

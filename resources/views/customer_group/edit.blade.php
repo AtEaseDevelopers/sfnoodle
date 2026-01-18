@@ -3,7 +3,7 @@
 @section('content')
     <ol class="breadcrumb">
           <li class="breadcrumb-item">
-             <a href="{!! route('customer_group.index') !!}">{{ __('customer_group.customer_group') }}</a>
+             <a href="{!! route('customer_group.index') !!}">{{ __('Customer Group') }}</a>
           </li>
           <li class="breadcrumb-item active">{{ __('customer_group.edit') }}</li>
         </ol>
@@ -16,9 +16,10 @@
                           <div class="card-header">
                               <i class="fa fa-edit fa-lg"></i>
                               <strong>{{ __('customer_group.edit_customer_group') }}</strong>
+                              <a href="{{ route('customer_group.index') }}" class="btn btn-light float-right">{{ __('Back') }}</a>
                           </div>
                           <div class="card-body">
-                              {!! Form::model($code, ['route' => ['customer_group.update', Crypt::encrypt($code->id)], 'method' => 'patch']) !!}
+                              {!! Form::model($customerGroup, ['route' => ['customer_group.update', Crypt::encrypt($customerGroup->id)], 'method' => 'patch']) !!}
 
                               @include('customer_group.fields')
 
@@ -30,3 +31,16 @@
          </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).keyup(function(e) {
+            if (e.key === "Escape") {
+                window.location.href = "{{ route('customer_group.index') }}";
+            }
+        });
+        $(document).ready(function () {
+            HideLoad();
+        });
+    </script>
+@endpush

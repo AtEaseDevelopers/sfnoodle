@@ -18,7 +18,44 @@ class InventoryTransactionDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'inventory_transactions.datatables_actions');
+        return $dataTable
+
+            ->editColumn('created_at', function($request) {
+                return $request->created_at ? $request->created_at->format('d-m-Y H:i') : '';
+            })
+            ->addColumn('action', 'inventory_transactions.datatables_actions')
+            ->editColumn('type', function ($model) {
+                $colors = [
+                    InventoryTransaction::TYPE_STOCK_IN => 'success', // Green
+                    InventoryTransaction::TYPE_STOCK_OUT => 'danger', // Red
+                    InventoryTransaction::TYPE_STOCK_RETURN => 'warning', // Orange
+                ];
+                
+                $labels = [
+                    InventoryTransaction::TYPE_STOCK_IN => 'Stock In',
+                    InventoryTransaction::TYPE_STOCK_OUT => 'Stock Out',
+                    InventoryTransaction::TYPE_STOCK_RETURN => 'Stock Return',
+                ];
+                
+                $color = $colors[$model->type] ?? 'secondary';
+                $label = $labels[$model->type] ?? 'Unknown';
+                
+                return '<span class="badge badge-' . $color . '">' . $label . '</span>';
+            })
+            
+            ->editColumn('quantity', function ($model) {
+                $colors = [
+                    InventoryTransaction::TYPE_STOCK_IN => 'text-success font-weight-bold',
+                    InventoryTransaction::TYPE_STOCK_OUT => 'text-danger font-weight-bold',
+                    InventoryTransaction::TYPE_STOCK_RETURN => 'text-warning font-weight-bold',
+                ];
+                
+                $sign = $model->type == InventoryTransaction::TYPE_STOCK_IN ? '+' : '-';
+                $colorClass = $colors[$model->type] ?? '';
+                
+                return '<span class="' . $colorClass . '">' . $sign . abs($model->quantity) . '</span>';
+            })
+            ->rawColumns(['type', 'quantity', 'action']);
     }
 
     /**
@@ -30,7 +67,7 @@ class InventoryTransactionDataTable extends DataTable
     public function query(InventoryTransaction $model)
     {
         return $model->newQuery()
-        ->with('lorry:id,lorryno')
+        ->with('driver:id,name')
         ->with('product:id,name')
         ->select('inventory_transactions.*');
     }
@@ -103,28 +140,7 @@ class InventoryTransactionDataTable extends DataTable
                         'text' => trans('table_buttons.show_10_rows')
                     ],
                 ],
-                'columnDefs' => [
-                    [
-                        'targets' => 1,
-                        'render' => 'function(data, type){
-                                                            if(data == 1){
-                                                                return "Stock In";
-                                                            }
-                                                            if(data == 2){
-                                                                return "Stock Out";
-                                                            }
-                                                            if(data == 3){
-                                                                return "Invoice";
-                                                            }
-                                                            if(data == 4){
-                                                                return "Transfer";
-                                                            }
-                                                            if(data == 5){
-                                                                return "Wastage";
-                                                            }
-                                                        }'
-                    ],
-                ],
+                
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
                     this.api()
@@ -133,7 +149,7 @@ class InventoryTransactionDataTable extends DataTable
                         var column = this;
                         if(columns[index].searchable){
                             if(columns[index].title == \'Type\'){
-                                var input = \'<select class="border-0" id="typeStock" style="width: 100%;"><option value=""></option><option value="1">Stock In</option><option value="2">Stock Out</option><option value="3">Invoice</option><option value="4">Transfer</option><option value="5">Wastage</option></select>\';
+                                var input = \'<select class="border-0" id="typeStock" style="width: 100%;"><option value=""></option><option value="1">Stock In</option><option value="2">Stock Out</option><option value="3">Stock Return</option></select>\';
                             }else if(columns[index].title == \'Date\'){
                                 var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
                             }else{
@@ -158,23 +174,28 @@ class InventoryTransactionDataTable extends DataTable
     {
         return [
             'date'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.date'),
-            'data' => 'date',
-            'name' => 'date']),
+            'data' => 'created_at',
+            'name' => 'created_at']),
 
-            trans('inventory_transactions.type'),
+            'type'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.type'),
+            'data' => 'type',
+            'name' => 'inventory_transactions.type']),
 
-            'lorry_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.lorry'),
-            'data' => 'lorry.lorryno',
-            'name' => 'lorry.lorryno']),
+            'driver_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('Driver'),
+            'data' => 'driver.name',
+            'name' => 'driver.name']),
 
             'product_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.product'),
             'data' => 'product.name',
             'name' => 'product.name']),
 
-            trans('inventory_transactions.quantity'),
-            trans('inventory_transactions.remark'),
-            trans('inventory_transactions.user'),
+            'quantity'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.quantity'),
+            'data' => 'quantity',
+            'name' => 'quantity']),
 
+            'remark'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.remark'),
+            'data' => 'remark',
+            'name' => 'remark']),
         ];
     }
 

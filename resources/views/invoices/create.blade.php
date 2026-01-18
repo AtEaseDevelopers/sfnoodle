@@ -5,7 +5,7 @@
       <li class="breadcrumb-item">
          <a href="{!! route('invoices.index') !!}">{{ __('invoices.invoices') }}</a>
       </li>
-      <li class="breadcrumb-item active">{{ __('invoices.create') }}</li>
+      <li class="breadcrumb-item active">{{ __('Create') }}</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -18,7 +18,7 @@
                                 <strong>{{ __('invoices.create_invoice') }}</strong>
                             </div>
                             <div class="card-body">
-                                {!! Form::open(['route' => 'invoices.store']) !!}
+                                {!! Form::open(['route' => 'invoices.store', 'method' => 'POST', 'id' => 'invoiceForm', 'enctype' => 'multipart/form-data']) !!}
 
                                    @include('invoices.fields')
 

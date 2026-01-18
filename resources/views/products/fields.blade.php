@@ -16,14 +16,15 @@
     {!! Form::number('price', null, ['class' => 'form-control', 'step' => '0.01']) !!}
 </div>
 
-<!-- Type Field -->
+<!-- Category Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('type', __('products.type')) !!}
-    {{ Form::select('type', [
-        0 => __('products.type_ice'),
-    ], null, ['class' => 'form-control']) }}
+    {!! Form::label('category_id', __('Category')) !!}<span class="asterisk"> *</span>
+    {{ Form::select('category_id', 
+        $categories->pluck('name', 'id')->prepend(__('Select Category'), ''),
+        isset($product) ? $product->category_id : null, 
+        ['class' => 'form-control', 'required' => 'required']
+    ) }}
 </div>
-
 <!-- Status Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('status', __('products.status')) !!}

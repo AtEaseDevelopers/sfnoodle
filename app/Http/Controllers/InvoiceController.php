@@ -3,10 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\InvoiceDataTable;
-use App\Http\Requests;
-use App\Http\Requests\CreateInvoiceRequest;
-use App\Http\Requests\UpdateInvoiceRequest;
-use App\Repositories\InvoiceRepository;
 use Flash;
 use App\Http\Controllers\AppBaseController;
 use Response;
@@ -22,9 +18,13 @@ use App\Models\Trip;
 use App\Models\Product;
 use App\Models\Task;
 use App\Models\Code;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Session;
 use Exception;
+use Illuminate\Support\Facades\Validator;
+use App\Repositories\InvoiceRepository;
+use App\Models\Driver;
 
 class InvoiceController extends AppBaseController
 {
@@ -57,63 +57,152 @@ class InvoiceController extends AppBaseController
      */
     public function create()
     {
-        return view('invoices.create');
+        $customers = Customer::select('id', 'company', 'paymentterm')->orderBy('company')->get();
+        $customerItems = $customers->pluck('company', 'id');
+        
+        // Pass customer payment terms as JSON for JavaScript
+        $customerPaymentTerms = $customers->mapWithKeys(function($customer) {
+            return [$customer->id => $customer->paymentterm];
+        })->toJson();
+        
+        $drivers = Driver::select('id', 'name')->orderBy('name')->get();
+        $driverItems = $drivers->pluck('name', 'id');
+
+        // Get products for the details section
+        $products = Product::select('id', 'name', 'code')->orderBy('name')->get();
+        $productItems = $products->mapWithKeys(function($product) {
+            return [$product->id => $product->name . ' (' . $product->code . ')'];
+        });
+
+        $productPrices = Product::pluck('price', 'id')->toArray();
+
+        // Generate next invoice number
+        $nextInvoiceNumber = Invoice::getNextInvoiceNumber();
+
+        return view('invoices.create', compact(
+            'customerItems', 
+            'driverItems', 
+            'customerPaymentTerms',
+            'productItems',
+            'nextInvoiceNumber',
+            'productPrices'
+
+        ));
     }
 
     /**
      * Store a newly created Invoice in storage.
      *
-     * @param CreateInvoiceRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function store(CreateInvoiceRequest $request)
+    public function store(Request $request)
     {
-        $input = $request->all();
+        $input = $request->all(); 
 
-        $input['date'] = date_create($input['date']);
-        if($input['invoiceno'] == null){
-            Code::where('code','invoicerunningnumber')->first()->increment('value');
-            $input['invoiceno'] = 'INV'.sprintf('%07d',Code::where('code','invoicerunningnumber')->first()->value);
+        $additionalRules = [
+            'payment_attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'payment_remark' => 'nullable|string|max:255',
+        ];
+        
+        $validator = Validator::make($request->all(), array_merge(Invoice::$rules, $additionalRules));
+        
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
-        $invoice = $this->invoiceRepository->create($input);
+        DB::beginTransaction(); // Start transaction
 
-        if($input['driver_id'] != ''){
-            $trip = Trip::where('driver_id',$input['driver_id'])->orderBy('id','desc')->first();
-            if(!empty($trip)){
-                //check user start trip
-                if($trip->type == 1){
-                    $exttask = Task::where('driver_id',$input['driver_id'])->where('status',0);
-                    if($exttask->count() != 0){
-                        $sequence = $exttask->orderby('sequence','asc')->get()->first()->sequence;
-                        $exttask->increment('sequence');
-                    }else{
-                        $sequence = 1;
-                    }
-                    $task = new Task();
-                    $task->date = date("Y-m-d");
-                    $task->driver_id = $invoice->driver_id;
-                    $task->customer_id = $invoice->customer_id;
-                    $task->sequence = $sequence;
-                    $task->invoice_id = $invoice->id;
-                    $task->status = 0;
-                    $task->save();
-                    Flash::success('Invoice saved and assigned to driver successfully.');
+        try {
+            $input = $request->all();
+
+            $input['date'] = date_create($input['date']);
+            
+            // Handle invoice number generation using the new method
+            if(empty($input['invoiceno']) || $input['invoiceno'] == 'SYSTEM GENERATED IF BLANK') {
+                // Generate new invoice number using the new method
+                $input['invoiceno'] = Invoice::generateInvoiceNumber();
+            } else {
+                // Check if the provided invoice number already exists
+                if(Invoice::invoiceNumberExists($input['invoiceno'])) {
+                    // If exists, generate a new one with incremented number
+                    $input['invoiceno'] = Invoice::generateInvoiceNumber();
                 }
-            }else{
-                Flash::success('Invoice saved successfully.');
             }
-        }else{
-            Flash::success('Invoice saved successfully.');
-        }
+            // Set creator information (handled by model boot method)
+            // Model boot will automatically set created_by and is_driver
+            
+            // Set default status if not provided
+            if (!isset($input['status'])) {
+                $input['status'] = Invoice::STATUS_NEW;
+            }
 
-        if($input['method'] == 1){
+            // Create invoice
+            $invoice = $this->invoiceRepository->create($input);
+
+            // Create invoice details
+            $totalAmount = 0;
+            if (isset($input['details']) && is_array($input['details'])) {
+                foreach ($input['details'] as $detail) {
+                    $itemTotal = $detail['quantity'] * $detail['price'];
+                    $totalAmount += $itemTotal;
+                    
+                    $invoiceDetail = new InvoiceDetail();
+                    $invoiceDetail->invoice_id = $invoice->id;
+                    $invoiceDetail->product_id = $detail['product_id'];
+                    $invoiceDetail->quantity = $detail['quantity'];
+                    $invoiceDetail->price = $detail['price'];
+                    $invoiceDetail->totalprice = $itemTotal;
+                    $invoiceDetail->remark = $detail['remark'] ?? null;
+                    $invoiceDetail->save();
+                }
+            }
+
+            // Create invoice payment ONLY if status is COMPLETED and payment term is CASH
+            if ($input['status'] == Invoice::STATUS_COMPLETED && $input['paymentterm'] == 'Cash') {
+                $this->createInvoicePayment($invoice, $input, $totalAmount, $request);
+            }
+            
+            DB::commit(); // Commit transaction if everything is successful
+
+            Flash::success('Invoice created successfully.');
             return redirect(route('invoices.index'));
-        }else{
-            return redirect(route('invoices.show',encrypt($invoice->id)));
-        }
 
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction on error
+            
+            Flash::error('Error saving invoice: ' . $e->getMessage());
+            return redirect()->back()->withInput();
+        }
+    }
+
+    private function createInvoicePayment($invoice, $input, $totalAmount, $request)
+    {
+        $invoicePayment = new InvoicePayment();
+        $invoicePayment->invoice_id = $invoice->id;
+        $invoicePayment->customer_id = $invoice->customer_id;
+        $invoicePayment->amount = $totalAmount;
+        $invoicePayment->status = 1; // Completed status for payment
+        $invoicePayment->type = Invoice::PAYMENT_TYPE_CASH ; // always cash for now
+
+        // Handle attachment upload
+        if ($request->hasFile('payment_attachment')) {
+            $file = $request->file('payment_attachment');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('payment_attachments', $fileName, 'public');
+            $invoicePayment->attachment = $filePath;
+        }
+        
+        $invoicePayment->remark = $input['payment_remark'] ?? null;
+        $invoicePayment->user_id = Auth::id();
+        $invoicePayment->approve_by = Auth::user()->name;
+        $invoicePayment->approve_at = date('Y-m-d H:i:s');
+        $invoicePayment->save();
+
+        return $invoicePayment;
     }
 
     /**
@@ -153,22 +242,57 @@ class InvoiceController extends AppBaseController
 
         if (empty($invoice)) {
             Flash::error('Invoice not found');
-
             return redirect(route('invoices.index'));
         }
 
-        return view('invoices.edit')->with('invoice', $invoice);
+        $customers = Customer::select('id', 'company', 'paymentterm')->orderBy('company')->get();
+        $customerItems = $customers->pluck('company', 'id');
+        
+        // Pass customer payment terms as JSON for JavaScript
+        $customerPaymentTerms = $customers->mapWithKeys(function($customer) {
+            return [$customer->id => $customer->paymentterm];
+        })->toJson();
+        
+        $drivers = Driver::select('id', 'name')->orderBy('name')->get();
+        $driverItems = $drivers->pluck('name', 'id');
+
+        // Get products for the details section
+        $products = Product::select('id', 'name', 'code')->orderBy('name')->get();
+        $productItems = $products->mapWithKeys(function($product) {
+            return [$product->id => $product->name . ' (' . $product->code . ')'];
+        });
+        
+        // Get invoice details
+        $invoiceDetails = InvoiceDetail::with('product')
+            ->where('invoice_id', $id)
+            ->get()
+            ->toArray();
+            
+        $invoicePayment = InvoicePayment::where('invoice_id', $id)->first();
+
+            // Format date for display
+        $invoice->date = $invoice->date ? date('d-m-Y', strtotime($invoice->date)) : null;
+
+        return view('invoices.edit', compact(
+            'invoice', 
+            'customerItems', 
+            'driverItems', 
+            'customerPaymentTerms', 
+            'productItems',
+            'invoiceDetails',
+            'invoicePayment'
+        ))->with('isEdit', true);
     }
 
     /**
      * Update the specified Invoice in storage.
      *
      * @param int $id
-     * @param UpdateInvoiceRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function update($id, UpdateInvoiceRequest $request)
+    public function update($id, Request $request)
     {
         $id = Crypt::decrypt($id);
         $invoice = $this->invoiceRepository->find($id);
@@ -177,6 +301,15 @@ class InvoiceController extends AppBaseController
             Flash::error('Invoice not found');
 
             return redirect(route('invoices.index'));
+        }
+
+        // Validate using model rules
+        $validator = Validator::make($request->all(), Invoice::$Updaterules);
+        
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
         }
     
         $old_payment = $invoice['paymentterm'];
@@ -191,187 +324,23 @@ class InvoiceController extends AppBaseController
 
         $invoice = $this->invoiceRepository->update($input, $id);
 
-         if($old_payment != $input['paymentterm'])
-        {
-            $invoicePayment = InvoicePayment::where('invoice_id', $id)->first();
-
-            if($old_payment == "1")
-            {
-                if($invoicePayment)
-                {
-                    // Cancel Invoice Payment
-                    $invoicePayment->status = 2;
-                    $invoicePayment->approve_by = null;
-                    $invoicePayment->approve_at = null;
-                    $invoicePayment->save();
-                }
-            }
-            else
-            {
-                if($invoicePayment)
-                {
-                    $invoicePayment->status = 1;
-                    $invoicePayment->approve_by = Auth::user()->email;
-                    $invoicePayment->approve_at = date('Y-m-d H:i:s');
-                    $invoicePayment->save();
-                }
-                else
-                {
-                    $totalAmount = InvoiceDetail::where('invoice_id', $id)->sum('totalprice');
-
-                    $invoicepayment_new = New InvoicePayment();
-                    $invoicepayment_new->invoice_id = $id;
-                    $invoicepayment_new->type = 1;
-                    $invoicepayment_new->customer_id = $invoice->customer_id;
-                    $invoicepayment_new->amount = $totalAmount;
-                    $invoicepayment_new->status = $invoice->status;
-                    $invoicepayment_new->driver_id = $invoice->driver_id;
-                    $invoicepayment_new->approve_by = Auth::user()->email;
-                    $invoicepayment_new->approve_at = date('Y-m-d H:i:s');
-                    $invoicepayment_new->save();
-                }
-            }
-        }
-        else
-        {
-            if($input['paymentterm'] == 1)
-            {
-                $totalAmount = InvoiceDetail::where('invoice_id', $id)->sum('totalprice');
-
-                $invoicePayment = InvoicePayment::where('invoice_id', $id)->first();
-
-                if(!$invoicePayment)
-                {
-                    $invoicepayment_new = New InvoicePayment();
-                    $invoicepayment_new->invoice_id = $id;
-                    $invoicepayment_new->type = 1;
-                    $invoicepayment_new->customer_id = $invoice->customer_id;
-                    $invoicepayment_new->amount = $totalAmount;
-                    $invoicepayment_new->status = $invoice->status;
-                    $invoicepayment_new->driver_id = $invoice->driver_id;
-                    $invoicepayment_new->approve_by = Auth::user()->email;
-                    $invoicepayment_new->approve_at = date('Y-m-d H:i:s');
-                    $invoicepayment_new->save();
-                }
-                else
-                {
-                    $invoicePayment->status = 1;
-                    $invoicePayment->amount = $totalAmount;
-                    $invoicePayment->save();
-                }
+        InvoiceDetail::where('invoice_id', $id)->delete();
+        
+        if (isset($input['details']) && is_array($input['details'])) {
+            foreach ($input['details'] as $detail) {
+                $invoiceDetail = new InvoiceDetail();
+                $invoiceDetail->invoice_id = $invoice->id;
+                $invoiceDetail->product_id = $detail['product_id'];
+                $invoiceDetail->quantity = $detail['quantity'];
+                $invoiceDetail->price = $detail['price'];
+                $invoiceDetail->totalprice = $detail['quantity'] * $detail['price'];
+                $invoiceDetail->remark = $detail['remark'] ?? null;
+                $invoiceDetail->save();
             }
         }
 
-
-        if($input['driver_id'] != ''){
-            $task = Task::where('invoice_id',$invoice->id)->where('status',0)->first();
-            if(!empty($task)){
-                //Task found
-                if($task->driver_id != $invoice->driver_id){
-                    //if driver changed
-                    $task_status = $task->status;
-                    if($task_status == 0){
-                        //task is new
-                        $task->status = 9;
-                        $task->save();
-
-                        $trip = Trip::where('driver_id',$input['driver_id'])->orderBy('id','desc')->first();
-                        if(!empty($trip)){
-                            //check user start trip
-                            if($trip->type == 1){
-                                $exttask = Task::where('driver_id',$input['driver_id'])->where('status',0);
-                                if($exttask->count() != 0){
-                                    $sequence = $exttask->orderby('sequence','asc')->get()->first()->sequence;
-                                    $exttask->increment('sequence');
-                                }else{
-                                    $sequence = 1;
-                                }
-                                $task = new Task();
-                                $task->date = date("Y-m-d");
-                                $task->driver_id = $invoice->driver_id;
-                                $task->customer_id = $invoice->customer_id;
-                                $task->sequence = $sequence;
-                                $task->invoice_id = $invoice->id;
-                                $task->status = 0;
-                                $task->save();
-                                Flash::success('Invoice updated and assigned to another driver successfully.');
-                            }
-                        }else{
-                            Flash::success('Invoice updated successfully.');
-                        }
-
-                    }
-                    if($task_status == 9){
-                        //task is cancelled
-                        $trip = Trip::where('driver_id',$input['driver_id'])->orderBy('id','desc')->first();
-                        if(!empty($trip)){
-                            //check user start trip
-                            if($trip->type == 1){
-                                $exttask = Task::where('driver_id',$input['driver_id'])->where('status',0);
-                                if($exttask->count() != 0){
-                                    $sequence = $exttask->orderby('sequence','asc')->get()->first()->sequence;
-                                    $exttask->increment('sequence');
-                                }else{
-                                    $sequence = 1;
-                                }
-                                $task = new Task();
-                                $task->date = date("Y-m-d");
-                                $task->driver_id = $invoice->driver_id;
-                                $task->customer_id = $invoice->customer_id;
-                                $task->sequence = $sequence;
-                                $task->invoice_id = $invoice->id;
-                                $task->status = 0;
-                                $task->save();
-                                Flash::success('Invoice updated and assigned to another driver successfully.');
-                            }
-                        }else{
-                            Flash::success('Invoice updated successfully.');
-                        }
-
-                    }
-                    if($task_status == 1){
-                        Flash::success('Invoice updated successfully.');
-                    }
-                    if($task_status == 8){
-                        Flash::success('Invoice updated successfully.');
-                    }
-                }
-            }else{
-                //Task not found
-                $trip = Trip::where('driver_id',$input['driver_id'])->orderBy('id','desc')->first();
-                if(!empty($trip)){
-                    //check user start trip
-                    if($trip->type == 1){
-                        $exttask = Task::where('driver_id',$input['driver_id'])->where('status',0);
-                        if($exttask->count() != 0){
-                            $sequence = $exttask->orderby('sequence','asc')->get()->first()->sequence;
-                            $exttask->increment('sequence');
-                        }else{
-                            $sequence = 1;
-                        }
-                        $task = new Task();
-                        $task->date = date("Y-m-d");
-                        $task->driver_id = $invoice->driver_id;
-                        $task->customer_id = $invoice->customer_id;
-                        $task->sequence = $sequence;
-                        $task->invoice_id = $invoice->id;
-                        $task->status = 0;
-                        $task->save();
-                        Flash::success('Invoice updated and assigned to driver successfully.');
-                    }
-                }else{
-                    Flash::success('Invoice updated successfully.');
-                }
-            }
-        }else{
-            Flash::success('Invoice updated successfully.');
-        }
-
-        if($input['method'] == 1){
-            return redirect(route('invoices.index'));
-        }else{
-            return redirect(route('invoices.show',encrypt($invoice->id)));
-        }
+        Flash::success('Invoice updated successfully.');
+        return redirect(route('invoices.index'));
     }
 
     /**
@@ -422,7 +391,7 @@ class InvoiceController extends AppBaseController
 
             $invoice = $this->invoiceRepository->find($id);
 
-            $task = Task::where('invoice_id',$invoice->id)->first();
+        $task = Task::where('invoice_id',$invoice->id)->first();
             if(!empty($task)){
                 if ($task->status != 0) {
                     continue;
@@ -432,7 +401,7 @@ class InvoiceController extends AppBaseController
             }
             $invoicedetail = Invoicedetail::where('invoice_id',$invoice->id)->delete();
 
-            $count = $count + invoice::destroy($id);
+            $count = $count + Invoice::destroy($id);
         }
 
         return $count;
@@ -444,7 +413,7 @@ class InvoiceController extends AppBaseController
         $ids = $data['ids'];
         $status = $data['status'];
 
-        $count = invoice::whereIn('id',$ids)->update(['status'=>$status]);
+        $count = Invoice::whereIn('id',$ids)->update(['status'=>$status]);
 
         return $count;
     }
@@ -519,7 +488,7 @@ class InvoiceController extends AppBaseController
         $invoicedetail->save();
         
 
-        if($invoice->paymentterm == 1)
+        if($invoice->paymentterm == "Cash") // Changed from "1" to "Cash"
         {
             // Check invoice payment if cash 
             $id = $input['invoice_id'];
@@ -548,63 +517,7 @@ class InvoiceController extends AppBaseController
             }
         }
 
-
-        
-        // $xero_has_err = false;
-        // try {
-        //     $redirect_uri = config('app.url') . '/invoices';
-        //     $xero = new XeroController($redirect_uri);
-
-        //     // Get Xero's access token
-        //     if ($request->has('code')) {
-        //         $res = $xero->getToken($request->code);
-        //         if (!$res->ok()) {
-        //             throw new Exception('Failed to get xero access token.');
-        //         }
-        //     }
-        //     // Xero auth
-        //     $res = $xero->auth();
-        //     if ($res !== true) {
-        //         return $res;
-        //     }
-        //     // Get contact
-        //     $customer_name = Customer::where('id', $invoice->customer_id)->value('company');
-            
-        //     $res = $xero->getContact($customer_name); // Get contact
-        //     $payload = $res->object();
-
-        //     if (!$res->ok()) {
-        //         throw new Exception('Failed to get xero contact.');
-        //     } elseif ($res->ok() && isset($payload->Contacts) && count($payload->Contacts) <= 0) { // Create contact in Xero
-        //         $res = $xero->createContact($customer_name);
-        //         if (!$res->ok()) {
-        //             throw new Exception('Failed to create contact for ' . $customer_name);
-        //         }
-        //         $payload = $res->object();
-        //     }
-        //     // Create credit note
-        //     $items = [
-        //         'Quantity' => $input['quantity'],
-        //         'UnitAmount' => $input['price'], 
-        //         'Description' => $input['remark'] ?? $invoice->invoiceno
-        //     ];
-        //     $res = $xero->createCreditNote(true, $payload->Contacts[0], $items, 'ID' . $invoicedetail->id);
-        //     if (!$res->ok()) {
-        //         throw new Exception('Failed to create credit note.');
-        //     }
-            
-        //     DB::commit();
-        // } catch (\Throwable $th) {
-        //     DB::rollback();
-        //     report($th);
-            
-        //     $xero_has_err = true;
-        //     Flash::error('Something went wrong. Please contact administator.');
-        // }
-
-        // if (!$xero_has_err) {
-            Flash::success('Invoice Detail saved successfully.');
-        // }
+        Flash::success('Invoice Detail saved successfully.');
         
         Session::forget('invoice_detail_data');
     }
@@ -637,27 +550,20 @@ class InvoiceController extends AppBaseController
     {
         $id = Crypt::decrypt($id);
         $invoice = Invoice::where('id',$id)
-        ->with('customer')
-        ->with('driver')
-        ->with('invoicedetail.product')
+        ->with(['customer', 'InvoiceDetails.product', 'createdByUser', 'createdByDriver'])
         ->first();
-
-        if (empty($invoice)) {
-            abort('404');
-        }
+    
 
         $min = 450;
         $each = 23;
-        $height = (count($invoice['invoicedetail']) * $each) + $min;
+        $height = (count($invoice['invoiceDetails']) * $each) + $min;
 
-        $invoice->newcredit = round(DB::select('call ice_spGetCustomerCreditByDate("'.$invoice->updated_at.'",'.$invoice->customer_id.');')[0]->credit,2);
-        $invoice->customer->groupcompany = DB::table('companies')
-        ->where('companies.group_id',explode(',',$invoice->customer->group)[0])
-        ->select('companies.*')
-        ->first() ?? null;
+        $creator = $invoice->creator; // Returns User or Driver model
+
         try{
             $pdf = Pdf::loadView('invoices.print', array(
-                'invoice' => $invoice
+                'invoices' => $invoice,
+                'creatorName' => $creator->name
             ));
 
             if($function == 'download'){
@@ -667,9 +573,46 @@ class InvoiceController extends AppBaseController
             }
         }
         catch(Exception $e){
+            dd($e->getMessage());
+
             abort(404);
         }
 
+    }
+
+    public function cancelInvoice($id, Request $request)
+    {
+        $id = Crypt::decrypt($id);
+        $invoice = $this->invoiceRepository->find($id);
+
+        if (empty($invoice)) {
+            Flash::error('Invoice not found');
+            return redirect(route('invoices.index'));
+        }
+
+        // Check if invoice can be cancelled (only completed invoices can be cancelled)
+        if ($invoice->status != Invoice::STATUS_COMPLETED) {
+            Flash::error('Only completed invoices can be cancelled.');
+            return redirect(route('invoices.show', encrypt($id)));
+        }
+        try {
+            // Cancel the invoice
+            $invoice->cancel();
+
+            // Store cancellation reason if provided
+            $cancellationReason = $request->input('cancellation_reason');
+            if ($cancellationReason) {
+                $invoice->remark = "\n[Cancelled: " . $cancellationReason . " - " . date('Y-m-d H:i:s') . "] by". Auth::user()->name;
+                $invoice->save();
+            }
+            
+            Flash::success('Invoice cancelled successfully.');
+            
+        } catch (\Exception $e) {
+            Flash::error('Error cancelling invoice: ' . $e->getMessage());
+        }
+
+        return redirect(route('invoices.index'));
     }
 
     public function syncXero(Request $req)
@@ -696,7 +639,7 @@ class InvoiceController extends AppBaseController
             }
             // Sync customers
             $ids = Session::get('ids_to_sync_xero');
-            $records = invoice::whereIn('id', $ids)->get();
+            $records = Invoice::whereIn('id', $ids)->get();
             
             $invoice_data = [];
             for ($i = 0; $i < count($records); $i++) {

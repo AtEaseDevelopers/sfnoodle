@@ -18,7 +18,18 @@ class AssignDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'assigns.datatables_actions');
+        return $dataTable
+            ->addColumn('customer_count', function ($assign) {
+                if ($assign->customerGroup && $assign->customerGroup->customer_ids) {
+                    return count($assign->customerGroup->customer_ids);
+                }
+                return 0;
+            })
+             ->addColumn('created_at', function ($customerGroup) {
+                return $customerGroup->created_at ? $customerGroup->created_at->format('d/m/Y H:i') : '';
+            })
+            ->addColumn('action', 'assigns.datatables_actions')
+            ->rawColumns(['action', 'checkbox']);
     }
 
     /**
@@ -30,9 +41,8 @@ class AssignDataTable extends DataTable
     public function query(Assign $model)
     {
         return $model->newQuery()
-        ->with('driver:id,name')
-        ->with('customer:id,company')
-        ->select('assigns.*');
+            ->with(['driver:id,name', 'customerGroup:id,name'])
+            ->select('assigns.*');
     }
 
     /**
@@ -80,7 +90,7 @@ class AssignDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'assignments_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'pdfHtml5',
@@ -90,7 +100,7 @@ class AssignDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'assignments_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'colvis',
@@ -111,7 +121,14 @@ class AssignDataTable extends DataTable
                     [
                         'targets' => 0,
                         'visible' => true,
-                        'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
+                        'orderable' => false,
+                        'searchable' => false,
+                        'render' => 'function(data, type, row, meta){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
+                    ],
+                    [
+                        'targets' => 4, // sequence column
+                        'visible' => false,
+                        'searchable' => false
                     ]
                 ],
                 'initComplete' => 'function(){
@@ -121,16 +138,9 @@ class AssignDataTable extends DataTable
                     .every(function (index) {
                         var column = this;
                         if(columns[index].searchable){
-                            if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Unactive</option></select>\';
-                            }else if(columns[index].title == \'Payment Term\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Cash</option><option value="2">Bankin</option><option value="3">Credit Note</option></select>\';
-                            }else{
-                                var input = \'<input type="text" placeholder="Search ">\';
-                            }
+                            var input = \'<input type="text" placeholder="Search">\';
                             $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
                                 column.search($(this).val(),true,false).draw();
-                                ShowLoad();
                             })
                         }
                     });
@@ -146,22 +156,48 @@ class AssignDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'checkbox'=> new \Yajra\DataTables\Html\Column(['title' => '<input type="checkbox" id="selectallcheckbox">',
-            'data' => 'id',
-            'name' => 'id',
-            'orderable' => false,
-            'searchable' => false]),
-
-            'driver_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('assign.driver'),
-            'data' => 'driver.name',
-            'name' => 'driver.name']),
-
-            'customer_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('assign.customer'),
-            'data' => 'customer.company',
-            'name' => 'customer.company']),
-
-            'sequence'
-
+            'checkbox' => new \Yajra\DataTables\Html\Column([
+                'title' => '<input type="checkbox" id="selectallcheckbox">',
+                'data' => 'id',
+                'name' => 'id',
+                'orderable' => false,
+                'searchable' => false
+            ]),
+            'id' => new \Yajra\DataTables\Html\Column([
+                'title' => 'ID',
+                'data' => 'id',
+                'name' => 'id',
+                'visible' => false
+            ]),
+            'driver.name' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Agents',
+                'data' => 'driver.name',
+                'name' => 'driver.name'
+            ]),
+            'customer_group.name' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('Customer Group'),
+                'data' => 'customer_group.name',
+                'name' => 'customerGroup.name'
+            ]),
+            // 'sequence' => new \Yajra\DataTables\Html\Column([
+            //     'title' => trans('assign.sequence'),
+            //     'data' => 'sequence',
+            //     'name' => 'sequence',
+            //     'visible' => false
+            // ]),
+            'customer_count' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('Customer Count'),
+                'data' => 'customer_count',
+                'name' => 'customer_count',
+                'orderable' => false,
+                'searchable' => false
+            ]),
+             'created_at' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('Created At'),
+                'data' => 'created_at',
+                'name' => 'created_at',
+                'searchable' => false
+            ])
         ];
     }
 

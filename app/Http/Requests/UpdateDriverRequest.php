@@ -30,19 +30,9 @@ class UpdateDriverRequest extends FormRequest
             'employeeid' => 'nullable|string|max:20|unique:drivers,employeeid,'.Crypt::decrypt($id),
             'password' => 'required|string|max:65535',
             'name' => 'required|string|max:255',
-            'ic' => 'nullable|string|max:20|unique:drivers,ic,'.Crypt::decrypt($id),
-            'phone' => 'nullable|string|max:255',
-            // 'commissionrate' => 'required|numeric|min:0|max:100',
-            'bankdetails1' => 'nullable|string|max:255',
-            'bankdetails2' => 'nullable|string|max:255',
-            'firstvaccine' => 'nullable',
-            'secondvaccine' => 'nullable',
-            'temperature' => 'nullable|numeric',
             'status' => 'required',
+            'invoice_code' => 'required|string|max:10|unique:drivers,invoice_code,'.Crypt::decrypt($id),
             'remark' => 'nullable|string|max:255',
-            'created_at' => 'nullable',
-            'updated_at' => 'nullable',
-            'deleted_at' => 'nullable'
         ];
 
         return $rules;

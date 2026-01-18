@@ -14,8 +14,8 @@
                              <i class="fa fa-align-justify"></i>
                              {{ __('assign.assigns') }}
                              <a class="pull-right" href="{{ route('assigns.create') }}"><i class="fa fa-plus-square fa-lg"></i></a>
-                             <a class="pull-right text-success pr-2" href="{{ route('assigns.masscreate') }}"><i class="fa fa-window-restore fa-lg"></i></a>
-                             <a class="pull-right text-danger pr-2" id="massdelete" href="#" alt="Mass delete"><i class="fa fa-trash fa-lg"></i></a>
+                             <!-- <a class="pull-right text-success pr-2" href="{{ route('assigns.masscreate') }}"><i class="fa fa-window-restore fa-lg"></i></a>
+                             <a class="pull-right text-danger pr-2" id="massdelete" href="#" alt="Mass delete"><i class="fa fa-trash fa-lg"></i></a> -->
                          </div>
                          <div class="card-body">
                              @include('assigns.table')

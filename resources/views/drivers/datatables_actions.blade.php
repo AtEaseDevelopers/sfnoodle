@@ -9,7 +9,7 @@
     {!! Form::button('<i class="fa fa-trash"></i>', [
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
-        'onclick' => "return confirm('".trans('drivers.are_you_sure_to_delete_the_driver')."')"    
+        'onclick' => "return confirm('".trans('Are you sure to delete this agent ?')."')"    
     ]) !!}
 </div>
 {!! Form::close() !!}

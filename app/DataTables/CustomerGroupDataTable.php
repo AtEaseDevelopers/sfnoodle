@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\Code;
+use App\Models\CustomerGroup;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
 
@@ -18,18 +18,26 @@ class CustomerGroupDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'customer_group.datatables_actions');
+        return $dataTable
+            ->addColumn('customer_count', function ($customerGroup) {
+                return count($customerGroup->customer_ids ?? []);
+            })
+            ->addColumn('created_at', function ($customerGroup) {
+                return $customerGroup->created_at ? $customerGroup->created_at->format('d/m/Y H:i') : '';
+            })
+            ->addColumn('action', 'customer_group.datatables_actions')
+            ->rawColumns(['action']);
     }
 
     /**
      * Get query source of dataTable.
      *
-     * @param \App\Models\Code $model
+     * @param \App\Models\CustomerGroup $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(Code $model)
+    public function query(CustomerGroup $model)
     {
-        return $model->newQuery()->where("code","=","customer_group");
+        return $model->newQuery();
     }
 
     /**
@@ -77,7 +85,7 @@ class CustomerGroupDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'customer_groups_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'pdfHtml5',
@@ -87,7 +95,7 @@ class CustomerGroupDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'customer_groups_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'colvis',
@@ -101,8 +109,10 @@ class CustomerGroupDataTable extends DataTable
                     ],
                 ],
                 'columnDefs' => [
-                    'targets' => -1,
-                    'visible' => false
+                    [
+                        'targets' => -1,
+                        'visible' => true
+                    ]
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
@@ -111,14 +121,9 @@ class CustomerGroupDataTable extends DataTable
                     .every(function (index) {
                         var column = this;
                         if(columns[index].searchable){
-                            if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Unactive</option></select>\';
-                            }else{
-                                var input = \'<input type="text" placeholder="Search ">\';
-                            }
+                            var input = \'<input type="text" placeholder="Search">\';
                             $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
                                 column.search($(this).val(),true,false).draw();
-                                ShowLoad();
                             })
                         }
                     });
@@ -134,30 +139,30 @@ class CustomerGroupDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            //'code',
-            'description'=> new \Yajra\DataTables\Html\Column(['title' => trans('customer_group.customer_group'),
-            'data' => 'description',
-            'name' => 'description']),
-            //'value',
-            //'sequence',
-            // 'STR_UDF1'=> new \Yajra\DataTables\Html\Column(['title' => 'String UDF1',
-            // 'data' => 'STR_UDF1',
-            // 'name' => 'STR_UDF1']),
-            // 'STR_UDF2'=> new \Yajra\DataTables\Html\Column(['title' => 'String UDF2',
-            // 'data' => 'STR_UDF2',
-            // 'name' => 'STR_UDF2']),
-            // 'STR_UDF3'=> new \Yajra\DataTables\Html\Column(['title' => 'String UDF3',
-            // 'data' => 'STR_UDF3',
-            // 'name' => 'STR_UDF3']),
-            // 'INT_UDF1'=> new \Yajra\DataTables\Html\Column(['title' => 'Integer UDF1',
-            // 'data' => 'INT_UDF1',
-            // 'name' => 'INT_UDF1']),
-            // 'INT_UDF2'=> new \Yajra\DataTables\Html\Column(['title' => 'Integer UDF2',
-            // 'data' => 'INT_UDF2',
-            // 'name' => 'INT_UDF2']),
-            // 'INT_UDF3'=> new \Yajra\DataTables\Html\Column(['title' => 'Integer UDF3',
-            // 'data' => 'INT_UDF3',
-            // 'name' => 'INT_UDF3']),
+
+            'name' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('Name'),
+                'data' => 'name',
+                'name' => 'name'
+            ]),
+            'description' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('customer_group.description'),
+                'data' => 'description',
+                'name' => 'description'
+            ]),
+            'customer_count' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('Customer Count'),
+                'data' => 'customer_count',
+                'name' => 'customer_count',
+                'orderable' => false,
+                'searchable' => false
+            ]),
+            'created_at' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('customer_group.created_at'),
+                'data' => 'created_at',
+                'name' => 'created_at',
+                'searchable' => false
+            ])
         ];
     }
 
@@ -168,6 +173,6 @@ class CustomerGroupDataTable extends DataTable
      */
     protected function filename()
     {
-        return 'customer_group_datatable_' . time();
+        return 'customer_groups_datatable_' . time();
     }
 }

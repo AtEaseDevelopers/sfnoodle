@@ -5,15 +5,16 @@
     <title>{{config('app.name')}}</title>
     <style>
         @page {
-            margin-bottom:30px;
-            margin-top:30px;
-            margin-left:30px;
-            margin-right:30px;
+            margin: 0;
+            padding: 0;
         }
         body{
-            font-size: 14px;
-            margin: 0%;
-            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0 10px; /* Add overall body padding */
+            font-family: 'Courier New', monospace;
+            line-height: 1.2;
+            box-sizing: border-box;
         }
         table{
             width: 100%;
@@ -21,235 +22,156 @@
             table-layout: fixed;
         }
         table th, table td{
-            /* border: 1px solid black; */
+            padding: 2px 0;
             font-size: 12px;
+            vertical-align: top;
         }
-
-        .login-image{
-            background-image: url('{{config('app.url')}}/logo.png');
-            width: auto;
-            height: 55px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            margin-bottom: 0.5rem;
+        .header-section {
+            text-align: center;
+            margin-bottom: 10px;
         }
-        .company{
+        .company-name {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        .company-details {
+            font-size: 11px;
+            margin-bottom: 2px;
+        }
+        .invoice-title {
+            font-size: 13px;
             font-weight: bold;
             text-align: center;
+            margin: 5px 0;
         }
-        .address{
-            text-align: center;
+        .section-separator {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
         }
-        p{
-            margin: 0%;
-        }
-        .ta-r{
-            text-align: right;
-        }
-        .ta-l{
+        .left-align {
             text-align: left;
         }
-        .paidsummary{
+        .right-align {
+            text-align: right;
+        }
+        .center-align {
+            text-align: center;
+        }
+
+        .product-table {
+            margin: 5px 0;
+            /* Add padding to the entire table */
+            width: calc(100% - 30px); /* Compensate for padding */
+            margin-left: auto;
+            margin-right: auto;
+        }
+       
+        
+        .col-sku {
+            width: 40%;
+        }
+        .col-qty {
+            width: 20%;
+            text-align: right;
+        }
+        .col-price {
+            width: 20%;
+            text-align: right;
+        }
+        .col-total {
+            width: 20%;
+            text-align: right;
+        }
+        .footer-line {
+            border-top: 1px dashed #000;
+            margin: 10px 0 5px 0;
+        }
+        .thank-you {
             text-align: center;
             font-weight: bold;
-            color: #394068;
+            margin-top: 5px;    
         }
+        
     </style>
 </head>
 <body>
-    <table class="invoice">
+    <div class="header-section">
+        <div class="invoice-title">================= INVOICES =================</div>
+            <div class="section-separator"></div>
+
+        <div class="company-name">{{ config('invoice.name', $invoices['customer']['groupcompany']->name ?? 'SF NOODLES SON BHD') }}</div>
+        <div class="company-details">(Formerly known as Soon Fatt Foods Sdn Bhd)</div>
+        <div class="company-details">ROC.: {{ config('invoice.roc', '201001017887 (901592-A)') }}</div>
+        <div class="company-details">{{ config('invoice.address1', '48, Jin TPP 1/18, Tim Industri Puchong,') }}</div>
+        <div class="company-details">{{ config('invoice.address2', '47100 Puchong, Selangor DE.') }}</div>
+        <div class="company-details">t: {{ config('invoice.phone', '03-8061 1490/ 012-311 1531') }}</div>
+        <div class="company-details">email: {{ config('invoice.email', 'account@sfnoodles.com') }}</div>
+    </div>
+    <div class="section-separator"></div>
+
+    <table>
         <tr>
-            <td>
-                <div class="login-image"></div>
-            </td>
+            <td class="left-align">Document #</td>
+            <td class="right-align">{{ date_format(date_create($invoices['created_at']),'d M Y H:i A') ?? '' }}</td>
         </tr>
         <tr>
-            <td>
-                <p class="company">{{ $invoice['customer']['groupcompany']->name ?? config('invoice.name') }}</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p class="address">{{ $invoice['customer']['groupcompany']->ssm ?? config('invoice.ssm') }}</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p class="address">{{ $invoice['customer']['groupcompany']->address1 ?? config('invoice.address1') }}</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p class="address">{{ $invoice['customer']['groupcompany']->address2 ?? config('invoice.address2') }}</p>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <p class="address">{{ $invoice['customer']['groupcompany']->address3 ?? env('INVOICE_ADDRESS3') }}</p>
-            </td>
-        </tr>
-       
-        <tr>
-            <td>
-                <br>
-                <table id="header">
-                    <tr>
-                        <td width="35%">
-                            <p>Invoice</p>
-                        </td>
-                        <td width="65%">
-                            <p class="ta-r">{{ $invoice['invoiceno'] ?? '-' }}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Invoice Date</p>
-                        </td>
-                        <td>
-                            <p class="ta-r">{{ date_format(date_create($invoice['date']),'d-m-Y H:i:s') ?? '-' }}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Payment Method</p>
-                        </td>
-                        <td>
-                            <p class="ta-r">
-                            @if($invoice['paymentterm']==1)
-                                {{ 'Cash' }}
-                            @elseif($invoice['paymentterm']==2)
-                                {{ 'Credit'}}
-                            @elseif($invoice['paymentterm']==3)
-                                {{ 'Online BankIn'}}
-                            @elseif($invoice['paymentterm']==4)
-                                {{ 'E-wallet'}}
-                            @elseif($invoice['paymentterm']==5)
-                                {{ 'Cheque'}}
-                            @endif
-                            </p>
-                        </td>
-                    </tr>
-                    
-                    @if($invoice['paymentterm']==5)
-                    <tr>
-                        <td>
-                            <p>Cheque No</p>
-                        </td>
-                        <td>
-                            <p class="ta-r">
-                            {{ $invoice['chequeno'] }}
-                            </p>
-                        </td>
-                    </tr>
-                    @endif
-                    <tr>
-                        <td>
-                            <p>Address</p>
-                        </td>
-                        <td>
-                            <p class="ta-r">{{ $invoice['customer']['address'] ?? '-' }}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <p>Driver</p>
-                        </td>
-                        <td>
-                            <p class="ta-r">{{ $invoice['driver']['name'] ?? '-' }}</p>
-                        </td>
-                    </tr>
-                    
-                    <tr><td height="15">&nbsp;</td></tr>
-                    <tr>
-                        <td>
-                            <p style="font-size:16px; font-weight:bold;">Customer</p>
-                        </td>
-                        <td>
-                            <p class="ta-r" style="font-size:16px; font-weight:bold;">{{ $invoice['customer']['company'] ?? '-' }}</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <br>
-                <table id="detail">
-                    <tr>
-                        <th>
-                            <p class="ta-l">Product</p>
-                        </th>
-                        <th>
-                            <p class="ta-r">Price <br>(RM)</p>
-                        </th>
-                        <th>
-                            <p class="ta-r">Qty</p>
-                        </th>
-                        <th>
-                            <p class="ta-r">Subtotal</p>
-                        </th>
-                    </tr>
-                    @php
-                            $totalamount = 0;
-                    @endphp
-                    @foreach ($invoice['invoicedetail'] as $invoicedetail)
-                        @php
-                            $totalamount = ($totalamount ?? 0) + $invoicedetail['totalprice'];
-                        @endphp
-                        <tr>
-                            <td>
-                                <p style="font-size:16px;">{{ $invoicedetail['product']['name'] }}</p>
-                            </td>
-                            <td>
-                                <p class="ta-r" style="font-size:16px;">{{ number_format($invoicedetail['price'],2) }}</p>
-                            </td>
-                            <td>
-                                <p class="ta-r" style="font-size:16px;">{{ $invoicedetail['quantity'] }}</p>
-                            </td>
-                            <td>
-                                <p class="ta-r" style="font-size:16px;">{{ number_format($invoicedetail['totalprice'],2) }}</p>
-                            </td>
-                        </tr>
-                    @endforeach
-                </table>
-            </td>
-        </tr>
-        <tr>
-            <td>
-                <br>
-                <table id="total">
-                    <tr>
-                        <th>
-                            <p class="ta-l" style="font-size:18px;">Total</p>
-                        </th>
-                        <th>
-                            <p class="ta-r" style="font-size:18px;">RM{{ number_format($totalamount,2) }}</p>
-                        </td>
-                    </tr>
-                </table>
-                <p class="paidsummary">Paid Summary</p>
-                <table id="footer">
-                    <tr>
-                        <th>
-                            <p class="ta-l" style="font-size:18px;">Paid Amount</p>
-                        </th>
-                        <td>
-                            <p class="ta-r" style="font-size:18px;">RM{{ number_format($totalamount,2) }}</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>
-                            <p class="ta-l" style="font-size:18px;">Updated Credit</p>
-                        </th>
-                        <td>
-                            <p class="ta-r" style="font-size:18px;">RM{{ number_format($invoice->newcredit,2) }}</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
+            <td class="left-align">Invoice No:</td>
+            <td class="right-align">{{ $invoices['invoiceno'] ?? '' }}</td>
         </tr>
     </table>
-</body>
 
+    <div class="section-separator"></div>
+
+    <table>
+        <tr>
+            <td class="left-align">Customer:</td>
+            <td class="right-align">{{ $invoices['customer']['company'] ?? '' }}</td>
+        </tr>
+        <tr>
+            <td class="left-align">Created By:</td>
+            <td class="right-align">{{ $creatorName ?? ''}}</td>
+        </tr>
+    </table>
+
+    <div class="section-separator"></div>
+
+    <!-- OPTION 1: Wrap table in a div container -->
+    <div class="table-container">
+        <table class="product-table">
+            <tr>
+                <th class="col-sku left-align">SKU</th>
+                <th class="col-qty">Qty</th>
+                <th class="col-price">U.Price</th>
+                <th class="col-total">Total</th>
+            </tr>
+            @php
+                $totalamount = 0;
+            @endphp
+            @foreach ($invoices['invoiceDetails'] as $invoiceDetail)
+                @php
+                    $totalamount = ($totalamount ?? 0) + $invoiceDetail['totalprice'];
+                @endphp
+                <tr>
+                    <td class="col-sku left-align">{{ $invoiceDetail['product']['sku'] ?? $invoiceDetail['product']['name'] }}</td>
+                    <td class="col-qty">{{ $invoiceDetail['quantity'] }}</td>
+                    <td class="col-price">{{ number_format($invoiceDetail['price'], 2) }}</td>
+                    <td class="col-total">{{ number_format($invoiceDetail['totalprice'], 2) }}</td>
+                </tr>
+            @endforeach
+        </table>
+    </div>
+
+    <div class="section-separator"></div>
+
+    <table>
+        <tr>
+            <td class="left-align" style="font-weight: bold; font-size: 24px;">Total</td>
+            <td class="right-align" style="font-weight: bold; font-size: 24px;">RM {{ number_format($totalamount, 2) }}</td>
+        </tr>
+    </table>
+
+    <div class="footer-line"></div>
+
+</body>
 </html>

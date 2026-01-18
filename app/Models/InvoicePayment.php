@@ -18,7 +18,12 @@ class InvoicePayment extends Model
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
 
+    // Status constants
+    public const STATUS_COMPLETED = 1;
+    public const STATUS_CANCELLED = 0;
 
+    const PAYMENT_TYPE_CASH = 1;
+    const PAYMENT_TYPE_CREDIT = 2;
 
     public $fillable = [
         'invoice_id',
@@ -32,7 +37,6 @@ class InvoicePayment extends Model
         'approve_by',
         'approve_at',
         'remark',
-        'chequeno'
     ];
 
     protected $attributes = [
@@ -47,11 +51,10 @@ class InvoicePayment extends Model
     protected $casts = [
         'id' => 'integer',
         'invoice_id' => 'integer',
-        'type' => 'integer',
+        'type' => 'string',
         'customer_id' => 'integer',
         'amount' => 'float',
         'status' => 'integer',
-        'attachment' => 'string',
         'driver_id' => 'integer',
         'user_id' => 'integer',
         'approve_by' => 'string',
@@ -67,17 +70,22 @@ class InvoicePayment extends Model
      */
     public static $rules = [
         'invoice_id' => 'nullable',
-        'type' => 'required',
         'customer_id' => 'required',
+        'type' => 'required',
         'amount' => 'required|numeric|numeric',
         'status' => 'nullable',
-        // 'attachment' => 'nullable|string|max:65535',
+        'attachment' => 'nullable|file|mimes:jpg,jpeg,png,gif,pdf|max:5120', 
         'approve_by' => 'nullable|string|max:255',
         'approve_at' => 'nullable',
         'remark' => 'nullable|string|max:255',
         'created_at' => 'nullable',
         'updated_at' => 'nullable'
     ];
+
+    public function getInvoiceNoAttribute()
+    {
+        return optional($this->invoice)->invoiceno ?? 'N/A';
+    }
 
     public function invoice()
     {
@@ -87,14 +95,6 @@ class InvoicePayment extends Model
     public function customer()
     {
         return $this->belongsTo(\App\Models\Customer::class, 'customer_id', 'id');
-    }
-
-    public function getApproveAtAttribute($value)
-    {
-        if($value == ''){
-            return "";
-        }
-        return Carbon::parse($value)->format('d-m-Y');
     }
 
     

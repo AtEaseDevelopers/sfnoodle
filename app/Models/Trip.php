@@ -18,66 +18,61 @@ class Trip extends Model
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
 
-
+    const START_TRIP = 1;
+    const END_TRIP = 0;
 
     public $fillable = [
+        'uuid', // Add this column
         'date',
         'driver_id',
-        'kelindan_id',
-        'lorry_id',
-        'cash',
-        'type'
+        'type',
+        'stock_data'
     ];
 
-    /**
-     * The attributes that should be casted to native types.
-     *
-     * @var array
-     */
     protected $casts = [
         'id' => 'integer',
-        'date' => 'datetime:d-m-Y H:i:s',
+        'uuid' => 'integer',
+        'date' => 'datetime:Y-m-d H:i:s', 
         'driver_id' => 'integer',
-        'kelindan_id' => 'integer',
-        'lorry_id' => 'integer',
-        'cash' => 'float',
         'type' => 'integer'
     ];
 
-    /**
-     * Validation rules
-     *
-     * @var array
-     */
     public static $rules = [
         'date' => 'required',
         'driver_id' => 'required',
-        'kelindan_id' => 'required',
-        'lorry_id' => 'required',
         'type' => 'required',
-        'created_at' => 'nullable|nullable',
-        'updated_at' => 'nullable|nullable'
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+    }
+
+    /**
+     * Generate unique integer reference
+     */
+    public static function generateUniqueReference()
+    {
+        do {
+            // Generate a random integer (adjust range as needed)
+            $reference = mt_rand(100000000, 999999999); // 9-digit number
+            
+            // Add timestamp prefix for more uniqueness
+            // $reference = (int) (time() . mt_rand(1000, 9999));
+            
+        } while (self::where('uuid', $reference)->exists());
+        
+        return $reference;
+    }
 
     public function driver()
     {
         return $this->belongsTo(\App\Models\Driver::class, 'driver_id', 'id');
     }
 
-    public function kelindan()
-    {
-        return $this->belongsTo(\App\Models\Kelindan::class, 'kelindan_id', 'id');
-    }
-
-    public function lorry()
-    {
-        return $this->belongsTo(\App\Models\Lorry::class, 'lorry_id', 'id');
-    }
-
     public function getDateAttribute($value)
     {
         return Carbon::parse($value)->format('d-m-Y H:i:s');
     }
-
-
 }

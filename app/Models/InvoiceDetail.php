@@ -26,7 +26,6 @@ class InvoiceDetail extends Model
         'quantity',
         'price',
         'totalprice',
-        'remark'
     ];
 
     /**
@@ -40,7 +39,6 @@ class InvoiceDetail extends Model
         'product_id' => 'integer',
         'quantity' => 'integer',
         'price' => 'float',
-        'remark' => 'string'
     ];
 
     /**
@@ -53,7 +51,6 @@ class InvoiceDetail extends Model
         'product_id' => 'required',
         'quantity' => 'required|integer|integer',
         'price' => 'required|numeric|numeric',
-        'remark' => 'nullable|string|max:255|string|max:255',
         'created_at' => 'nullable|nullable',
         'updated_at' => 'nullable|nullable'
     ];

@@ -19,13 +19,7 @@ class DriverRepository extends BaseRepository
     protected $fieldSearchable = [
         'employeeid',
         'name',
-        'ic',
-        'phone',
-        'bankdetails1',
-        'bankdetails2',
-        'firstvaccine',
-        'secondvaccine',
-        'temperature',
+        'invoice_code',
         'status',
         'remark',
     ];

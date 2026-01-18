@@ -18,23 +18,45 @@ class InvoicePaymentDataTable extends DataTable
     public function dataTable($query)
     {
         $dataTable = new EloquentDataTable($query);
-        $dataTable
-        ->addColumn('payment_no', function ($row) {
-            return 'PR' . str_pad($row->id, 5, '0', STR_PAD_LEFT); // Assuming 'PR00001' format
-        })
-        ->addColumn('action', 'invoice_payments.datatables_actions')
-        ->filter(function ($query) {
-            
-            $searchValue = request('columns')[4]['search']['value'] ?? '';
-
-            if (!empty($searchValue)) {
-                $query->where(function ($q) use ($searchValue) {
-                    // Filter by custom field 'payment_no'
-                    $q->whereRaw("LOWER(CONCAT('PR', LPAD(invoice_payments.id, 5, '0'))) LIKE LOWER(?)", ["%{$searchValue}%"]);
-                });
-            }
-        });
-        return $dataTable;
+        
+        return $dataTable
+            ->addColumn('payment_no', function ($row) {
+                return 'PR' . str_pad($row->id, 5, '0', STR_PAD_LEFT);
+            })
+            ->addColumn('invoice_no', function ($row) {
+                return $row->invoice->invoiceno ?? '-';
+            })
+            ->addColumn('type', function ($row) {
+                if ($row->type == 1) {
+                    return 'Cash';
+                } elseif ($row->type == 2) {
+                    return 'Credit';
+                }
+                return $row->type;
+            })
+            ->addColumn('amount_formatted', function ($row) {
+                // Format amount to 2 decimal places
+                return number_format($row->amount, 2, '.', ',');
+            })
+            ->addColumn('approve_at_formatted', function ($row) {
+                // Format approve_at date if exists
+                return $row->approve_at ? \Carbon\Carbon::parse($row->approve_at)->format('Y-m-d H:i:s') : '-';
+            })
+            ->addColumn('created_at_formatted', function ($row) {
+                // Format created_at date to include time
+                return $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('Y-m-d H:i:s') : '-';
+            })
+            ->addColumn('action', 'invoice_payments.datatables_actions')
+            ->filterColumn('payment_no', function($query, $keyword) {
+                $query->whereRaw("CONCAT('PR', LPAD(invoice_payments.id, 5, '0')) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('approve_at_formatted', function($query, $keyword) {
+                // Add search functionality for approve_at
+                if (!empty($keyword)) {
+                    $query->whereDate('approve_at', '=', $keyword);
+                }
+            })
+            ->rawColumns(['action']);
     }
 
     /**
@@ -46,10 +68,9 @@ class InvoicePaymentDataTable extends DataTable
     public function query(InvoicePayment $model)
     {
         return $model->newQuery()
-        ->with('invoice:id,invoiceno')
-        ->with('customer')
-        ->selectRaw('invoice_payments.*, CONCAT(\'PR\', LPAD(invoice_payments.id, 5, \'0\')) AS payment_no');
-        
+            ->with(['invoice:id,invoiceno', 'customer'])
+            ->select('invoice_payments.*')
+            ->orderBy('created_at', 'desc'); 
     }
 
     /**
@@ -69,7 +90,7 @@ class InvoicePaymentDataTable extends DataTable
                 'stateDuration' => 0,
                 'processing' => false,
                 'order'     => [[1, 'desc']],
-                'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
+                'lengthMenu' => [[10, 50, 100, 300], ['10 rows', '50 rows', '100 rows', '300 rows']],
                 'buttons' => [
                     [
                         'extend' => 'create',
@@ -122,55 +143,41 @@ class InvoicePaymentDataTable extends DataTable
                 ],
                 'columnDefs' => [
                     [
-                        'targets' => -1,
-                        'visible' => true,
+                        'targets' => 0,
+                        'orderable' => false,
+                        'searchable' => false,
+                        'className' => 'dt-body-center',
+                        'render' => 'function(data, type, row){
+                            return \'<input type="checkbox" class="checkboxselect" checkboxid="\'+data+\'"/>\';
+                        }'
+                    ],
+                    [
+                        'targets' => 5,
                         'className' => 'dt-body-right'
                     ],
                     [
-                        'targets' => 0,
-                        'visible' => true,
-                        'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
-                    ],
-                    [
-                        'targets' => 3,
-                        'render' => 'function(data, type, row){
-                                var paymentTerms = {
-                                    1: \'Cash\',
-                                    3: \'Online BankIn\',
-                                    4: \'E-wallet\',
-                                    5: \'Cheque\'
-                                };
-                                return paymentTerms[data] || \'Unknown\';
-                            }'
-                    ],
-                    [
-                        'targets' => 8,
-                        'render' => 'function(data, type){ if(data != null){return "<a target=\'_blank\' href=\''.config('app.url').'/"+data+"\'>view</a>";}else{return "";}}'
-                    ],
-                    [
-                        'targets' => 7,
-                         'render' => 'function(data, type){
-                            if (data == 0) {
-                                return "New";
-                            } else if (data == 1) {
-                                return "Completed";
+                        'targets' => 6,
+                        'render' => 'function(data, type){
+                            if (data == 1) {
+                                return "Cash";
                             } else if (data == 2) {
-                                return "Canceled";
+                                return "Credit";
                             } else {
-                                return "Unknown";
+                                return data;
                             }
                         }'
                     ],
                     [
-                    'targets' => 11,
-                    'render' => 'function(data, type){
-                        if(data == 1) {
-                            return "Synced";
-                        } else if (data == 2) {
-                            return "Voided";
-                        }
-                        
-                    }'
+                        'targets' => 7,
+                        'render' => 'function(data, type){
+                            if (data == 0) {
+                                return "Cancelled";
+                            } else if (data == 1) {
+                                return "Completed";
+                            } else {
+                                return "Unknown";
+                            }
+                        }'
                     ],
                 ],
                 'initComplete' => 'function(){
@@ -180,32 +187,20 @@ class InvoicePaymentDataTable extends DataTable
                     .every(function (index) {
                         var column = this;
                         if(columns[index].searchable){
-                            if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Completed</option><option value="0">New</option><option value="2">Canceled</option></select>\';
-                            }else if(columns[index].title == \'Type\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value=""></option><option value="1">Cash</option><option value="3">Online BankIn</option><option value="4">E-wallet</option><option value="5">Cheque</option></select>\';
-                            }else if(columns[index].title == \'Approve At\'){
-                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
-                            }else if(columns[index].title == \'Date\'){
-                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
-                            }else if(columns[index].title == \'Group\'){
-                                var input = \'<select id="group" class="border-0" style="width: 100%;"><option value=""></option></select>\';
+                            if(columns[index].title == "Status"){
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="1">Completed</option><option value="0">Cancelled</option></select>\';
+                            }else if(columns[index].title == "Type"){
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="1">Cash</option><option value="2">Credit</option></select>\';
+                            }else if(columns[index].title == "Approve At" || columns[index].title == "Date"){
+                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search">\';
                             }else{
-                                var input = \'<input type="text" placeholder="Search ">\';
+                                var input = \'<input type="text" placeholder="Search">\';
                             }
                             $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
                                 column.search($(this).val(),true,false).draw();
                                 ShowLoad();
                             })
                         }
-                    });
-                    var groupItems = '.json_encode(Code::where('code','customer_group')->pluck('description','value')->toArray()).';
-                    var x = document.getElementById("group");
-                    $.each(groupItems, function( index, value ) {
-                        var option = document.createElement("option");
-                        option.text = value;
-                        option.value = index;
-                        x.add(option);
                     });
                 }'
             ]);
@@ -219,52 +214,58 @@ class InvoicePaymentDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'checkbox'=> new \Yajra\DataTables\Html\Column(['title' => '<input type="checkbox" id="selectallcheckbox">',
-            'data' => 'id',
-            'name' => 'id',
-            'orderable' => false,
-            'searchable' => false]),
-
-            'created_at'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.date'),
-            'data' => 'created_at',
-            'name' => 'created_at']),
-
-            'customer_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.customer'),
-            'data' => 'customer.company',
-            'name' => 'customer.company']),
-
-            trans('invoice_payments.type'),
-
-            'payment_no'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.payment_no'),
-            'data' => 'payment_no',
-            'name' => 'payment_no']),
+            [
+                'title' => '<input type="checkbox" id="selectallcheckbox">',
+                'data' => 'id',
+                'name' => 'id',
+                'orderable' => false,
+                'searchable' => false
+            ],
+            [
+                'title' => trans('invoice_payments.date'),
+                'data' => 'created_at_formatted',
+                'name' => 'created_at_formatted'
+            ],
+            [
+                'title' => trans('invoice_payments.customer'),
+                'data' => 'customer.company',
+                'name' => 'customer.company'
+            ],
+            [
+                'title' => trans('invoice_payments.invoice_no'),
+                'data' => 'invoice_no',
+                'name' => 'invoice_no',
+                'orderable' => false,
+                'searchable' => false
+            ],
+            [
+                'title' => trans('invoice_payments.payment_no'),
+                'data' => 'payment_no',
+                'name' => 'payment_no'
+            ],
+            [
+                'title' => trans('invoice_payments.amount'),
+                'data' => 'amount_formatted',
+                'name' => 'amount_formatted',
+                'orderable' => false,
+                'searchable' => false
+            ],
+            [
+                'title' => trans('invoice_payments.type'),
+                'data' => 'type',
+                'name' => 'type'
+            ],
+            [
+                'title' => trans('invoice_payments.status'),
+                'data' => 'status',
+                'name' => 'status'
+            ],
+            [
+                'title' => trans('invoice_payments.approve_by'),
+                'data' => 'approve_by',
+                'name' => 'approve_by'
+            ],
             
-            'invoice_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.invoice_no'),
-            'data' => 'invoice.invoiceno',
-            'name' => 'invoice.invoiceno']),
-
-            trans('invoice_payments.amount'),
-            trans('invoice_payments.status'),
-            trans('invoice_payments.attachment'),
-
-            'approve_by'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('invoice_payments.approve_by'),
-            'data' => 'approve_by',
-            'name' => 'approve_by']),
-
-            'approve_at'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.approve_at'),
-            'data' => 'approve_at',
-            'name' => 'approve_at']),
-            
-            // 'xero_status'=> new \Yajra\DataTables\Html\Column(['title' => 'Xero Status',
-            // 'data' => 'xero_status',
-            // 'name' => 'xero_status']),
-
-            // 'remark',
-
-            'group'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoice_payments.group'),
-            'data' => 'customer.GroupDescription',
-            'name' => 'customer.group',
-            'orderable' => false]),
         ];
     }
 

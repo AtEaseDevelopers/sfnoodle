@@ -194,7 +194,7 @@ class LorryDataTable extends DataTable
                     ],
                     [
                     'targets' => 9,
-                    'render' => 'function(data, type){return data == 1 ? "Active" : "Unactive";}'],
+                    'render' => 'function(data, type){return data == 1 ? "Active" : "Inactive";}'],
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
@@ -204,7 +204,7 @@ class LorryDataTable extends DataTable
                         var column = this;
                         if(columns[index].searchable){
                             if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Unactive</option></select>\';
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Inactive</option></select>\';
                             }else{
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
@@ -232,7 +232,7 @@ class LorryDataTable extends DataTable
             'orderable' => false,
             'searchable' => false]),
 
-            'lorryno'=> new \Yajra\DataTables\Html\Column(['title' => trans('invoices.lorry_no'),
+            'lorryno'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.lorry_no'),
             'data' => 'lorryno',
             'name' => 'lorryno']),
 
@@ -284,8 +284,14 @@ class LorryDataTable extends DataTable
             'data' => 'fireextinguishernextdateshow',
             'name' => 'fireextinguisher']),
 
-            trans('lorries.status'),
-            trans('lorries.remark'),
+            'status'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.status'),
+            'data' => 'status',
+            'name' => 'status']),
+
+            'remark'=> new \Yajra\DataTables\Html\Column(['title' => trans('lorries.remark'),
+            'data' => 'remark',
+            'name' => 'remark']),
+
             
             // 'STR_UDF1'=> new \Yajra\DataTables\Html\Column(['title' => 'String UDF1',
             // 'data' => 'STR_UDF1',

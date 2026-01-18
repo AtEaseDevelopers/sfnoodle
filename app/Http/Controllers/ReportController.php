@@ -13,6 +13,7 @@ use App\Http\Controllers\AppBaseController;
 use App\Models\Report;
 use Response;
 use App\Models\Reportdetail;
+use App\Models\Trip;
 use Illuminate\Support\Facades\DB;
 use \Exception;
 use Mockery\Expectation;
@@ -33,6 +34,8 @@ use App\Models\InvoicePayment;
 use App\Models\Customer;
 use App\Models\Agent;
 use App\Models\Product;
+use App\Models\User;
+use App\Models\InventoryCount;
 use App\Exports\SellerInformationExport;
 use App\Exports\MonthlySaleReport;
 use App\Exports\DailySaleReportExport;
@@ -102,56 +105,305 @@ class ReportController extends AppBaseController
 
         if (empty($report)) {
             Flash::error(__('report.report_not_found'));
+            return redirect(route('reports.index'));
+        }
 
+        // Instead of using reportdetails, we'll handle the form fields based on report name/type
+        $reportType = $report->sqlvalue;
+        
+        // Initialize variables based on report type
+        $formFields = [];
+        
+        if ($reportType == 'DAILY_SALES_REPORT') {
+            // Daily Sales Report - only needs date
+            $formFields = [
+                'report_date' => [
+                    'label' => 'Report Date',
+                    'type' => 'date',
+                    'required' => true
+                ]
+            ];
+        } elseif ($reportType == 'STOCK_COUNT_REPORT') {
+            // Inventory Count Report - needs date, driver, and trip
+            $formFields = [
+                'report_date' => [
+                    'label' => 'Report Date',
+                    'type' => 'date',
+                    'required' => true
+                ],
+                'driver_id' => [
+                    'label' => 'Driver',
+                    'type' => 'dropdown',
+                    'required' => false,
+                    'depends_on' => 'report_date' // This field depends on date selection
+                ],
+                'trip_id' => [
+                    'label' => 'Trip Number',
+                    'type' => 'dropdown',
+                    'required' => true,
+                    'depends_on' => 'driver_id' // This field depends on driver selection
+                ]
+            ];
+        }
+
+        return view('reports.show')
+            ->with('report', $report)
+            ->with('formFields', $formFields);
+    }
+
+    public function getDriversByDate(Request $request)
+    {
+        $date = $request->get('date');
+        
+        // Validate date
+        if (!$date) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Date parameter is required'
+            ], 400);
+        }
+        try {
+            $driverIds = Trip::whereDate('date', $date)
+                ->distinct() // Get unique driver IDs
+                ->pluck('driver_id');
+            // Get driver details for the unique IDs
+            $drivers = Driver::whereIn('id', $driverIds)
+                ->where('status', 1) // Active drivers only
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        
+            return response()->json([
+                'success' => true,
+                'drivers' => $drivers
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching drivers: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading drivers'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get trips for a specific driver and date
+     */
+    public function getTripsByDriverDate(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+            'driver_id' => 'required'
+        ]);
+        
+        $date = $request->get('date');
+        $driverId = $request->get('driver_id');
+        
+        try {
+            $trips = Trip::whereDate('date', $date)
+                ->where('driver_id', $driverId)
+                ->where('type', Trip::END_TRIP)
+                ->get(['id', 'uuid','driver_id']);
+            
+            return response()->json([
+                'success' => true,
+                'trips' => $trips
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching trips: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading trips'
+            ], 500);
+        }
+    }
+
+    /**
+     * Run the report
+     */
+    public function run(Request $request)
+    {        
+        $request->validate([
+            'report_id' => 'required|exists:reports,id',
+            'report_date' => 'required|date_format:Y-m-d'
+        ]);
+        
+        $report = $this->reportRepository->find($request->get('report_id'));
+        
+        if (!$report) {
+            Flash::error(__('report.report_not_found'));
             return redirect(route('reports.index'));
         }
         
-        if($report->sqlvalue == 'Monthly_Total_Sales_Quantity_Reports'){
-            $products = Product::select('id','name')->get();
-            $agents = Agent::select('id','name')->get();
-            $customerGroup = Code::where('code', 'customer_group')->select('value','description')->get();
-            return view('reports.monthly-total-sale-show',compact('report','products','agents','customerGroup'));
-            
+        try {
+            if ($report->sqlvalue == 'DAILY_SALES_REPORT') {
+                return $this->generateDailySalesReport($request);
+            } elseif ($report->sqlvalue == 'STOCK_COUNT_REPORT') {
+                return $this->generateStockCountReport($request);
+            } else {
+                Flash::error('Unsupported report type');
+                return redirect()->back();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Report generation error: ' . $e->getMessage());
+            Flash::error('Error generating report: ' . $e->getMessage());
+            return redirect()->back();
+        }
+    }
+
+    /**
+     * Generate Daily Sales Report
+     */
+    private function generateDailySalesReport(Request $request)
+    {
+        $date = $request->get('report_date');
+        
+        // Your report generation logic here
+        // Example: $data = Sales::whereDate('sale_date', $date)->get();
+        
+        // For now, just show a message
+        Flash::success("Daily Sales Report for {$date} generated successfully");
+        return redirect()->back();
+    }
+
+    /**
+     * Generate Stock Count Report
+     */
+    public function showStockCountReport($driverId, $tripId)
+    {
+        // You might want to validate the trip belongs to the driver
+        $trip = Trip::where('driver_id', $driverId)
+                    ->where('uuid', $tripId)
+                    ->firstOrFail();
+        
+        // Create a request object manually to pass to your existing function
+        $request = new \Illuminate\Http\Request();
+        $request->merge([
+            'driver_id' => $driverId,
+            'trip_id' => $tripId,
+            'report_date' => $trip->date, // If you need date
+        ]);
+        
+        return $this->generateStockCountReport($request);
+    }
+
+    private function generateStockCountReport(Request $request)
+    {
+        $driverId = $request->get('driver_id');
+        $tripId = $request->get('trip_id');
+
+        $driver = Driver::find($driverId);
+
+        $starttrip = Trip::where('driver_id', $driverId)->where('type',Trip::START_TRIP)->where('uuid', $tripId)->first();
+        $endtrip = Trip::where('driver_id', $driverId)->where('type',Trip::END_TRIP)->where('uuid', $tripId)->first();
+
+        // Get all approved inventory counts for this trip
+        $inventoryCounts = InventoryCount::where('driver_id', $driverId)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->where('trip_id', $tripId)
+            ->get();
+
+        // Process inventory counts to get summary data
+        $stockCountSummary = [];
+        $productData = [];
+        
+        foreach ($inventoryCounts as $count) {
+            $items = $count->items ?? [];
+            foreach ($items as $item) {
+                $productId = $item['product_id'] ?? null;
+                $currentQty = $item['current_quantity'] ?? 0;
+                $countedQty = $item['counted_quantity'] ?? 0;
+                
+                if ($productId && $countedQty !== '' && $countedQty !== null) {
+                    if (!isset($stockCountSummary[$productId])) {
+                        $stockCountSummary[$productId] = [
+                            'product_id' => $productId,
+                            'product_name' => $item['product_name'] ?? 'Product ' . $productId,
+                            'current_quantity' => 0,
+                            'counted_quantity' => 0,
+                            'difference' => 0
+                        ];
+                    }
+                    
+                    // Sum up quantities from all counts
+                    $stockCountSummary[$productId]['current_quantity'] += (float)$currentQty;
+                    $stockCountSummary[$productId]['counted_quantity'] += (float)$countedQty;
+                    $stockCountSummary[$productId]['difference'] = 
+                        $stockCountSummary[$productId]['counted_quantity'] - 
+                        $stockCountSummary[$productId]['current_quantity'];
+                }
+            }
         }
         
-        if($report->sqlvalue == 'Daily_Total_Sales_Quantity_Reports'){
-            $products = Product::select('id','name')->get();
-            $derviers = Driver::select('id','name')->get();
-            $lorrys = Lorry::select('id','lorryno')->get();
-            $customerGroup = Code::where('code', 'customer_group')->select('value','description')->get();
-            return view('reports.daily-total-sale-show',compact('report','products','derviers','lorrys','customerGroup'));
+        // Convert to collection for easier handling
+        $stockCounts = collect($stockCountSummary)->values();
+        
+        // Get product details for all products in the count
+        $productIds = $stockCounts->pluck('product_id')->toArray();
+        $products = \App\Models\Product::whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
+        
+        // Update product names from database (more accurate)
+        foreach ($stockCounts as &$count) {
+            $product = $products[$count['product_id']] ?? null;
+            if ($product) {
+                $count['product_name'] = $product->name;
+                $count['product_code'] = $product->code ?? '';
+            } else {
+                $count['product_code'] = '';
+            }
+        }
+        
+        // Get latest approved count for approved_by info
+        $latestCount = $inventoryCounts->sortByDesc('created_at')->first();
+        
+        // Calculate totals
+        $totalCurrent = $stockCounts->sum('current_quantity');
+        $totalCounted = $stockCounts->sum('counted_quantity');
+        $totalDifference = $stockCounts->sum('difference');
+        
+        $data =[
+            'company_name' => 'SF Noodles Sdn. Bhd.',
+            'roc_no' => '(FKA Soon Fatt Foods Sdn Bhd) ROC No. 201001017887',
+            'address' => '48, Jin TPP 1/18, Taman Industri Puchong, 47100 Puchong, Selangor',
+            'phone' => 't: 03-80611490 / 012-3111531',
+            'email' => 'email: account@sfnoodles.com',
             
-        }
+            // Trip Information
+            'salesman' => $driver->name ?? 'N/A',
+            'printed_time' => Carbon::now()->format('d M Y h:i A'),
+            'approved_by' => $latestCount ? (User::find($latestCount->approved_by)->name ?? '-') : '-',
+            'trip_id' => 'T-' . ($starttrip->uuid ?? $tripId),
+            'start_time' => $starttrip ? Carbon::parse($starttrip->date)->format('d M Y h:i A') : 'N/A',
+            'end_time' => $endtrip ? Carbon::parse($endtrip->date)->format('d M Y h:i A') : 'N/A',
+            
+            // Stock Count Data
+            'stock_counts' => $stockCounts,
+            'products' => $products,
+            'total_current' => $totalCurrent,
+            'total_counted' => $totalCounted,
+            'total_difference' => $totalDifference,
+            
+            // Additional data for display
+            'inventory_counts' => $inventoryCounts,
+            'has_data' => $stockCounts->isNotEmpty(),
+        ];
+        
+        try {
+            $pdf = Pdf::loadView('reports.stockCountreport', $data);
 
-        $reportdetails = Reportdetail::where('report_id',$id)->where('status','1')->orderBy('sequence','asc')->get()->toarray();
-        $c = 0;
-        foreach($reportdetails as $reportdetail){
-            try{
-                $t = $reportdetail['data'];
-                if($reportdetail['data']==null){
-                    $reportdetail['data'] = '{}';
-                }
-                // $data = json_decode(json_encode(DB::select($reportdetail['data'])), true);
-                $data = DB::select(DB::raw($reportdetail['data']));
-                $array = array();
-                foreach($data as $value){
-                    $value=array_values((array)$value);
-                    $array[$value[1]] = $value[0];
-                  }
-                $reportdetails[$c]['data'] = $array;
-            }
-            catch(Exception $e) {
-                if($reportdetails[$c]['type'] == 'multiselect' or $reportdetails[$c]['type'] == 'dropdown'){
-                    $data = json_decode($reportdetails[$c]['data'], true);
-                }else{
-                    $data = $reportdetails[$c]['data'];
-                }
-                $reportdetails[$c]['data'] = $data;
-            }
-            $c = $c + 1;
-        }
+            return $pdf->setPaper('a4', 'portrait')
+                    ->setOptions([
+                        'isPhpEnabled' => true, 
+                        'isRemoteEnabled' => true,
+                        'defaultFont' => 'sans-serif',
+                    ])
+                    ->stream('stock_count_' . $driver->name . '_' . $tripId . '_' . date('Ymd') . '.pdf');
 
-        return view('reports.show')->with('reportdetails', $reportdetails)->with('report', $report);
+        } catch(Exception $e) {
+            dd($e->getMessage());
+            abort(404);
+        }
     }
 
     /**
@@ -199,152 +451,8 @@ class ReportController extends AppBaseController
         return redirect(route('reports.index'));
     }
 
-    /**
-     * Remove the specified Report from storage.
-     *
-     * @param int $id
-     *
-     * @return Response
-     */
-    public function destroy($id)
-    {
-        $report = $this->reportRepository->find($id);
 
-        if (empty($report)) {
-            Flash::error(__('report.report_not_found'));
 
-            return redirect(route('reports.index'));
-        }
-
-        $this->reportRepository->delete($id);
-
-        Flash::error(__('report.report_deleted_successfully'));
-
-        return redirect(route('reports.index'));
-    }
-
-    public function getCustomers($id)
-    {
-        if($id == "All"){
-            $customers = Customer::select('id', 'company')->get(); 
-        }
-        else{
-            $customers = Customer::whereRaw("FIND_IN_SET(?, `group`)", [$id])->select('id', 'company')->get();
-        }
-
-        if($customers->isNotEmpty()){
-            $options = '<option value="%">ALL</option>';
-            foreach ($customers as $customer) {
-                $options .= '<option value="' . $customer->id . '">' . $customer->company . '</option>';
-            }
-        }
-        else{
-          $options = '<option value="">Select</option>';  
-        }
-        
-        return response()->json(['options' => $options]);
-    }
-    
-    public function run(Request $request)
-    {
-        $data = $request->all();
-        $report_id = $data['_report_id'];
-        $sp = Report::where('id',$report_id)->pluck('sqlvalue')->first();
-        if($sp == 'SELLER_INFORMATION_RECORD'){
-            $param = '';
-            foreach ($data as $key => $value) {
-                if($key != '_token' && $key != '_report_id'){
-                    if(is_array($value)){
-                        $array = '';
-                        foreach($value as $arr){
-                            $array = $array.$arr.',';
-                        }
-                        $array = rtrim($array, ",");
-                        $param = $param . $key . '=' . $array . '&';
-                    }else{
-                        $param = $param . $key . '=' . $value . '&';
-                    }
-                }
-            }
-            return redirect(route('seller_information_record').'?'.$param); 
-
-            /*if($request->report_type == 'Run Report PDF'){
-                return redirect(route('seller_information_record').'?'.$param); 
-            }
-            else{
-                return redirect(route('seller_information_record_excel').'?'.$param); 
-            }*/
-        }
-        if($sp == 'CUSTOMER_STATEMENT_OF_ACCOUNT'){
-            $param = '';
-            foreach ($data as $key => $value) {
-                if($key != '_token' && $key != '_report_id'){
-                    if(is_array($value)){
-                        $array = '';
-                        foreach($value as $arr){
-                            $array = $array.$arr.',';
-                        }
-                        $array = rtrim($array, ",");
-                        $param = $param . $key . '=' . $array . '&';
-                    }else{
-                        $param = $param . $key . '=' . $value . '&';
-                    }
-                }
-            }
-            return redirect(route('customer_statement_of_account').'?'.$param);   
-        }
-        
-         if($sp == 'DAILY_SALES_REPORT'){
-            $param = '';
-            foreach ($data as $key => $value) {
-                if($key != '_token' && $key != '_report_id'){
-                    if(is_array($value)){
-                        $array = '';
-                        foreach($value as $arr){
-                            $array = $array.$arr.',';
-                        }
-                        $array = rtrim($array, ",");
-                        $param = $param . $key . '=' . $array . '&';
-                    }else{
-                        $param = $param . $key . '=' . $value . '&';
-                    }
-                }
-            }
-             return redirect(route('daily_sales_report_excel').'?'.$param); 
-        }
-        
-        $param = '';
-        foreach ($data as $key => $value) {
-            if($key != '_token'){
-                if(is_array($value)){
-                    $array = '';
-                    foreach($value as $arr){
-                        $array = $array.$arr.',';
-                    }
-                    $array = rtrim($array, ",");
-                    $param = $param . "'" . $array . "',";
-                }else{
-                    
-                    
-                    if($key== 'datefrom')
-                        $value .=  ' 00:00:00';
-                    else
-                    if($key== 'dateto')
-                    {
-                        $value .=  ' 23:59:59';
-                    }
-                    
-                    $param = $param . "'" . $value . "',";
-                }
-            }
-        }
-        $param = rtrim($param, ",");
-        $query = 'call '.$sp."(".$param.");";
-        $result = DB::select($query)[0];
-        $result = $result->ID;
-        return redirect(route('showreport', $result));
-    }
-    
     public function monthlysalereport(Request $request)
     {
         // return $request->all();

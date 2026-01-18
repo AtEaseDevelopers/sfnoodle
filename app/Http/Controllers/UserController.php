@@ -145,11 +145,21 @@ class UserController extends AppBaseController
             return redirect(route('users.index'));
         }
 
-        $input['password'] = Hash::make($input['password']);
+        // Only hash and update password if update_password is checked
+        if (isset($input['update_password']) && $input['update_password'] == 1) {
+            $input['password'] = Hash::make($input['password']);
+        } else {
+            // Remove password from input to prevent updating with empty value
+            unset($input['password']);
+        }
+        
+        // Remove the update_password checkbox value from input
+        unset($input['update_password']);
+
         $user = $this->userRepository->update($input, $id);
         
 
-        $userHasRole = $this->userHasRoleRepository->where('model_id', $id)->first();  // Use Eloquent 'where' and 'first'
+        $userHasRole = $this->userHasRoleRepository->where('model_id', $id)->first();
 
         if($userHasRole)
         {
@@ -165,10 +175,10 @@ class UserController extends AppBaseController
                 "model_id" => $user["id"],
                 "role_id" => $input["role_id"]
             ];
-    
+
             $userHasRole = $this->userHasRoleRepository->create($userRole);
         }
-       
+    
 
         Flash::success('User updated successfully.');
 

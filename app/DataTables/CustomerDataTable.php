@@ -5,7 +5,6 @@ namespace App\DataTables;
 use App\Models\Customer;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
-use Illuminate\Support\Facades\DB;
 
 class CustomerDataTable extends DataTable
 {
@@ -18,8 +17,39 @@ class CustomerDataTable extends DataTable
     public function dataTable($query)
     {
         $dataTable = new EloquentDataTable($query);
-
-        return $dataTable->addColumn('action', 'customers.datatables_actions');
+        
+        return $dataTable
+            ->addColumn('action', 'customers.datatables_actions')
+            ->addColumn('customer_groups', function ($customer) {
+                // Get customer groups
+                $groups = \App\Models\CustomerGroup::whereJsonContains('customer_ids', $customer->id)
+                    ->orderBy('name')
+                    ->get();
+                
+                if ($groups->isEmpty()) {
+                    return '-';
+                }
+                
+                // Return comma-separated group names
+                return $groups->pluck('name')->implode(', ');
+            })
+            ->filterColumn('customer_groups', function ($query, $keyword) {
+                // Search in customer groups
+                $query->whereHas('customerGroups', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->orderColumn('customer_groups', function ($query, $order) {
+                // Order by customer groups
+                $query->orderBy(
+                    \App\Models\CustomerGroup::select('name')
+                        ->whereRaw("JSON_CONTAINS(customer_groups.customer_ids, CAST(customers.id as JSON), '$')")
+                        ->orderBy('name', $order)
+                        ->limit(1),
+                    $order
+                );
+            })
+            ->rawColumns(['action', 'customer_groups']);
     }
 
     /**
@@ -30,126 +60,8 @@ class CustomerDataTable extends DataTable
      */
     public function query(Customer $model)
     {
-        // return $model->newQuery()
-        // ->with('agent:id,name')
-        // ->with('supervisor:id,name')
-        // // ->with('groups:value,description')
-        // ->leftJoin(DB::raw('(select invoices.customer_id, sum(invoice_details.totalprice) as totalprice, COALESCE(paymentsummary.amount,0) as paid, ( sum(invoice_details.totalprice) - COALESCE(paymentsummary.amount,0) ) as credit from invoices left join invoice_details on invoices.id = invoice_details.invoice_id left join ( select invoice_payments.customer_id, sum(COALESCE(invoice_payments.amount,0)) as amount from invoice_payments where invoice_payments.status = 1 group by invoice_payments.customer_id ) as paymentsummary on invoices.customer_id = paymentsummary.customer_id where invoices.status = 1 group by invoices.customer_id, paymentsummary.customer_id, paymentsummary.amount) invoicesummary'),
-        // function($join)
-        // {
-        //    $join->on('customers.id', '=', 'invoicesummary.customer_id');
-        // })
-        // ->leftJoin('codes', function($join)
-        // {
-        //     $join->whereRaw('find_in_set(codes.value, customers.group)');
-        //     $join->where('codes.code', '=', 'customer_group');
-        // })
-        // ->select('customers.*',DB::raw("COALESCE(invoicesummary.credit,0) as credit"),DB::raw("GROUP_CONCAT(codes.description) as group_descr"))
-        // ->distinct()
-        // ->groupby('customers.id','customers.code','customers.company','customers.paymentterm','customers.phone','customers.address',
-        // 'customers.status','customers.created_at','customers.updated_at','customers.deleted_at','customers.supervisor_id','customers.agent_id', 'customers.sst', 'customers.tin',
-        // 'customers.group','customers.group','invoicesummary.customer_id','invoicesummary.totalprice','invoicesummary.paid','invoicesummary.credit',)
-        // ;
-
-        $invoicesSubquery = "
-        SELECT
-            invoices.customer_id,
-            SUM(invoice_details.totalprice) AS totalprice
-        FROM
-            invoices
-            LEFT JOIN invoice_details ON invoices.id = invoice_details.invoice_id
-        WHERE
-            invoices.status = 1
-        GROUP BY
-            invoices.customer_id
-    ";
-    
-    $paymentsSubquery = "
-        SELECT
-            invoice_payments.customer_id,
-            SUM(COALESCE(invoice_payments.amount, 0)) AS amount
-        FROM
-            invoice_payments
-        WHERE
-            invoice_payments.status = 1
-        GROUP BY
-            invoice_payments.customer_id
-    ";
-    
-            $query = $model->newQuery()
-    
-                ->with('agent:id,name')
-    
-                ->with('supervisor:id,name')
-                ->leftJoin(DB::raw("
-                (
-                 SELECT
-                    customers.id AS customer_id,
-                    COALESCE(total_invoiced.totalprice, 0) AS totalprice,
-                    COALESCE(paymentsummary.amount, 0) AS paid,
-                    (COALESCE(total_invoiced.totalprice, 0) - COALESCE(paymentsummary.amount, 0)) AS credit
-                FROM
-                    customers
-                    LEFT JOIN (
-                        {$invoicesSubquery}
-                    ) AS total_invoiced ON customers.id = total_invoiced.customer_id
-                    LEFT JOIN (
-                        {$paymentsSubquery}
-                    ) AS paymentsummary ON customers.id = paymentsummary.customer_id
-                
-                ) as invoicesummary
-            "), function ($join) {
-                $join->on('customers.id', '=', 'invoicesummary.customer_id');
-            })
-            ->leftJoin('codes', function ($join) {
-                $join->on('customers.group', '=', 'codes.value')
-                    ->where('codes.code', '=', 'customer_group');
-            })
-            ->select(
-                'customers.*',
-                DB::raw("COALESCE(invoicesummary.totalprice, 0) as totalprice"),
-                DB::raw("COALESCE(invoicesummary.paid, 0) as paid"),
-                DB::raw("
-                 CASE
-                WHEN (COALESCE(invoicesummary.totalprice, 0) - COALESCE(invoicesummary.paid, 0)) >= 0 THEN
-                    ABS(COALESCE(invoicesummary.totalprice, 0) - COALESCE(invoicesummary.paid, 0))
-                ELSE
-                    CONCAT('(', COALESCE(invoicesummary.totalprice, 0) - COALESCE(invoicesummary.paid, 0), ')')
-            END as credit
-    
-                ")
-            )
-    
-                ->groupBy(
-                    'customers.id',
-                    'customers.code',
-                    'customers.company',
-                    'customers.chinese_name',
-                    'customers.paymentterm',
-                    'customers.phone',
-                    'customers.address',
-                    'customers.status',
-                    'customers.created_at',
-                    'customers.updated_at',
-                    'customers.deleted_at',
-                    'customers.supervisor_id',
-                    'customers.agent_id',
-                    'customers.group',
-                    'customers.tin',
-                    'customers.sst',
-                    'invoicesummary.customer_id',
-                    'invoicesummary.totalprice',
-                    'invoicesummary.paid',
-                    'invoicesummary.credit'
-                );
-                
-            if ($this->request()->has('group_id') && $this->request()->input('group_id') != -1) {
-    
-                $query->whereRaw('FIND_IN_SET(?, customers.group)', [$this->request()->input('group_id')]);
-    
-            }
-            
-            return $query;
+        return $model->newQuery()
+            ->select('customers.*');
     }
 
     /**
@@ -162,62 +74,62 @@ class CustomerDataTable extends DataTable
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->addAction(['title' => trans('customers.action'), 'printable' => false])
+            ->addAction(['title' => 'Action', 'printable' => false])
             ->parameters([
                 'dom'       => '<"row"B><"row"<"dataTableBuilderDiv"t>><"row"ip>',
                 'stateSave' => true,
                 'stateDuration' => 0,
                 'processing' => false,
-                'order'     => [[1, 'desc']],
-                'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
+                'order'     => [[1, 'asc']],
+                'lengthMenu' => [[10, 50, 100, 300], ['10 rows', '50 rows', '100 rows', '300 rows']],
                 'buttons' => [
                     [
                         'extend' => 'create',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-plus"></i> ' . trans('table_buttons.create'),
+                        'text' => '<i class="fa fa-plus"></i> Create',
                     ],
                     [
                         'extend' => 'print',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-print"></i> ' . trans('table_buttons.print'),
+                        'text' => '<i class="fa fa-print"></i> Print',
                     ],
                     [
                         'extend' => 'reset',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reset'),
+                        'text' => '<i class="fa fa-refresh"></i> Reset',
                     ],
                     [
                         'extend' => 'reload',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reload'),
+                        'text' => '<i class="fa fa-refresh"></i> Reload',
                     ],
                     [
                         'extend' => 'excelHtml5',
-                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'text' => '<i class="fa fa-file-excel-o"></i> Excel',
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'customers_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'pdfHtml5',
                         'orientation' => 'landscape',
                         'pageSize' => 'LEGAL',
-                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'text' => '<i class="fa fa-file-pdf-o"></i> PDF',
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'customers_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'colvis',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                        'text' => '<i class="fa fa-columns"></i> Column'
                     ],
                     [
                         'extend' => 'pageLength',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => trans('table_buttons.show_10_rows')
+                        'text' => 'Show 10 rows'
                     ],
                 ],
                 'columnDefs' => [
@@ -231,24 +143,22 @@ class CustomerDataTable extends DataTable
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
                     [
-                        'targets' => 4,
-                        'visible' => true,
-                        'render' => 'function(data, type){
-                                                            if(data == 1){
-                                                                return "Cash";
-                                                            }
-                                                            if(data == 2){
-                                                                return "Credit Note";
-                                                            }
-                                                        }'
+                        'targets' => 5, // Status column index
+                        'render' => 'function(data, type){return data == 1 ? "Active" : "Inactive";}'
                     ],
                     [
-                        'targets' => 8,
-                        'className' => "truncate"
+                        'targets' => 6, // Customer Groups column index
+                        'render' => 'function(data, type, row){
+                            if (type === "display") {
+                                if (!data || data === "-" || data === "") {
+                                    return "-";
+                                }
+                                // Wrap in span with title for full text on hover
+                                return "<span title=\'" + data + "\'>" + data + "</span>";
+                            }
+                            return data;
+                        }'
                     ],
-                    [
-                    'targets' => 9,
-                    'render' => 'function(data, type){return data == 1 ? "Active" : "Unactive";}'],
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
@@ -258,13 +168,16 @@ class CustomerDataTable extends DataTable
                         var column = this;
                         if(columns[index].searchable){
                             if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Unactive</option></select>\';
-                            }else if(columns[index].title == \'Payment Term\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Cash</option><option value="2">Credit Note</option></select>\';
-                            }else{
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="1">Active</option><option value="0">Inactive</option></select>\';
+                            } else if(columns[index].title == \'Payment Term\'){
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="Cash">Cash</option><option value="Credit">Credit</option></select>\';
+                            } else if(columns[index].title == \'Customer Groups\'){
+                                // Optional: Add autocomplete for customer groups
+                                var input = \'<input type="text" placeholder="Search groups..." class="border-0" style="width: 100%;">\';
+                            } else {
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
-                            $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
+                            $(input).appendTo($(column.footer()).empty()).on(\'change keyup\', function(){
                                 column.search($(this).val(),true,false).draw();
                                 ShowLoad();
                             })
@@ -282,52 +195,58 @@ class CustomerDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'checkbox'=> new \Yajra\DataTables\Html\Column(['title' => '<input type="checkbox" id="selectallcheckbox">',
-            'data' => 'id',
-            'name' => 'id',
-            'orderable' => false,
-            'searchable' => false]),
+            'checkbox' => new \Yajra\DataTables\Html\Column([
+                'title' => '<input type="checkbox" id="selectallcheckbox">',
+                'data' => 'id',
+                'name' => 'id',
+                'orderable' => false,
+                'searchable' => false
+            ]),
 
-            'code',
-            'company'=> new \Yajra\DataTables\Html\Column(['title' => trans('customers.company'),
-            'data' => 'company',
-            'name' => 'company']),
-            
-            'chinese_name'=> new \Yajra\DataTables\Html\Column(['title' => trans('customers.chinese_name'),
-            'data' => 'chinese_name',
-            'name' => 'chinese_name']),
+            'code' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Code',
+                'data' => 'code',
+                'name' => 'code',
+                'width' => '150px' 
+            ]),
 
-            'paymentterm'=> new \Yajra\DataTables\Html\Column(['title' => trans('customers.paymentterm'),
-            'data' => 'paymentterm',
-            'name' => 'paymentterm']),
+            'company' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Company',
+                'data' => 'company',
+                'name' => 'company',
+                'width' => '300px' 
+            ]),
 
-            // 'group'=> new \Yajra\DataTables\Html\Column(['title' => 'Group',
-            // 'data' => 'groups.description',
-            // 'name' => 'groups.description']),
+            'paymentterm' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Payment Term',
+                'data' => 'paymentterm',
+                'name' => 'paymentterm',
+                'width' => '120px' 
+            ]),
 
-            'agent_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('customers.agent'),
-            'data' => 'agent.name',
-            'name' => 'agent.name']),
+            'phone' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Phone',
+                'data' => 'phone',
+                'name' => 'phone',
+                'width' => '120px'
+            ]),
 
-            'supervisor_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('customers.operation'),
-            'data' => 'supervisor.name',
-            'name' => 'supervisor.name']),
+            'status' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Status',
+                'data' => 'status',
+                'name' => 'status',
+                'width' => '80px'
+            ]),
 
-            'phone',
-            'address',
-            'status',
-            'credit',
-            
-            'sst'=> new \Yajra\DataTables\Html\Column(['title' => trans('customers.ssm'),
-            'data' => 'sst',
-            'name' => 'sst']),
-            
-            'tin',
+            'customer_groups' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Customer Groups',
+                'data' => 'customer_groups',
+                'name' => 'customer_groups',
+                'orderable' => true,
+                'searchable' => true,
+                'width' => '200px'
+            ]),
 
-            'group_descr'=> new \Yajra\DataTables\Html\Column(['title' => trans('customers.group'),
-            'data' => 'GroupDescription',
-            'name' => 'group',
-            'searchable' => false]),
         ];
     }
 

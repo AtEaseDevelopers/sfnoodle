@@ -5,7 +5,6 @@ namespace App\DataTables;
 use App\Models\Invoice;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
-use App\Models\Code;
 
 class InvoiceDataTable extends DataTable
 {
@@ -19,8 +18,29 @@ class InvoiceDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'invoices.datatables_actions');
-    }
+        return $dataTable
+            ->addColumn('action', 'invoices.datatables_actions')
+            ->editColumn('date', function ($model) {
+                return $model->date ? date('d-m-Y', strtotime($model->date)) : '';
+            })
+            ->editColumn('created_by', function ($model) {
+                // Use the creator_name accessor
+                return $model->creator_name ?? 'Unknown';
+            })
+            ->filterColumn('date', function ($query, $keyword) {
+                $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
+            })
+            ->filterColumn('created_by', function ($query, $keyword) {
+                // Add filtering for creator name
+                $query->where(function ($q) use ($keyword) {
+                    $q->whereHas('createdByUser', function ($subQuery) use ($keyword) {
+                        $subQuery->where('name', 'like', '%' . $keyword . '%');
+                    })->orWhereHas('createdByDriver', function ($subQuery) use ($keyword) {
+                        $subQuery->where('name', 'like', '%' . $keyword . '%');
+                    });
+                });
+            }); 
+        }
 
     /**
      * Get query source of dataTable.
@@ -30,14 +50,18 @@ class InvoiceDataTable extends DataTable
      */
     public function query(Invoice $model)
     {
-        return $model->newQuery()
-        ->with('customer')
-        ->with('driver:id,name')
-        ->with('kelindan:id,name')
-        ->with('agent:id,name')
-        ->with('supervisor:id,name')
-        ->with('invoicedetail')
-        ->select('invoices.*');
+        return $model->newQuery()   
+            ->with([
+                'customer', 
+                'invoiceDetails',
+                'driver',
+                'createdByUser:id,name',
+                'createdByDriver:id,name'
+            ])
+            ->selectRaw('invoices.*, 
+                (SELECT SUM(totalprice) FROM invoice_details 
+                 WHERE invoice_details.invoice_id = invoices.id) as calculated_total')
+            ->select('invoices.*');
     }
 
     /**
@@ -50,7 +74,7 @@ class InvoiceDataTable extends DataTable
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->addAction(['title' => trans('invoices.action'), 'printable' => false])
+            ->addAction(['title' => 'Action', 'printable' => false])
             ->parameters([
                 'dom'       => '<"row"B><"row"<"dataTableBuilderDiv"t>><"row"ip>',
                 'stateSave' => true,
@@ -62,26 +86,26 @@ class InvoiceDataTable extends DataTable
                     [
                         'extend' => 'create',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-plus"></i> ' . trans('table_buttons.create'),
+                        'text' => '<i class="fa fa-plus"></i> Create',
                     ],
                     [
                         'extend' => 'print',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-print"></i> ' . trans('table_buttons.print'),
+                        'text' => '<i class="fa fa-print"></i> Print',
                     ],
                     [
                         'extend' => 'reset',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reset'),
+                        'text' => '<i class="fa fa-refresh"></i> Reset',
                     ],
                     [
                         'extend' => 'reload',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-refresh"></i> ' . trans('table_buttons.reload'),
+                        'text' => '<i class="fa fa-refresh"></i> Reload',
                     ],
                     [
                         'extend' => 'excelHtml5',
-                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
+                        'text' => '<i class="fa fa-file-excel-o"></i> Excel',
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
@@ -91,7 +115,7 @@ class InvoiceDataTable extends DataTable
                         'extend' => 'pdfHtml5',
                         'orientation' => 'landscape',
                         'pageSize' => 'LEGAL',
-                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
+                        'text' => '<i class="fa fa-file-pdf-o"></i> PDF',
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
@@ -100,12 +124,12 @@ class InvoiceDataTable extends DataTable
                     [
                         'extend' => 'colvis',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                        'text' => '<i class="fa fa-columns"></i> Column'
                     ],
                     [
                         'extend' => 'pageLength',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => trans('table_buttons.show_10_rows')
+                        'text' => 'Show 10 rows'
                     ],
                 ],
                 'columnDefs' => [
@@ -119,37 +143,30 @@ class InvoiceDataTable extends DataTable
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
                     [
-                        'targets' => 8,
+                        'targets' => 5, // This is the total price column
                         'visible' => true,
-                        'render' => 'function(data, type){var totalprice = 0; $.each(data,function(index,value){ totalprice=totalprice+parseFloat(value.totalprice) }); return totalprice.toFixed(2);}'
-                    ],
-                    [
-                    'targets' => 9,
-                    'render' => 'function(data, type, row){
-                            var paymentTerms = {
-                                1: \'Cash\',
-                                2: \'Credit\',
-                                3: \'Online BankIn\',
-                                4: \'E-wallet\',
-                                5: \'Cheque\'
-                            };
-                            return paymentTerms[data] || \'Unknown\';
+                        'render' => 'function(data, type, row){
+                            if(type === "display" || type === "filter"){
+                                var totalprice = 0;
+                                if(data && Array.isArray(data)){
+                                    $.each(data, function(index, value){
+                                        if(value && value.totalprice){
+                                            totalprice += parseFloat(value.totalprice) || 0;
+                                        }
+                                    });
+                                }
+                                // Alternative: if you have a total field directly in the invoice
+                                if(row.total && !isNaN(parseFloat(row.total))){
+                                    totalprice = parseFloat(row.total);
+                                }
+                                return totalprice.toFixed(2);
+                            }
+                            return data;
                         }'
                     ],
                     [
-                    'targets' => 10,
-                    'render' => 'function(data, type){return data == 1 ? "Completed" : "New";}'
-                    ],
-                    [
-                    'targets' => 11,
-                    'render' => 'function(data, type){
-                        if(data == 1) {
-                            return "Synced";
-                        } else if (data == 2) {
-                            return "Voided";
-                        }
-                        
-                    }'
+                    'targets' => 8,
+                    'render' => 'function(data, type){return data == 0 ? "Completed" : "Cancelled";}'
                     ],
                 ],
                 'initComplete' => 'function(){
@@ -159,14 +176,16 @@ class InvoiceDataTable extends DataTable
                     .every(function (index) {
                         var column = this;
                         if(columns[index].searchable){
-                            if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Completed</option><option value="0">New</option></select>\';
+                           if(columns[index].title == \'Status\'){
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="0">Completed</option><option value="1">Cancelled</option></select>\';
+                                $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
+                                    column.search($(this).val(), true, false).draw();
+                                    ShowLoad();
+                                });
                             }else if(columns[index].title == \'Payment Term\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value=""></option><option value="1">Cash</option><option value="2">Credit</option><option value="3">Online BankIn</option><option value="4">E-wallet</option><option value="5">Cheque</option></select>\';
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="Cash">Cash</option><option value="Credit">Credit</option></select>\';
                             }else if(columns[index].title == \'Date\'){
                                 var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
-                            }else if(columns[index].title == \'Group\'){
-                                var input = \'<select id="group" class="border-0" style="width: 100%;"><option value=""></option></select>\';
                             }else{
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
@@ -175,14 +194,6 @@ class InvoiceDataTable extends DataTable
                                 ShowLoad();
                             })
                         }
-                    });
-                    var groupItems = '.json_encode(Code::where('code','customer_group')->pluck('description','value')->toArray()).';
-                    var x = document.getElementById("group");
-                    $.each(groupItems, function( index, value ) {
-                        var option = document.createElement("option");
-                        option.text = value;
-                        option.value = index;
-                        x.add(option);
                     });
                 }'
             ]);
@@ -204,72 +215,56 @@ class InvoiceDataTable extends DataTable
             ]),
 
             'invoiceno' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.invoice_no'),
+                'title' => 'Invoice No',
                 'data' => 'invoiceno',
                 'name' => 'invoiceno'
             ]),
 
             'date' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.date'),
+                'title' => 'Date',
                 'data' => 'date',
                 'name' => 'date'
             ]),
 
             'customer_id' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.customer'),
+                'title' => 'Customer',
                 'data' => 'customer.company',
                 'name' => 'customer.company'
             ]),
 
-            'driver_id' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.driver'),
+            'driver' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Agent',
                 'data' => 'driver.name',
                 'name' => 'driver.name'
             ]),
 
-            'kelindan_id' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.kelindan'),
-                'data' => 'kelindan.name',
-                'name' => 'kelindan.name'
-            ]),
-
-            'agent_id' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.agent'),
-                'data' => 'agent.name',
-                'name' => 'agent.name'
-            ]),
-
-            'supervisor_id' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.supervisor'),
-                'data' => 'supervisor.name',
-                'name' => 'supervisor.name'
-            ]),
-
             'total' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.total_price'),
-                'data' => 'invoicedetail',
-                'name' => 'invoicedetail',
+                'title' => 'Total Price',
+                'data' => 'invoice_details',
+                'name' => 'invoice_details',
                 'searchable' => false
             ]),
 
             'paymentterm' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.payment_term'),
+                'title' => 'Payment Term',
                 'data' => 'paymentterm',
                 'name' => 'invoices.paymentterm'
             ]),
 
+            'created_by' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Created By',
+                'data' => 'created_by', 
+                'name' => 'created_by',
+                'searchable' => true,
+                'orderable' => true
+            ]),
+
             'status' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.status'),
+                'title' => 'Status',
                 'data' => 'status',
                 'name' => 'invoices.status'
             ]),
 
-            'group' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('invoices.group'),
-                'data' => 'customer.GroupDescription',
-                'name' => 'customer.group',
-                'orderable' => false
-            ]),
         ];
     }
 

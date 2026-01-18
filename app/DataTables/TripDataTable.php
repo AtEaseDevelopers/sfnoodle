@@ -19,18 +19,48 @@ class TripDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-      return $dataTable->addColumn('action', function ($row) {
-        if ($row->type == 2) {
-            return '<div class="btn-group">
-                        <a href="' . route('trips.show', Crypt::encrypt($row->id)) . '" class="btn btn-ghost-success">
-                            <i class="fa fa-eye"></i>
+        return $dataTable
+           ->editColumn('uuid', function ($row) {
+                // Add "T-" prefix to UUID
+                return 'T-' . $row->uuid;
+            })
+            ->addColumn('action', function ($row) {
+                if ($row->type == 0) {
+                    return '<div class="btn-group">
+                        <a href="' . route('tripsummaries', $row->uuid) . '" 
+                        target="_blank" 
+                        class="btn btn-ghost-success" 
+                        title="View Trip Summary Report"
+                        data-toggle="tooltip">
+                            <i class="fa fa-print"></i>
+                        </a>
+
+                        <a href="' . route('trips.stockCount', ['driver_id' => $row->driver_id, 'trip_id' => $row->uuid]) . '" 
+                            class="btn btn-ghost-info" 
+                            title="View Stock Count Report"
+                            data-toggle="tooltip"
+                            target="_blank">
+                            <i class="fa fa-file-archive-o"></i>
                         </a>
                     </div>';
-        } else {
-            return '';
-        }
-    })
-    ->rawColumns(['action']);
+                } else {
+                    return '';
+                }
+            })
+            ->editColumn('type', function ($row) {
+                if ($row->type == 1) {
+                    // Start Trip - Orange color
+                    return '<span class="badge" style="background-color: #ff9800; color: dark; padding: 5px 10px; border-radius: 4px;">
+                        </i> Start Trip
+                    </span>';
+                } else {
+                    // End Trip - Green color
+                    return '<span class="badge" style="background-color: #7bdf7eff; color: dark; padding: 5px 10px; border-radius: 4px;">
+                        </i> End Trip
+                    </span>';
+                }
+            })
+            ->rawColumns(['action', 'type']); // Add 'type' to rawColumns
     }
 
     /**
@@ -42,10 +72,8 @@ class TripDataTable extends DataTable
     public function query(Trip $model)
     {
         return $model->newQuery()
-        ->with('driver:id,name')
-        ->with('kelindan:id,name')
-        ->with('lorry:id,lorryno')
-        ->select('trips.*');
+            ->with('driver:id,name')
+            ->select('trips.*');
     }
 
     /**
@@ -67,11 +95,6 @@ class TripDataTable extends DataTable
                 'order'     => [[1, 'desc']],
                 'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
                 'buttons' => [
-                    // [
-                    //     'extend' => 'create',
-                    //     'className' => 'btn btn-default btn-sm no-corner',
-                    //     'text' => '<i class="fa fa-plus"></i> ' . trans('table_buttons.create'),
-                    // ],
                     [
                         'extend' => 'print',
                         'className' => 'btn btn-default btn-sm no-corner',
@@ -117,24 +140,14 @@ class TripDataTable extends DataTable
                     ],
                 ],
                 'columnDefs' => [
-                    // [
-                    //     'targets' => -1,
-                    //     'visible' => true,
-                    //     'className' => 'dt-body-right'
-                    // ],
-                    // [
-                    //     'targets' => 0,
-                    //     'visible' => true,
-                    //     'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
-                    // ],
                     [
-                        'targets' => 6,
-                        'render' => 'function(data, type){return data == 1 ? "Start Trip" : "End Trip";}'
-                    ],
-                    
-                    [
-                        'targets' => 6,
-                        'render' => 'function(data, type){return data == 1 ? "Start Trip" : "End Trip";}'
+                        'targets' => 3, // Type column index
+                        'render' => 'function(data, type){ 
+                            if(type === "display" || type === "filter") {
+                                return data;
+                            }
+                            return data == 1 ? "Start Trip" : "End Trip";
+                        }'
                     ],
                 ],
                 'initComplete' => 'function(){
@@ -145,7 +158,7 @@ class TripDataTable extends DataTable
                         var column = this;
                         if(columns[index].searchable){
                             if(columns[index].title == \'Type\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Start Trip</option><option value="2">End Trip</option></select>\';
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="1">Start Trip</option><option value="2">End Trip</option></select>\';
                             }else if(columns[index].title == \'Date\'){
                                 var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
                             }else{
@@ -169,30 +182,26 @@ class TripDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'id'=> new \Yajra\DataTables\Html\Column(['title' => trans('trips.trip_id'),
-            'data' => 'id',
-            'name' => 'id']),
+            'uuid'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('trips.trip_id'),
+                'data' => 'uuid',
+                'name' => 'uuid',
+                
+            ]),
 
             'date',
 
-            'driver_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('trips.driver'),
-            'data' => 'driver.name',
-            'name' => 'driver.name']),
+            'driver_id'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('trips.driver'),
+                'data' => 'driver.name',
+                'name' => 'driver.name'
+            ]),
 
-            'kelindan_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('trips.kelindan'),
-            'data' => 'kelindan.name',
-            'name' => 'kelindan.name']),
-
-            'lorry_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('trips.lorry'),
-            'data' => 'lorry.lorryno',
-            'name' => 'lorry.lorryno']),
-
-            'cash'=> new \Yajra\DataTables\Html\Column(['title' => trans('trips.closing_cash'),
-            'data' => 'cash',
-            'name' => 'cash']),
-
-
-            trans('trips.type'),
+            'type'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('trips.type'),
+                'data' => 'type',
+                'name' => 'type'
+            ]),
         ];
     }
 

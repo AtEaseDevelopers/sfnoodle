@@ -3,7 +3,7 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-            <a href="{{ route('drivers.index') }}">Driver</a>
+            <a href="{{ route('drivers.index') }}">Agent</a>
       </li>
       <li class="breadcrumb-item active">Assign</li>
     </ol>

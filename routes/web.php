@@ -156,8 +156,6 @@ Route::get('/clear-cache', function() {
     return 'Application cache has been cleared';
 });
 
-Route::get('/', [App\Http\Controllers\HomeController::class, 'index']);
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 // Route::get('/archived', [App\Http\Controllers\ArcHomeController::class, 'index'])->name('home');
 
 // Route::get('/scheduler/updatedo', [App\Http\Controllers\scheduler::class, 'updateDoRate']);
@@ -170,7 +168,14 @@ Route::get('/scheduler/checkkelindanpermit', [App\Http\Controllers\scheduler::cl
 //     Route::resource('codes', App\Http\Controllers\CodeController::class);
 //     Route::resource('permissions', App\Http\Controllers\PermissionController::class);
 // });
+Route::get('reports/get-drivers-by-date', [App\Http\Controllers\ReportController::class, 'getDriversByDate'])
+->name('reports.getDriversByDate');
 
+Route::get('reports/get-trips-by-driver-date', [App\Http\Controllers\ReportController::class, 'getTripsByDriverDate'])
+    ->name('reports.getTripsByDriverDate');
+
+Route::get('trips/{driver_id}/{trip_id}/stock-count-report', [App\Http\Controllers\ReportController::class, 'showStockCountReport'])
+->name('trips.stockCount');
 
 // Route::resource('codes', App\Http\Controllers\CodeController::class);
 // Route::resource('users', UserController::class);
@@ -178,6 +183,8 @@ Route::get('/scheduler/checkkelindanpermit', [App\Http\Controllers\scheduler::cl
 // Route::resource('roles', App\Http\Controllers\RoleController::class);
 // Route::resource('roleHasPermissions', App\Http\Controllers\RoleHasPermissionController::class);
 Route::group(['middleware' => ['auth']], function() {
+    Route::get('/', [App\Http\Controllers\InvoiceController::class, 'index']);
+    Route::get('/home', [App\Http\Controllers\InvoiceController::class, 'index'])->name('home');
     // Route::post('/home/getProductDelivered', [App\Http\Controllers\HomeController::class, 'getProductDelivered']);
     Route::post('/home/getTotalSales', [App\Http\Controllers\HomeController::class, 'getTotalSales']);
     Route::post('/home/getTotalSalesQty', [App\Http\Controllers\HomeController::class, 'getTotalSalesQty']);
@@ -284,13 +291,13 @@ Route::group(['middleware' => ['auth']], function() {
     // });
     Route::group(['middleware' => ['permission:report']], function() {
         Route::resource('reports', App\Http\Controllers\ReportController::class);
-        Route::post('/reports/run', [App\Http\Controllers\ReportController::class, 'run']);
+        Route::post('/reports/run', [App\Http\Controllers\ReportController::class, 'run'])->name('reports.run');
         Route::get('/showreport/{id}', [App\Http\Controllers\ReportController::class, 'report'])->name('showreport');
         Route::get('/report/sellerinformationrecord', [App\Http\Controllers\ReportController::class, 'seller_information_record'])->name('seller_information_record');
         Route::get('/report/customerstatementofaccount', [App\Http\Controllers\ReportController::class, 'customer_statement_of_account'])->name('customer_statement_of_account');
         Route::get('/report/daily_sales_report_excel', [App\Http\Controllers\ReportController::class, 'daily_sales_report_excel'])->name('daily_sales_report_excel');
-
     });
+
     // Route::group(['middleware' => ['permission:report|paymentdetail']], function() {
     //     Route::resource('reports', App\Http\Controllers\ReportController::class);
     //     Route::post('/reports/run', [App\Http\Controllers\ReportController::class, 'run']);
@@ -356,12 +363,27 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/products/massdestroy', [App\Http\Controllers\ProductController::class, 'massdestroy']);
         Route::post('/products/massupdatestatus', [App\Http\Controllers\ProductController::class, 'massupdatestatus']);
     });
+    Route::group(['middleware' => ['permission:productcategory']], function() {
+        // Product Categories
+        Route::get('/productCategories', [App\Http\Controllers\ProductCategoryController::class, 'index'])->name('productCategories.index');
+        Route::post('/productCategories/store', [App\Http\Controllers\ProductCategoryController::class, 'store'])->name('productCategories.store');
+        Route::get('/productCategories/show/{id}', [App\Http\Controllers\ProductCategoryController::class, 'show'])->name('productCategories.show');
+        Route::put('/productCategories/update/{id}', [App\Http\Controllers\ProductCategoryController::class, 'update'])->name('productCategories.update');
+        Route::post('/productCategories/update/{id}', [App\Http\Controllers\ProductCategoryController::class, 'update']); // Alternative
+        Route::delete('/productCategories/delete/{id}', [App\Http\Controllers\ProductCategoryController::class, 'destroy'])->name('productCategories.destroy');
+        Route::get('/productCategories/active', [App\Http\Controllers\ProductCategoryController::class, 'getActiveCategories'])->name('productCategories.active');
+    });
     Route::group(['middleware' => ['permission:customer']], function() {
         Route::get('/customers/sync-xero', [App\Http\Controllers\CustomerController::class, 'syncXero']);
         Route::resource('customers', App\Http\Controllers\CustomerController::class);
         Route::post('/customers/massdestroy', [App\Http\Controllers\CustomerController::class, 'massdestroy']);
         Route::post('/customers/massupdatestatus', [App\Http\Controllers\CustomerController::class, 'massupdatestatus']);
+           
+        Route::get('/assigns/get-group-customers/{groupId}', [App\Http\Controllers\AssignController::class, 'getGroupCustomers'])->name('assigns.get-group-customers');
+        Route::resource('customer_group', App\Http\Controllers\CustomerGroupController::class);
+
     });
+
     Route::group(['middleware' => ['permission:company']], function() {
         Route::resource('companies', App\Http\Controllers\CompanyController::class);
         Route::post('/companies/massdestroy', [App\Http\Controllers\CompanyController::class, 'massdestroy']);
@@ -383,6 +405,24 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/assigns/massdestroy', [App\Http\Controllers\AssignController::class, 'massdestroy']);
         Route::post('/customerfindgroup', [App\Http\Controllers\AssignController::class, 'customerfindgroup'])->name('assigns.customerfindgroup');
     });
+     Route::group(['middleware' => ['permission:sales_invoices']], function() {
+        //Sales Invoice
+        Route::get('/salesInvoices/sync-xero', [App\Http\Controllers\SalesInvoiceController::class, 'syncXero']);
+        Route::get('/salesInvoices/{id}/detail', [App\Http\Controllers\SalesInvoiceController::class, 'detail'])->name('salesInvoices.detail');
+        Route::post('/salesInvoices/{id}/adddetail', [App\Http\Controllers\SalesInvoiceController::class, 'adddetail'])->name('salesInvoices.adddetail');
+        Route::delete('/salesInvoices/{id}/deletedetail', [App\Http\Controllers\SalesInvoiceController::class, 'deletedetail'])->name('salesInvoices.deletedetail');
+        Route::get('/salesInvoices/customer/{id}', [App\Http\Controllers\SalesInvoiceController::class, 'getcustomer']);
+        Route::resource('salesInvoices', App\Http\Controllers\SalesInvoiceController::class);
+        Route::get('salesInvoices/print/{id}/{function}',[App\Http\Controllers\SalesInvoiceController::class, 'getSalesInvoiceViewPDF'])->name('salesInvoice.print');
+        Route::post('salesInvoices/{id}/cancel', [ App\Http\Controllers\ControllersSalesInvoiceController::class, 'cancel'])->name('salesInvoices.cancel');
+        Route::post('/salesInvoices/convert-to-invoice', [App\Http\Controllers\SalesInvoiceController::class, 'convertToInvoice'])->name('salesInvoices.convertToInvoice');
+        Route::post('/salesInvoices/convert-with-payment', [App\Http\Controllers\SalesInvoiceController::class, 'convertWithPayment'])->name('salesInvoices.convertWithPayment');
+
+        //Sales Invoice Detail
+        Route::get('salesInvoiceDetails/getprice/{invoice_id}/{product_id}', [App\Http\Controllers\SalesInvoiceDetailController::class, 'getprice']);
+        Route::resource('salesInvoiceDetails', App\Http\Controllers\SalesInvoiceDetailController::class);
+     });
+
     Route::group(['middleware' => ['permission:invoice']], function() {
         //Invoice
         Route::get('/invoices/sync-xero', [App\Http\Controllers\InvoiceController::class, 'syncXero']);
@@ -393,11 +433,14 @@ Route::group(['middleware' => ['auth']], function() {
         Route::resource('invoices', App\Http\Controllers\InvoiceController::class);
         Route::post('/invoices/massdestroy', [App\Http\Controllers\InvoiceController::class, 'massdestroy']);
         Route::post('/invoices/massupdatestatus', [App\Http\Controllers\InvoiceController::class, 'massupdatestatus']);
+        Route::post('invoices/{id}/cancel', [App\Http\Controllers\InvoiceController::class, 'cancelInvoice'])->name('invoices.cancelInvoice');
+
         //Invoice Detail
         Route::get('invoiceDetails/getprice/{invoice_id}/{product_id}', [App\Http\Controllers\InvoiceDetailController::class, 'getprice']);
         Route::resource('invoiceDetails', App\Http\Controllers\InvoiceDetailController::class);
         Route::post('/invoiceDetails/massdestroy', [App\Http\Controllers\InvoiceDetailController::class, 'massdestroy']);
         //Invoice Payment
+        Route::get('/invoicePayments/customer-invoices/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'getcustomerinvoice']);
         Route::post('invoicePayments/updatepayment/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'updatepayment']);
         Route::get('invoicePayments/getpayment/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'getpayment']);
         Route::get('invoicePayments/getinvoice/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'getinvoice']);
@@ -409,6 +452,15 @@ Route::group(['middleware' => ['auth']], function() {
         Route::get('/print/invoicePayments/getReceiptViewPDF/{id}/{function}', [App\Http\Controllers\InvoicePaymentController::class, 'getReceiptViewPDF'])->name('invoicePayments.print');
 
     });
+    //notifications
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'getNotifications'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount']);
+    Route::put('/notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
+    Route::put('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+
+    //trip summarize 
+    Route::get('/tripsummaries/{trip_id}', [App\Http\Controllers\TripController::class, 'generateTripReportPDF'])->name('tripsummaries'); 
+
     Route::group(['middleware' => ['permission:task']], function() {
         Route::resource('tasks', App\Http\Controllers\TaskController::class);
         Route::resource('taskTransfers', App\Http\Controllers\TaskTransferController::class);
@@ -417,12 +469,72 @@ Route::group(['middleware' => ['auth']], function() {
         Route::resource('trips', App\Http\Controllers\TripController::class);
 
     });
+    Route::group(['middleware' => ['permission:checkin']], function() {
+        Route::resource('checkins', App\Http\Controllers\CheckInController::class);
+        Route::get('/checkins/{id}/details', [App\Http\Controllers\CheckInController::class, 'getDetails'])->name('checkins.details');
+    });
+    
     Route::group(['middleware' => ['permission:inventorybalance']], function() {
         Route::get('/inventoryBalances', [App\Http\Controllers\InventoryBalanceController::class, 'index'])->name('inventoryBalances.index');
         Route::post('/inventoryBalances/stockin', [App\Http\Controllers\InventoryBalanceController::class, 'stockin'])->name('inventoryBalances.stockin');
         Route::get('/inventoryBalances/getstock/{lorry_id}/{product_id}', [App\Http\Controllers\InventoryBalanceController::class, 'getstock'])->name('inventoryBalances.getstock');
         Route::post('/inventoryBalances/stockout', [App\Http\Controllers\InventoryBalanceController::class, 'stockout'])->name('inventoryBalances.stockout');
     });
+
+    Route::group(['middleware' => ['permission:stockrequest']], function() {
+        // Index
+        Route::get('/inventoryRequests', [App\Http\Controllers\InventoryRequestController::class, 'index'])->name('inventoryRequests.index');
+        // Store (Create)
+        Route::post('/inventoryRequests/store', [App\Http\Controllers\InventoryRequestController::class, 'store'])->name('inventoryRequests.store');
+        // Show
+        Route::get('/inventoryRequests/show/{id}', [App\Http\Controllers\InventoryRequestController::class, 'show'])->name('inventoryRequests.show');
+        // Update
+        Route::put('/inventoryRequests/update/{id}', [App\Http\Controllers\InventoryRequestController::class, 'update'])->name('inventoryRequests.update');
+        Route::post('/inventoryRequests/update/{id}', [App\Http\Controllers\InventoryRequestController::class, 'update']); // Alternative
+        // Delete
+        Route::delete('/inventoryRequests/delete/{id}', [App\Http\Controllers\InventoryRequestController::class, 'destroy'])->name('inventoryRequests.destroy');
+        // Approve
+        Route::post('/inventoryRequests/approve/{id}', [App\Http\Controllers\InventoryRequestController::class, 'approve'])->name('inventoryRequests.approve');
+        // Reject
+        Route::post('/inventoryRequests/reject/{id}', [App\Http\Controllers\InventoryRequestController::class, 'reject'])->name('inventoryRequests.reject');
+    });
+
+    Route::group(['middleware' => ['permission:stockreturn']], function() {
+        // Index
+        Route::get('/inventoryReturns', [App\Http\Controllers\InventoryReturnController::class, 'index'])->name('inventoryReturns.index');
+        // Store (Create)
+        Route::post('/inventoryReturns/store', [App\Http\Controllers\InventoryReturnController::class, 'store'])->name('inventoryReturns.store');
+        // Show
+        Route::get('/inventoryReturns/show/{id}', [App\Http\Controllers\InventoryReturnController::class, 'show'])->name('inventoryReturns.show');
+        // Update
+        Route::put('/inventoryReturns/update/{id}', [App\Http\Controllers\InventoryReturnController::class, 'update'])->name('inventoryReturns.update');
+        Route::post('/inventoryReturns/update/{id}', [App\Http\Controllers\InventoryReturnController::class, 'update']); // Alternative
+        // Delete
+        Route::delete('/inventoryReturns/delete/{id}', [App\Http\Controllers\InventoryReturnController::class, 'destroy'])->name('inventoryReturns.destroy');
+        // Approve
+        Route::post('/inventoryReturns/approve/{id}', [App\Http\Controllers\InventoryReturnController::class, 'approve'])->name('inventoryReturns.approve');
+        // Reject
+        Route::post('/inventoryReturns/reject/{id}', [App\Http\Controllers\InventoryReturnController::class, 'reject'])->name('inventoryReturns.reject');
+    });
+    
+    Route::group(['middleware' => ['permission:stockcount']], function() {
+        // Index
+        Route::get('/inventoryCounts', [App\Http\Controllers\InventoryCountController::class, 'index'])->name('inventoryCounts.index');
+        // Store (Create)
+        Route::post('/inventoryCounts/store', [App\Http\Controllers\InventoryCountController::class, 'store'])->name('inventoryCounts.store');
+        // Show
+        Route::get('/inventoryCounts/show/{id}', [App\Http\Controllers\InventoryCountController::class, 'show'])->name('inventoryCounts.show');
+        // Update
+        Route::put('/inventoryCounts/update/{id}', [App\Http\Controllers\InventoryCountController::class, 'update'])->name('inventoryCounts.update');
+        Route::post('/inventoryCounts/update/{id}', [App\Http\Controllers\InventoryCountController::class, 'update']); // Alternative
+        // Delete
+        Route::delete('/inventoryCounts/delete/{id}', [App\Http\Controllers\InventoryCountController::class, 'destroy'])->name('inventoryCounts.destroy');
+        // Approve
+        Route::post('/inventoryCounts/approve/{id}', [App\Http\Controllers\InventoryCountController::class, 'approve'])->name('inventoryCounts.approve');
+        // Reject
+        Route::post('/inventoryCounts/reject/{id}', [App\Http\Controllers\InventoryCountController::class, 'reject'])->name('inventoryCounts.reject');
+    });
+
     Route::group(['middleware' => ['permission:inventorytransaction']], function() {
         Route::get('/inventoryTransactions', [App\Http\Controllers\InventoryTransactionController::class, 'index'])->name('inventoryTransactions.index');
     });
@@ -462,9 +574,6 @@ Route::group(['middleware' => ['auth']], function() {
 
     Route::get('/language/load', [LanguageController::class, 'loadTranslations'])->name('language.load');   
     
-    Route::group(['middleware' => ['permission:code']], function() {
-        Route::resource('customer_group', App\Http\Controllers\CustomerGroupController::class);
-    });
     Route::group(['middleware' => ['permission:code']], function() {
         Route::resource('commission_group', App\Http\Controllers\CommissionGroupController::class);
     });

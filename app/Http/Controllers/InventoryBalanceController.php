@@ -39,11 +39,11 @@ class InventoryBalanceController extends AppBaseController
 	public function stockin(Request $request)
 	{
 		$data = $request->all();
-		$lorryIds = $data['lorry_id'];  // This will be an array of selected lorry IDs
+		$driverIds = $data['driver_id'];  // This will be an array of selected driver IDs
 
-		foreach ($lorryIds as $lorryId) {
+		foreach ($driverIds as $driverId) {
 			$inventoryBalance = InventoryBalance::where('product_id', $data['product_id'])
-				->where('lorry_id', $lorryId)
+				->where('driver_id', $driverId)
 				->first();
 
 			if (!empty($inventoryBalance)) {
@@ -54,42 +54,42 @@ class InventoryBalanceController extends AppBaseController
 				// Create an inventory transaction record
 				$inventoryTransaction = new InventoryTransaction();
 				$inventoryTransaction->type = 1;
-				$inventoryTransaction->lorry_id = $lorryId;
+				$inventoryTransaction->driver_id = $driverId;
 				$inventoryTransaction->product_id = $inventoryBalance->product_id;
 				$inventoryTransaction->quantity = $data['quantity'];
 				$inventoryTransaction->date = date("Y-m-d H:i:s");
 				$inventoryTransaction->user = Auth::user()->email . ' (' . Auth::user()->name . ')';
 				$inventoryTransaction->save();
 
-				Flash::success('Inventory Balance for lorry ID ' . $lorryId . ' has been updated successfully.');
+				Flash::success('Inventory Balance for driver ID ' . $driverId . ' has been updated successfully.');
 			} else {
 				// Insert a new inventory balance
 				$newInventoryBalance = new InventoryBalance();
 				$newInventoryBalance->product_id = $data['product_id'];
-				$newInventoryBalance->lorry_id = $lorryId;
+				$newInventoryBalance->driver_id = $driverId;
 				$newInventoryBalance->quantity = $data['quantity'];
 				$newInventoryBalance->save();
 
 				// Create an inventory transaction record
 				$inventoryTransaction = new InventoryTransaction();
 				$inventoryTransaction->type = 1;
-				$inventoryTransaction->lorry_id = $lorryId;
+				$inventoryTransaction->driver_id = $driverId;
 				$inventoryTransaction->product_id = $data['product_id'];
 				$inventoryTransaction->quantity = $data['quantity'];
 				$inventoryTransaction->date = date("Y-m-d H:i:s");
 				$inventoryTransaction->user = Auth::user()->email . ' (' . Auth::user()->name . ')';
 				$inventoryTransaction->save();
 
-				Flash::success('Inventory Balance for lorry ID ' . $lorryId . ' has been inserted successfully.');
+				Flash::success('Inventory Balance for driver ID ' . $driverId . ' has been inserted successfully.');
 			}
 		}
 
 		return redirect(route('inventoryBalances.index'));
 	}
 
-    public function getstock($lorry_id,$product_id)
+    public function getstock($driver_id,$product_id)
     {
-        $inventoryBalance = InventoryBalance::where('product_id',$product_id)->where('lorry_id',$lorry_id)->first();
+        $inventoryBalance = InventoryBalance::where('product_id',$product_id)->where('driver_id',$driver_id)->first();
         if(!empty($inventoryBalance)){
             if($inventoryBalance->quantity > 0){
                 return response()->json(['status' => true, 'message' => 'Stock found!', 'quantity' => $inventoryBalance->quantity]);
@@ -104,14 +104,14 @@ class InventoryBalanceController extends AppBaseController
     public function stockout(Request $request)
     {
         $data = $request->all();
-        $inventoryBalance = InventoryBalance::where('product_id',$data['product_id'])->where('lorry_id',$data['lorry_id'])->first();
+        $inventoryBalance = InventoryBalance::where('product_id',$data['product_id'])->where('driver_id',$data['driver_id'])->first();
         if(!empty($inventoryBalance)){
             if($inventoryBalance->quantity >= $data['quantity']){
                 $inventoryBalance->quantity = $inventoryBalance->quantity - $data['quantity'];
                 $inventoryBalance->save();
                 $inventorytransaction = new InventoryTransaction();
                 $inventorytransaction->type = 2;
-                $inventorytransaction->lorry_id = $data['lorry_id'];
+                $inventorytransaction->driver_id = $data['driver_id'];
                 $inventorytransaction->product_id = $data['product_id'];
                 $inventorytransaction->quantity = $data['quantity'] * -1;
                 $inventorytransaction->date = date("Y-m-d H:i:s");

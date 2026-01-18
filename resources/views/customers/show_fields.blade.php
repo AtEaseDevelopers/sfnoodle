@@ -25,7 +25,7 @@
 <!-- Paymentterm Field -->
 <div class="form-group">
     {!! Form::label('paymentterm', __('customers.payment_term')) !!}:
-    <p>{{ $paymentterm }}</p>
+    <p>{{ $customer->paymentterm }}</p>
 </div>
 
 <!-- Group Field -->

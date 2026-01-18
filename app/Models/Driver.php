@@ -27,18 +27,12 @@ class Driver extends Model
         'employeeid',
         'password',
         'name',
-        'ic',
-        'phone',
-        'commissionrate',
-        'bankdetails1',
-        'bankdetails2',
-        'firstvaccine',
-        'secondvaccine',
-        'temperature',
+        'invoice_code',
         'status',
+        'trip_id',
         'remark',
         'session',
-        'invoice_runningnumber',
+        'credit_amount'
     ];
 
     protected $hidden = [
@@ -55,14 +49,6 @@ class Driver extends Model
         'password' => 'string',
         'id' => 'integer',
         'name' => 'string',
-        'ic' => 'string',
-        'phone' => 'string',
-        'commissionrate' => 'float',
-        'bankdetails1' => 'string',
-        'bankdetails2' => 'string',
-        'firstvaccine' => 'date:d-m-Y',
-        'secondvaccine' => 'date:d-m-Y',
-        'temperature' => 'float',
         'status' => 'integer',
         'remark' => 'string',
         'session' => 'string',
@@ -77,19 +63,9 @@ class Driver extends Model
         'employeeid' => 'required|string|max:20|unique:drivers,employeeid',
         'password' => 'required|string|max:65535',
         'name' => 'required|string|max:255',
-        'ic' => 'nullable|string|max:20|unique:drivers,ic',
-        'phone' => 'nullable|string|max:255',
-        // 'commissionrate' => 'required|numeric|min:0|max:100',
-        'bankdetails1' => 'nullable|string|max:255',
-        'bankdetails2' => 'nullable|string|max:255',
-        'firstvaccine' => 'nullable',
-        'secondvaccine' => 'nullable',
-        'temperature' => 'nullable|numeric',
         'status' => 'required',
+        'invoice_code' => 'required|string|max:10|unique:drivers,invoice_code',
         'remark' => 'nullable|string|max:255',
-        'created_at' => 'nullable',
-        'updated_at' => 'nullable',
-        'deleted_at' => 'nullable'
     ];
 
     public function getFirstVaccineAttribute($value)

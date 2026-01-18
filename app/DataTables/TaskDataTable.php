@@ -176,9 +176,12 @@ class TaskDataTable extends DataTable
             'searchable' => false]),
 
             'trip_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.trip_id'),
+            'data' => 'trip_id',
             'name' => 'trip_id']),
 
-            trans('tasks.date'),
+            'date'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.date'),
+            'data' => 'date',
+            'name' => 'date']),
 
             'driver_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.driver'),
             'data' => 'driver.name',
@@ -188,13 +191,18 @@ class TaskDataTable extends DataTable
             'data' => 'customer.company',
             'name' => 'customer.company']),
 
-            trans('tasks.sequence'),
+            'sequence'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.sequence'),
+            'data' => 'sequence',
+            'name' => 'customer.sequence']),
 
             'invoice_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.invoice_no'),
-            'data' => 'invoice.invoiceno',
+            'data' => 'invoice_id',
             'name' => 'invoice.invoiceno']),
 
-            trans('tasks.status'),
+            'status'=> new \Yajra\DataTables\Html\Column(['title' => trans('tasks.status'),
+            'data' => 'status',
+            'name' => 'tasks.status']),
+
         ];
     }
 

@@ -11,7 +11,6 @@ use App\Models\Code;
 class Customer extends Model
 {
     // use SoftDeletes;
-
     use HasFactory;
 
     public $table = 'customers';
@@ -19,24 +18,15 @@ class Customer extends Model
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
 
-
-    public $appends = [
-        'GroupDescription',
-    ];
-
     public $fillable = [
         'code',
         'company',
-        'chinese_name',
         'paymentterm',
-        'group',
-        'agent_id',
-        'supervisor_id',
         'phone',
         'address',
         'status',
         'sst',
-        'tin'
+        'tin',
     ];
 
     /**
@@ -48,10 +38,6 @@ class Customer extends Model
         'id' => 'integer',
         'code' => 'string',
         'company' => 'string',
-        'paymentterm' => 'integer',
-        'group' => 'string',
-        'agent_id' => 'integer',
-        'supervisor_id' => 'integer',
         'phone' => 'string',
         'address' => 'string',
         'status' => 'integer',
@@ -78,44 +64,29 @@ class Customer extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     **/
-    public function agent()
+     * Get the customer groups that this customer belongs to
+     */
+    public function customerGroups()
     {
-        return $this->belongsTo(\App\Models\Agent::class, 'agent_id', 'id');
+        return CustomerGroup::whereJsonContains('customer_ids', $this->id);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-     **/
-    public function groups()
+     * Accessor to get customer group names as comma-separated string
+     */
+    public function getCustomerGroupsAttribute()
     {
-        return $this->belongsTo(\App\Models\Code::class, 'group', 'value')->where('code','customer_group');
+        $groups = $this->customerGroups()->get();
+        return $groups->pluck('name')->implode(', ');
     }
 
-    public function supervisor()
+    /**
+     * Scope to eager load customer groups
+     */
+    public function scopeWithCustomerGroups($query)
     {
-        return $this->belongsTo(\App\Models\Supervisor::class, 'supervisor_id', 'id');
+        return $query->with(['customerGroups' => function($q) {
+            $q->select('id', 'name');
+        }]);
     }
-
-    public function foc(){
-        return $this->hasMany(\App\Models\foc::class, 'customer_id', 'id');
-    }
-
-    public function activefoc(){
-        return $this->foc()->where('startdate','<=',date('Y-m-d H:i:s'))->where('enddate','>',date('Y-m-d H:i:s'))->where('status',1);
-    }
-
-    public function specialprice(){
-        return $this->hasMany(\App\Models\SpecialPrice::class, 'customer_id', 'id');
-    }
-
-    public function normalprice(){
-        return $this->specialprice()->hasMany(\App\Models\Product::class);
-    }
-
-    public function getGroupDescriptionAttribute(){
-        return Code::where('code','customer_group')->whereRaw('find_in_set(codes.value, "'.$this->group.'")')->select(DB::raw("GROUP_CONCAT(codes.description) as group_descr"))->get()->first()->group_descr ?? '';
-    }
-
 }

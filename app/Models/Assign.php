@@ -18,7 +18,6 @@ use Illuminate\Support\Carbon;
 class Assign extends Model
 {
     // use SoftDeletes;
-
     use HasFactory;
 
     public $table = 'assigns';
@@ -26,11 +25,11 @@ class Assign extends Model
     const CREATED_AT = 'created_at';
     const UPDATED_AT = 'updated_at';
 
-
+    // protected $dates = ['deleted_at'];
 
     public $fillable = [
         'driver_id',
-        'customer_id',
+        'customer_group_id',
         'sequence'
     ];
 
@@ -42,8 +41,7 @@ class Assign extends Model
     protected $casts = [
         'id' => 'integer',
         'driver_id' => 'integer',
-        'customer_id' => 'integer',
-        'sequence' => 'integer'
+        'customer_group_id' => 'integer',
     ];
 
     /**
@@ -52,21 +50,33 @@ class Assign extends Model
      * @var array
      */
     public static $rules = [
-        'driver_id' => 'required',
-        'customer_id' => 'required',
-        'sequence' => 'required',
-        'created_at' => 'nullable|nullable',
-        'updated_at' => 'nullable|nullable'
+        'driver_id' => 'required|exists:drivers,id',
+        'customer_group_id' => 'required|exists:customer_groups,id',
+        'created_at' => 'nullable',
+        'updated_at' => 'nullable'
     ];
 
-    public function customer()
-    {
-        return $this->belongsTo(\App\Models\Customer::class, 'customer_id');
-    }
-
+    /**
+     * Get the driver
+     */
     public function driver()
     {
         return $this->belongsTo(\App\Models\Driver::class, 'driver_id');
     }
-    
+
+    /**
+     * Get the customer group
+     */
+    public function customerGroup()
+    {
+        return $this->belongsTo(\App\Models\CustomerGroup::class, 'customer_group_id');
+    }
+
+    /**
+     * Get all customers through the customer group
+     */
+    public function customers()
+    {
+        return $this->customerGroup->customers();
+    }
 }

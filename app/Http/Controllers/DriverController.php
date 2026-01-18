@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\DriverDataTable;
-use App\Http\Requests;
 use App\Http\Requests\CreateDriverRequest;
 use App\Http\Requests\UpdateDriverRequest;
 use App\Repositories\DriverRepository;
@@ -13,10 +12,6 @@ use Response;
 use Illuminate\Support\Facades\Crypt;
 use App\Models\Driver;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Redirect;
 use App\Models\Invoice;
 use App\Models\Task;
 use App\Models\TaskTransfer;
@@ -24,6 +19,8 @@ use App\Models\Trip;
 use App\Models\InventoryTransfer;
 use App\Models\DriverLocation;
 use App\Models\Assign;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Redirect;
 
 class DriverController extends AppBaseController
 {
@@ -67,12 +64,6 @@ class DriverController extends AppBaseController
     public function store(CreateDriverRequest $request)
     {
         $input = $request->all();
-        // if($input['firstvaccine'] != ''){
-        //     $input['firstvaccine'] = date_create($input['firstvaccine']);
-        // }
-        // if($input['secondvaccine'] != ''){
-        //     $input['secondvaccine'] = date_create($input['secondvaccine']);
-        // }
         $driver = $this->driverRepository->create($input);
 
         Flash::success($input['name'].__('drivers.saved_successfully'));
@@ -98,8 +89,7 @@ class DriverController extends AppBaseController
             return redirect(route('drivers.index'));
         }
 
-        $assign = Assign::with('customer')->where('driver_id',$id)->get()->toArray();
-        return view('drivers.show')->with('driver', $driver)->with('assign',$assign)->with('id',$id);
+        return view('drivers.show')->with('driver', $driver)->with('id',$id);
     }
 
     /**
@@ -114,7 +104,7 @@ class DriverController extends AppBaseController
         $id = Crypt::decrypt($id);
         $driver = $this->driverRepository->find($id);
 
-    if (empty($driver)) {
+        if (empty($driver)) {
             Flash::error(__('drivers.driver_not_found'));
 
             return redirect(route('drivers.index'));
@@ -143,14 +133,6 @@ class DriverController extends AppBaseController
         }
 
         $input = $request->all();
-
-        if($input['firstvaccine'] != ''){
-            $input['firstvaccine'] = date_create($input['firstvaccine']);
-        }
-        if($input['secondvaccine'] != ''){
-            $input['secondvaccine'] = date_create($input['secondvaccine']);
-        }
-
         $driver = $this->driverRepository->update($input, $id);
 
         Flash::success($driver->name.__('drivers.updated_successfully'));

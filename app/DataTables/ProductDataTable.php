@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Models\Product;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
+use App\Models\ProductCategory;
 
 class ProductDataTable extends DataTable
 {
@@ -18,7 +19,21 @@ class ProductDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'products.datatables_actions');
+        return $dataTable
+            ->addColumn('category_name', function ($product) {
+                return $product->category->name ?? 'N/A';
+            })
+            ->addColumn('status_text', function ($product) {
+                return $product->status == 1 ? 'Active' : 'Inactive';
+            })
+            ->addColumn('price_formatted', function ($product) {
+                return number_format($product->price, 2);
+            })
+            ->addColumn('created_at', function ($product) {
+                return $product->created_at ? $product->created_at->format('d/m/Y H:i') : '';
+            })
+            ->addColumn('action', 'products.datatables_actions')
+            ->rawColumns(['action']);
     }
 
     /**
@@ -29,7 +44,9 @@ class ProductDataTable extends DataTable
      */
     public function query(Product $model)
     {
-        return $model->newQuery();
+        return $model->newQuery()
+            ->with(['category:id,name'])
+            ->select('products.*');
     }
 
     /**
@@ -39,6 +56,10 @@ class ProductDataTable extends DataTable
      */
     public function html()
     {
+        // Get categories for dropdown filter
+        $categories = ProductCategory::active()->pluck('name', 'id')->toArray();
+        $categoryOptions = json_encode($categories);
+        
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
@@ -77,7 +98,7 @@ class ProductDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'products_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'pdfHtml5',
@@ -87,7 +108,7 @@ class ProductDataTable extends DataTable
                         'exportOptions' => ['columns' => ':visible:not(:last-child)'],
                         'className' => 'btn btn-default btn-sm no-corner',
                         'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'filename' => 'products_' . date('dmYHis')
                     ],
                     [
                         'extend' => 'colvis',
@@ -108,42 +129,38 @@ class ProductDataTable extends DataTable
                     [
                         'targets' => 0,
                         'visible' => true,
+                        'orderable' => false,
+                        'searchable' => false,
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
                     [
-                    'targets' => 4,
-                    'render' => 'function(data, type){
-                            if (data == 1) {
-                                return "Coffee";
-                            } else if (data == 2) {
-                                return "Tea";
-                            } else if (data == 3) {
-                                return "Cocoa";
-                            } else if (data == 0) {
-                                return "Ice";
-                            }
-                        }'
+                        'targets' => 4, // Category column
+                        'render' => 'function(data, type, row, meta){return row.category_name || "N/A";}'
                     ],
                     [
-                    'targets' => 5,
-                    'render' => 'function(data, type){return data == 1 ? "Active" : "Unactive";}'
+                        'targets' => 5, // Status column
+                        'render' => 'function(data, type, row, meta){return row.status_text || (data == 1 ? "Active" : "Inactive");}'
                     ],
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
+                    var categories = ' . $categoryOptions . ';
+                    
                     this.api()
                     .columns()
                     .every(function (index) {
                         var column = this;
                         if(columns[index].searchable){
                             if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Unactive</option></select>\';
-                            }else if(columns[index].title == \'Type\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="0">Ice</option></select>\';
-                            }else if(columns[index].title == \'1st Vaccine Date\'){
-                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
-                            }else if(columns[index].title == \'2nd Vaccine Date\'){
-                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="1">Active</option><option value="0">Inactive</option></select>\';
+                            }else if(columns[index].title == \'Category\'){
+                                // Create category dropdown
+                                var select = \'<select class="border-0" style="width: 100%;"><option value="">All Categories</option>\';
+                                for(var id in categories){
+                                    select += \'<option value="\' + categories[id] + \'">\' + categories[id] + \'</option>\';
+                                }
+                                select += \'</select>\';
+                                var input = select;
                             }else{
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
@@ -165,17 +182,52 @@ class ProductDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'checkbox'=> new \Yajra\DataTables\Html\Column(['title' => '<input type="checkbox" id="selectallcheckbox">',
-            'data' => 'id',
-            'name' => 'id',
-            'orderable' => false,
-            'searchable' => false]),
-
-            'code',
-            'name',
-            'price',
-            'type',
-            'status'
+            'checkbox'=> new \Yajra\DataTables\Html\Column([
+                'title' => '<input type="checkbox" id="selectallcheckbox">',
+                'data' => 'id',
+                'name' => 'id',
+                'orderable' => false,
+                'searchable' => false
+            ]),
+            // 'id' => new \Yajra\DataTables\Html\Column([
+            //     'title' => 'ID',
+            //     'data' => 'id',
+            //     'name' => 'id'
+            // ]),
+            'code' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('products.code'),
+                'data' => 'code',
+                'name' => 'code'
+            ]),
+            'name' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('products.name'),
+                'data' => 'name',
+                'name' => 'name'
+            ]),
+            'price' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('products.price'),
+                'data' => 'price_formatted',
+                'name' => 'price',
+            ]),
+            'category_id' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('Category'),
+                'data' => 'category_name',
+                'name' => 'category.name',
+                'orderable' => true,
+                'searchable' => true
+            ]),
+            'status' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('products.status'),
+                'data' => 'status_text',
+                'name' => 'status',
+                'orderable' => true,
+                'searchable' => true
+            ]),
+            // 'created_at' => new \Yajra\DataTables\Html\Column([
+            //     'title' => trans('Created At'),
+            //     'data' => 'created_at',
+            //     'name' => 'created_at',
+            // ])
         ];
     }
 
