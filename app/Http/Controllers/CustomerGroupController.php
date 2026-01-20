@@ -57,7 +57,7 @@ class CustomerGroupController extends AppBaseController
      */
     public function store(Request $request)
     {
-        // Simple validation
+        // Fix validation - use dot notation for array validation
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',

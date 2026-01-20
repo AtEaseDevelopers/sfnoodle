@@ -93,104 +93,8 @@
     <script>
         $(document).ready(function () {
             // Initialize customers data
-            var customers = @json($customers);
+            var customers = @json($customers ?? []);
             var selectedCustomers = @json($selectedCustomers ?? []);
-            var customerCounter = 0;
-            
-            // Function to get all currently selected customer IDs
-            function getSelectedCustomerIds() {
-                var selectedIds = [];
-                $('#customers-sequence-table tbody tr').each(function() {
-                    var customerId = $(this).find('.customer-select').val();
-                    if (customerId) {
-                        selectedIds.push(parseInt(customerId));
-                    }
-                });
-                return selectedIds;
-            }
-            
-            // Function to update select2 options based on selected customers
-            function updateSelect2Options() {
-                var selectedIds = getSelectedCustomerIds();
-                
-                $('.customer-select').each(function() {
-                    var currentSelect = $(this);
-                    var currentValue = currentSelect.val();
-                    
-                    // Store current value to restore after updating options
-                    var currentSelectedValue = currentValue;
-                    
-                    // Clear current options
-                    currentSelect.empty();
-                    currentSelect.append('<option value="">Select Customer</option>');
-                    
-                    // Add available customers (not already selected in other rows)
-                    $.each(customers, function(id, name) {
-                        // If this customer is not selected in ANY row, OR it's the current row's selection
-                        if (!selectedIds.includes(parseInt(id)) || id == currentSelectedValue) {
-                            var option = $('<option>', {
-                                value: id,
-                                text: name
-                            });
-                            
-                            // Mark as selected if it's the current value
-                            if (id == currentSelectedValue) {
-                                option.attr('selected', true);
-                            }
-                            
-                            currentSelect.append(option);
-                        }
-                    });
-                    
-                    // Re-initialize select2
-                    currentSelect.select2('destroy').select2({
-                        width: '100%',
-                        placeholder: 'Select Customer'
-                    });
-                    
-                    // Restore value if it was set
-                    if (currentSelectedValue) {
-                        currentSelect.val(currentSelectedValue).trigger('change');
-                    }
-                    
-                    // Validate for duplicates
-                    validateCustomerSelections();
-                });
-            }
-            
-            // Function to validate for duplicate selections
-            function validateCustomerSelections() {
-                var selectedIds = [];
-                var hasDuplicates = false;
-                
-                // Clear previous error states
-                $('.customer-select').removeClass('duplicate-error');
-                $('.duplicate-error-text').remove();
-                
-                // Check for duplicates
-                $('#customers-sequence-table tbody tr').each(function() {
-                    var customerId = $(this).find('.customer-select').val();
-                    if (customerId) {
-                        if (selectedIds.includes(customerId)) {
-                            // Found a duplicate
-                            hasDuplicates = true;
-                            $(this).find('.customer-select').addClass('duplicate-error');
-                            
-                            // Add error message if not already present
-                            if (!$(this).find('.duplicate-error-text').length) {
-                                $(this).find('td').eq(2).append(
-                                    '<div class="duplicate-error-text">This customer is already selected in another row</div>'
-                                );
-                            }
-                        } else {
-                            selectedIds.push(customerId);
-                            $(this).find('.duplicate-error-text').remove();
-                        }
-                    }
-                });
-                
-                return hasDuplicates;
-            }
             
             // Function to render customers table
             function renderCustomersTable() {
@@ -198,56 +102,107 @@
                 tbody.empty();
                 
                 if (selectedCustomers.length === 0) {
-                    tbody.html('<tr><td colspan="4" class="text-center">No customers added</td></tr>');
-                    updateHiddenField();
-                    return;
+                    // For create mode - add one empty row
+                    addEmptyRow();
+                } else {
+                    // For edit mode - render existing customers
+                    $.each(selectedCustomers, function(index, customer) {
+                        var rowHtml = `
+                            <tr data-sequence="${customer.sequence || (index + 1)}">
+                                <td class="align-middle text-center">${index + 1}</td>
+                                <td class="align-middle text-center">
+                                    <input type="number" 
+                                        min="1" 
+                                        class="form-control form-control-sm sequence-input" 
+                                        value="${customer.sequence || (index + 1)}"
+                                        style="width: 60px;">
+                                </td>
+                                <td class="align-middle">
+                                    <select class="form-control form-control-sm customer-select">
+                                        <option value="">Select Customer</option>
+                                        ${Object.entries(customers).map(([id, name]) => 
+                                            `<option value="${id}" ${id == customer.id ? 'selected' : ''}>${name}</option>`
+                                        ).join('')}
+                                    </select>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <button type="button" class="btn btn-danger btn-sm remove-customer-btn">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.append(rowHtml);
+                    });
                 }
                 
-                $.each(selectedCustomers, function(index, customer) {
-                    var row = `
-                        <tr data-id="${customer.id}" data-sequence="${customer.sequence || (index + 1)}">
-                            <td class="align-middle text-center">${index + 1}</td>
-                            <td class="align-middle text-center">
-                                <input type="number" 
-                                       min="1" 
-                                       class="form-control form-control-sm sequence-input" 
-                                       value="${customer.sequence || (index + 1)}"
-                                       style="width: 60px;">
-                            </td>
-                            <td class="align-middle">
-                                <select class="form-control form-control-sm customer-select">
-                                    <option value="">Select Customer</option>
-                                    ${Object.entries(customers).map(([id, name]) => 
-                                        `<option value="${id}" ${id == customer.id ? 'selected' : ''}>${name}</option>`
-                                    ).join('')}
-                                </select>
-                            </td>
-                            <td class="align-middle text-center">
-                                <button type="button" class="btn btn-danger btn-sm remove-customer-btn">
-                                    <i class="fa fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                    tbody.append(row);
+                // Initialize select2 for all select elements
+                $('.customer-select').select2({
+                    width: '100%',
+                    placeholder: 'Select Customer'
                 });
                 
-                // Initialize select2 for customer selects and update options
-                updateSelect2Options();
-                
                 // Make table rows sortable
-                $("#customers-sequence-table tbody").sortable({
-                    update: function(event, ui) {
-                        updateSequenceNumbers();
-                    }
-                }).disableSelection();
+                makeRowsSortable();
                 
+                // Update the hidden field
                 updateHiddenField();
-                validateCustomerSelections();
             }
             
-            // Function to update sequence numbers
-            function updateSequenceNumbers() {
+            // Function to add an empty row
+            function addEmptyRow() {
+                var rowCount = $('#customers-sequence-table tbody tr').length;
+                var nextSequence = rowCount + 1;
+                
+                var rowHtml = `
+                    <tr data-sequence="${nextSequence}">
+                        <td class="align-middle text-center">${rowCount + 1}</td>
+                        <td class="align-middle text-center">
+                            <input type="number" 
+                                min="1" 
+                                class="form-control form-control-sm sequence-input" 
+                                value="${nextSequence}"
+                                style="width: 60px;">
+                        </td>
+                        <td class="align-middle">
+                            <select class="form-control form-control-sm customer-select">
+                                <option value="">Select Customer</option>
+                                ${Object.entries(customers).map(([id, name]) => 
+                                    `<option value="${id}">${name}</option>`
+                                ).join('')}
+                            </select>
+                        </td>
+                        <td class="align-middle text-center">
+                            <button type="button" class="btn btn-danger btn-sm remove-customer-btn">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                
+                $('#customers-sequence-body').append(rowHtml);
+                
+                // Initialize select2 for the new row
+                $('#customers-sequence-body tr:last .customer-select').select2({
+                    width: '100%',
+                    placeholder: 'Select Customer'
+                });
+                
+                // Update row numbers
+                updateRowNumbers();
+            }
+            
+            // Function to make rows sortable
+            function makeRowsSortable() {
+                $("#customers-sequence-table tbody").sortable({
+                    update: function(event, ui) {
+                        updateRowNumbers();
+                    }
+                }).disableSelection();
+            }
+            
+            // Function to update row numbers
+            function updateRowNumbers() {
                 $('#customers-sequence-table tbody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                     $(this).find('.sequence-input').val(index + 1);
@@ -282,52 +237,21 @@
             
             // Add customer button
             $('#add-customer-btn').click(function() {
-                // Find next available sequence
-                var maxSequence = 0;
-                $('#customers-sequence-table tbody tr').each(function() {
-                    var seq = parseInt($(this).find('.sequence-input').val());
-                    if (seq > maxSequence) maxSequence = seq;
-                });
-                
-                var newRow = `
-                    <tr data-sequence="${maxSequence + 1}">
-                        <td class="align-middle text-center">${$('#customers-sequence-table tbody tr').length + 1}</td>
-                        <td class="align-middle text-center">
-                            <input type="number" 
-                                   min="1" 
-                                   class="form-control form-control-sm sequence-input" 
-                                   value="${maxSequence + 1}"
-                                   style="width: 60px;">
-                        </td>
-                        <td class="align-middle">
-                            <select class="form-control form-control-sm customer-select">
-                                <option value="">Select Customer</option>
-                                ${Object.entries(customers).map(([id, name]) => 
-                                    `<option value="${id}">${name}</option>`
-                                ).join('')}
-                            </select>
-                        </td>
-                        <td class="align-middle text-center">
-                            <button type="button" class="btn btn-danger btn-sm remove-customer-btn">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                
-                $('#customers-sequence-body').append(newRow);
-                
-                // Update select2 options for all selects
-                updateSelect2Options();
-                
-                updateSequenceNumbers();
+                addEmptyRow();
             });
             
             // Remove customer button (delegated event)
             $(document).on('click', '.remove-customer-btn', function() {
-                $(this).closest('tr').remove();
-                updateSequenceNumbers();
-                updateSelect2Options(); // Update options after removal
+                var rowCount = $('#customers-sequence-table tbody tr').length;
+                if (rowCount <= 1) {
+                    // If it's the last row, just clear the selection instead of removing
+                    $(this).closest('tr').find('.customer-select').val('').trigger('change');
+                    $(this).closest('tr').find('.sequence-input').val(1);
+                } else {
+                    $(this).closest('tr').remove();
+                    updateRowNumbers();
+                }
+                updateHiddenField();
             });
             
             // Update sequence when input changes
@@ -343,12 +267,10 @@
             
             // Update when customer selection changes
             $(document).on('change', '.customer-select', function() {
-                updateSelect2Options(); // Update all select2 options
                 updateHiddenField();
-                validateCustomerSelections();
             });
             
-            // Form validation
+            // Form validation and submission
             $('form').submit(function(e) {
                 var name = $('#name').val().trim();
                 if (!name) {
@@ -358,46 +280,62 @@
                     return false;
                 }
                 
-                // Check for duplicate customers
-                if (validateCustomerSelections()) {
-                    e.preventDefault();
-                    alert("Please remove duplicate customer selections before submitting.");
-                    return false;
-                }
+                // Simple check for duplicate customers (only on submit)
+                var selectedIds = [];
+                var hasDuplicates = false;
+                var duplicateCustomers = [];
                 
-                // Check for empty customer selections
-                var hasEmptySelections = false;
                 $('#customers-sequence-table tbody tr').each(function() {
-                    if (!$(this).find('.customer-select').val()) {
-                        hasEmptySelections = true;
-                        $(this).find('.customer-select').addClass('duplicate-error');
+                    var customerId = $(this).find('.customer-select').val();
+                    if (customerId) {
+                        if (selectedIds.includes(customerId)) {
+                            hasDuplicates = true;
+                            var customerName = $(this).find('.customer-select option:selected').text();
+                            if (!duplicateCustomers.includes(customerName)) {
+                                duplicateCustomers.push(customerName);
+                            }
+                        } else {
+                            selectedIds.push(customerId);
+                        }
                     }
                 });
                 
-                if (hasEmptySelections) {
+                if (hasDuplicates) {
                     e.preventDefault();
-                    alert("Please select a customer for all rows.");
+                    alert("Duplicate customers found: " + duplicateCustomers.join(", ") + "\nPlease remove duplicates before submitting.");
                     return false;
                 }
                 
+                // Remove any completely empty rows (no customer selected)
+                $('#customers-sequence-table tbody tr').each(function() {
+                    if (!$(this).find('.customer-select').val()) {
+                        $(this).remove();
+                    }
+                });
+                
+                // Update sequence numbers after removing empty rows
+                updateRowNumbers();
+                
                 // Convert JSON to array for form submission
                 var customerData = JSON.parse($('#customer-ids-json').val() || '[]');
-                if (customerData.length > 0) {
-                    // Add hidden inputs for each customer
-                    $.each(customerData, function(index, customer) {
-                        $('<input>').attr({
-                            type: 'hidden',
-                            name: 'customer_ids[' + index + '][id]',
-                            value: customer.id
-                        }).appendTo('form');
-                        
-                        $('<input>').attr({
-                            type: 'hidden',
-                            name: 'customer_ids[' + index + '][sequence]',
-                            value: customer.sequence
-                        }).appendTo('form');
-                    });
-                }
+                
+                // Remove any existing hidden inputs
+                $('input[name^="customer_ids["]').remove();
+                
+                // Add hidden inputs for each customer
+                $.each(customerData, function(index, customer) {
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'customer_ids[' + index + '][id]',
+                        value: customer.id
+                    }).appendTo('form');
+                    
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'customer_ids[' + index + '][sequence]',
+                        value: customer.sequence
+                    }).appendTo('form');
+                });
                 
                 return true;
             });
@@ -405,7 +343,17 @@
             // Initial render
             renderCustomersTable();
             
-            HideLoad();
+            // Ensure at least one row exists
+            setTimeout(function() {
+                if ($('#customers-sequence-table tbody tr').length === 0) {
+                    addEmptyRow();
+                }
+                
+                // Hide the loading spinner
+                if (typeof HideLoad === 'function') {
+                    HideLoad();
+                }
+            }, 100);
         });
     </script>
 @endpush
