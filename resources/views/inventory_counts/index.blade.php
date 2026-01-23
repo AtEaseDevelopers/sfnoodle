@@ -340,7 +340,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        <small class="text-muted">* Required for approval</small>
                         <div class="text-danger" id="editCountItemsError"></div>
                     </div>
 
@@ -653,6 +652,7 @@
             var product = productsLookup[productId];
             return product ? product.name : 'Product ' + productId;
         }
+
         // Handle edit count modal opening
         $(document).on('click', '.edit-count-btn', function(e) {
             e.preventDefault();
@@ -687,14 +687,33 @@
             if (requestData.items && Array.isArray(requestData.items) && requestData.items.length > 0) {
                 requestData.items.forEach(function(item, index) {
                     var currentQty = item.current_quantity || item.quantity || 0;
-                    var countedQty = item.counted_quantity || '';
-                    var difference = countedQty !== '' ? countedQty - currentQty : '';
-                    var diffClass = difference === '' ? '' : (difference > 0 ? 'text-success' : difference < 0 ? 'text-danger' : '');
+                    var countedQty = item.counted_quantity || null; // Change from '' to null
+                    
+                    // Determine the value to display in the input field
+                    // If countedQty is null/undefined/empty/0, pre-fill with currentQty
+                    // Otherwise, use the saved countedQty
+                    var displayCountedQty = '';
+                    var hasSavedCount = false;
+                    
+                    if (countedQty !== null && countedQty !== undefined && countedQty !== '' && countedQty !== 0) {
+                        // Already has a counted quantity saved in DB
+                        displayCountedQty = countedQty;
+                        hasSavedCount = true;
+                    } else {
+                        // No counted quantity saved yet, pre-fill with current quantity
+                        displayCountedQty = currentQty;
+                        hasSavedCount = false;
+                    }
+                    
+                    // Calculate difference
+                    var difference = hasSavedCount ? countedQty - currentQty : 0;
+                    var diffClass = difference === 0 ? '' : (difference > 0 ? 'text-success' : difference < 0 ? 'text-danger' : '');
                     var diffSymbol = difference > 0 ? '+' : '';
+                    
                     var productName = getProductName(item.product_id);
 
                     var row = `
-                        <tr>
+                        <tr class="${hasSavedCount ? 'has-saved-count' : ''}">
                             <td class="align-middle text-center">${index + 1}</td>
                             <td class="align-middle">
                                 <strong>${productName}</strong>
@@ -704,17 +723,21 @@
                             </td>
                             <td class="align-middle">
                                 <input type="number" 
-                                       min="0" 
-                                       class="form-control counted-quantity" 
-                                       name="items[${index}][counted_quantity]" 
-                                       value="${countedQty}"
-                                       data-current-qty="${currentQty}"
-                                       placeholder="Enter counted quantity">
+                                    min="0" 
+                                    class="form-control counted-quantity" 
+                                    name="items[${index}][counted_quantity]" 
+                                    value="${displayCountedQty}"
+                                    data-current-qty="${currentQty}"
+                                    data-original-counted="${countedQty || ''}"
+                                    placeholder="Enter counted quantity"
+                                    data-has-saved="${hasSavedCount ? 'true' : 'false'}"
+                                    style="${hasSavedCount ? '' : 'background-color: #f0f8ff; border-left: 3px solid #007bff;'}">
                                 <input type="hidden" name="items[${index}][product_id]" value="${item.product_id}">
                                 <input type="hidden" name="items[${index}][current_quantity]" value="${currentQty}">
+                                <input type="hidden" name="items[${index}][original_counted]" value="${countedQty || ''}">
                             </td>
                             <td class="align-middle text-center">
-                                <span class="difference-display ${diffClass}">${difference !== '' ? diffSymbol + difference : '-'}</span>
+                                <span class="difference-display ${diffClass}">${hasSavedCount ? diffSymbol + difference : '0'}</span>
                             </td>
                         </tr>
                     `;
@@ -724,10 +747,33 @@
                 $('#editCountItemsBody').html('<tr><td colspan="5" class="text-center">No items found</td></tr>');
             }
             
+            // Add CSS for visual distinction if not already added
+            if (!$('#editCountStyles').length) {
+                var style = document.createElement('style');
+                style.id = 'editCountStyles';
+                style.textContent = `
+                    .has-saved-count {
+                        background-color: rgba(40, 167, 69, 0.05);
+                    }
+                    .has-saved-count .counted-quantity {
+                        border-color: #28a745;
+                        border-left: 3px solid #28a745 !important;
+                    }
+                    .counted-quantity[data-has-saved="true"] {
+                        border-left: 3px solid #28a745 !important;
+                    }
+                    .counted-quantity[data-has-saved="false"] {
+                        border-left: 3px solid #007bff !important;
+                        background-color: #f8f9fa !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
             // Show modal
             $('#editCountModal').modal('show');
         });
-        
+
         // Calculate difference when counted quantity changes
         $(document).on('input', '.counted-quantity', function() {
             var currentQty = parseFloat($(this).data('current-qty')) || 0;
@@ -741,7 +787,7 @@
             diffDisplay.removeClass('text-success text-danger').addClass(diffClass);
             diffDisplay.text(diffSymbol + difference);
         });
-        
+
         // Handle edit count form submission
         $('#editCountForm').submit(function(e) {
             e.preventDefault();
@@ -751,8 +797,17 @@
             
             // Validate counted quantities are not negative
             var hasError = false;
+            var hasAnyCountedQty = false;
+            
             $('.counted-quantity').each(function() {
                 var val = $(this).val();
+                
+                // Check if at least one counted quantity is provided
+                if (val !== '' && parseFloat(val) >= 0) {
+                    hasAnyCountedQty = true;
+                }
+                
+                // Validate the value itself
                 if (val !== '' && parseFloat(val) < 0) {
                     $(this).addClass('is-invalid');
                     hasError = true;
@@ -766,6 +821,11 @@
                 return false;
             }
             
+            if (!hasAnyCountedQty) {
+                $('#editCountItemsError').text('Please enter at least one counted quantity.');
+                return false;
+            }
+            
             // Prepare form data
             var formData = $(this).serializeArray();
             
@@ -775,12 +835,21 @@
                 var productId = $(this).closest('tr').find('input[name*="[product_id]"]').val();
                 var currentQty = $(this).data('current-qty');
                 var countedQty = $(this).val();
+                var hasSaved = $(this).data('has-saved') === 'true';
+                var originalCounted = $(this).data('original-counted');
                 
-                items.push({
+                // Create item data
+                var itemData = {
                     product_id: productId,
-                    current_quantity: currentQty,
-                    counted_quantity: countedQty !== '' ? countedQty : null
-                });
+                    current_quantity: currentQty
+                };
+                
+                // Only include counted_quantity if it has a value
+                if (countedQty !== '') {
+                    itemData.counted_quantity = countedQty;
+                }
+                
+                items.push(itemData);
             });
             
             // Add items to form data
@@ -852,13 +921,44 @@
                 }
             });
         });
-        
+
         // Clear edit count modal when closed
         $('#editCountModal').on('hidden.bs.modal', function () {
             $('#editCountForm')[0].reset();
             $('#editCountItemsBody').empty();
             $('#editCountRequestId').text('');
             $('#editCountItemsError').text('');
+        });
+
+        // Add reset button functionality (optional)
+        $(document).on('click', '.reset-to-current-btn', function() {
+            var input = $(this).closest('tr').find('.counted-quantity');
+            var currentQty = input.data('current-qty');
+            var hasSaved = input.data('has-saved') === 'true';
+            
+            // Only reset if there's no saved counted quantity
+            if (!hasSaved) {
+                input.val(currentQty);
+                input.trigger('input'); // Trigger difference calculation
+                showNotification('info', 'Reset to current quantity');
+            } else {
+                showNotification('warning', 'Cannot reset already saved counted quantity');
+            }
+        });
+
+        // Add clear button functionality (optional)
+        $(document).on('click', '.clear-count-btn', function() {
+            var input = $(this).closest('tr').find('.counted-quantity');
+            var hasSaved = input.data('has-saved') === 'true';
+            
+            // Only clear if there's no saved counted quantity
+            if (!hasSaved) {
+                input.val('');
+                input.trigger('input'); // Trigger difference calculation
+                showNotification('info', 'Cleared counted quantity');
+            } else {
+                showNotification('warning', 'Cannot clear already saved counted quantity');
+            }
         });
         
         // ============================================

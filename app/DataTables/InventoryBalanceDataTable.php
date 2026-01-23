@@ -2,12 +2,15 @@
 
 namespace App\DataTables;
 
-use App\Models\InventoryBalance;
+use App\Models\Driver;
+use App\Models\Product;
 use Yajra\DataTables\Services\DataTable;
-use Yajra\DataTables\EloquentDataTable;
+use Yajra\DataTables\DataTables;
 
 class InventoryBalanceDataTable extends DataTable
 {
+    protected $productOrder = [];
+    
     /**
      * Build DataTable class.
      *
@@ -16,24 +19,84 @@ class InventoryBalanceDataTable extends DataTable
      */
     public function dataTable($query)
     {
-        $dataTable = new EloquentDataTable($query);
-
-        return $dataTable->addColumn('action', 'inventory_balances.datatables_actions');
+        return DataTables::of($query)
+            ->addColumn('product_details', function($driver) {
+                // Get all products with their quantities
+                $productQuantities = [];
+                
+                foreach ($driver->inventoryBalances as $balance) {
+                    if ($balance->quantity != 0 && $balance->product) {
+                        $productQuantities[$balance->product->name] = $balance->quantity;
+                    }
+                }
+                
+                // Ensure all products are in the same order
+                $orderedItems = [];
+                foreach ($this->getProductOrder() as $productName) {
+                    if (isset($productQuantities[$productName])) {
+                        $orderedItems[] = '<strong>' . e($productName) . '</strong>: ' . $productQuantities[$productName];
+                    }
+                }
+                
+                // Add any remaining products (in case new products were added)
+                foreach ($productQuantities as $product => $quantity) {
+                    if (!in_array($product, $this->getProductOrder())) {
+                        $orderedItems[] = '<strong>' . e($product) . '</strong>: ' . $quantity;
+                    }
+                }
+                
+                if (empty($orderedItems)) {
+                    return '<span class="text-muted">No items</span>';
+                }
+                
+                return implode(' | ', $orderedItems);
+            })
+            ->addColumn('total_quantity', function($driver) {
+                $total = $driver->inventoryBalances->sum('quantity');
+                return '<span class="font-weight-bold text-primary">' . $total . '</span>';
+            })
+            ->addColumn('product_count', function($driver) {
+                $count = $driver->inventoryBalances
+                    ->where('quantity', '<>', 0)
+                    ->unique('product_id')
+                    ->count();
+                return '<span class="badge badge-secondary">' . $count . '</span>';
+            })
+            ->rawColumns(['product_details', 'total_quantity', 'product_count'])
+            ->addIndexColumn();
     }
 
     /**
      * Get query source of dataTable.
      *
-     * @param \App\Models\InventoryBalance $model
+     * @param \App\Models\Driver $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(InventoryBalance $model)
+    public function query(Driver $model)
     {
         return $model->newQuery()
-        ->with('product:id,name')
-        ->with('driver:id,name')
-        ->select('inventory_balances.*')
-        ->where('inventory_balances.quantity','<>','0');
+            ->with(['inventoryBalances' => function($query) {
+                $query->where('quantity', '<>', 0)
+                      ->with('product:id,name');
+            }])
+            ->whereHas('inventoryBalances', function($query) {
+                $query->where('quantity', '<>', 0);
+            })
+            ->select('drivers.*')
+            ->orderBy('name');
+    }
+
+    /**
+     * Get the product order from database
+     */
+    protected function getProductOrder()
+    {
+        if (empty($this->productOrder)) {
+            // Get all product names sorted alphabetically
+            $this->productOrder = Product::orderBy('name')->pluck('name')->toArray();
+        }
+        
+        return $this->productOrder;
     }
 
     /**
@@ -46,69 +109,48 @@ class InventoryBalanceDataTable extends DataTable
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
-            // ->addAction(['width' => '120px', 'printable' => false])
             ->parameters([
-                'dom'       => '<"row"B><"row"<"dataTableBuilderDiv"t>><"row"ip>',
+                'dom'       => '<"row"<"col-md-6"B><"col-md-6"f>><"row"<"col-md-12"tr>><"row"<"col-md-5"i><"col-md-7"p>>',
                 'stateSave' => true,
                 'stateDuration' => 0,
-                'processing' => false,
-                'order'     => [[0, 'desc']],
-                'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
+                'processing' => true,
+                'order'     => [[1, 'asc']],
+                'lengthMenu' => [[10, 25, 50, 100, 300], [10, 25, 50, 100, 300]],
+                'pageLength' => 25,
                 'buttons' => [
-                    // ['extend' => 'create', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.create')],
-                    ['extend' => 'print', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.print')],
-                    ['extend' => 'reset', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.reset')],
-                    ['extend' => 'reload', 'className' => 'btn btn-default btn-sm no-corner', 'text' => trans('table_buttons.reload')],
                     [
-                        'extend' => 'excelHtml5',
-                        'text' => '<i class="fa fa-file-excel-o"></i> ' . trans('table_buttons.excel'),
-                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'extend' => 'print',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'text' => '<i class="fa fa-print"></i> Print',
+                        'exportOptions' => ['columns' => [0, 1, 2, 3]]
                     ],
                     [
-                        'extend' => 'pdfHtml5',
-                        'orientation' => 'landscape',
-                        'pageSize' => 'LEGAL',
-                        'text' => '<i class="fa fa-file-pdf-o"></i> ' . trans('table_buttons.pdf'),
-                        'exportOptions' => ['columns' => ':visible:not(:last-child)'],
+                        'extend' => 'excel',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'title' => null,
-                        'filename' => 'invoice' . date('dmYHis')
+                        'text' => '<i class="fa fa-file-excel-o"></i> Excel',
+                        'exportOptions' => ['columns' => [0, 1, 2, 3]]
+                    ],
+                    [
+                        'extend' => 'pdf',
+                        'className' => 'btn btn-default btn-sm no-corner',
+                        'text' => '<i class="fa fa-file-pdf-o"></i> PDF',
+                        'exportOptions' => ['columns' => [0, 1, 2, 3]]
                     ],
                     [
                         'extend' => 'colvis',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-columns"></i> ' . trans('table_buttons.column')
+                        'text' => '<i class="fa fa-columns"></i> Columns'
                     ],
                     [
-                        'extend' => 'pageLength',
+                        'extend' => 'reload',
                         'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => trans('table_buttons.show_10_rows')
-                    ],
+                        'text' => '<i class="fa fa-refresh"></i> Reload'
+                    ]
                 ],
-                'initComplete' => 'function(){
-                    var columns = this.api().init().columns;
-                    this.api()
-                    .columns()
-                    .every(function (index) {
-                        var column = this;
-                        if(columns[index].searchable){
-                            if(columns[index].title == \'Type\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Start Trip</option><option value="2">End Trip</option></select>\';
-                            }else if(columns[index].title == \'Date\'){
-                                var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
-                            }else{
-                                var input = \'<input type="text" placeholder="Search ">\';
-                            }
-                            $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
-                                column.search($(this).val(),true,false).draw();
-                                ShowLoad();
-                            })
-                        }
-                    });
-                }'
+                'language' => [
+                    'emptyTable' => 'No inventory data available',
+                    'zeroRecords' => 'No matching records found'
+                ]
             ]);
     }
 
@@ -120,29 +162,42 @@ class InventoryBalanceDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'driver' => new \Yajra\DataTables\Html\Column([
-                'title' => 'Driver',
-                'data' => 'driver.name',
-                'name' => 'driver.name',
+            [
+                'data' => 'DT_RowIndex',
+                'title' => '#',
+                'orderable' => false,
+                'searchable' => false,
+                'width' => '5%',
+                'className' => 'text-center'
+            ],
+            [
+                'data' => 'name',
+                'title' => 'Agent',
+                'width' => '15%'
+            ],
+            [
+                'data' => 'product_details',
+                'title' => 'Products & Quantities',
+                'orderable' => false,
+                'searchable' => false,
+                'width' => '60%'
+            ],
+            [
+                'data' => 'product_count',
+                'title' => 'Types',
+                'orderable' => false,
+                'searchable' => false,
+                'width' => '10%',
+                'className' => 'text-center'
+            ],
+            [
+                'data' => 'total_quantity',
+                'title' => 'Total Items',
                 'orderable' => true,
-                'searchable' => true
-            ]),
-            
-            'product' => new \Yajra\DataTables\Html\Column([
-                'title' => 'Product',
-                'data' => 'product.name',
-                'name' => 'product.name',
-                'orderable' => true,
-                'searchable' => true
-            ]),
-            
-            'quantity' => new \Yajra\DataTables\Html\Column([
-                'title' => 'Quantity',
-                'data' => 'quantity',
-                'name' => 'quantity',
-                'orderable' => true,
-                'searchable' => true,
-            ]),
+                'searchable' => false,
+                'width' => '10%',
+                'className' => 'text-center font-weight-bold'
+            ]
         ];
     }
 
@@ -153,6 +208,6 @@ class InventoryBalanceDataTable extends DataTable
      */
     protected function filename()
     {
-        return 'inventory_balances_datatable_' . time();
+        return 'inventory_summary_' . date('Y_m_d');
     }
 }

@@ -50,7 +50,7 @@ class NotificationService
     /**
      * Get latest notifications for current user
      */
-    public function getLatestNotificationsForUser($userId = null, $limit = 10)
+    public function getLatestNotificationsForUser($userId = null)
     {
         $userId = $userId ?? auth()->id();
         $today = Carbon::today();
@@ -58,9 +58,8 @@ class NotificationService
 
         return Notification::with(['trip', 'driver'])
             ->where('user_id', $userId)
-            ->whereBetween('created_at', [$yesterday->startOfDay(), $today->endOfDay()])
+            ->where('is_read', false)
             ->latest()
-            ->limit($limit)
             ->get();
     }
 

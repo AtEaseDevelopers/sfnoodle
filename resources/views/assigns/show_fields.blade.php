@@ -58,13 +58,18 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
             <i class="fa fa-users"></i> {{ __('Customers in Group') }}
-            <span class="badge badge-info">{{ $assign->customerGroup ? count($assign->customerGroup->customer_ids ?? []) : 0 }}</span>
+            <span class="badge badge-info">
+                {{ $assign->customerGroup ? count($assign->customerGroup->customer_ids ?? []) : 0 }}
+            </span>
         </h5>
     </div>
     <div class="card-body p-0">
         @if($assign->customerGroup && !empty($assign->customerGroup->customer_ids))
             @php
-                $customerIds = $assign->customerGroup->customer_ids;
+                // Extract just the customer IDs from the JSON structure
+                $customerData = $assign->customerGroup->customer_ids;
+                $customerIds = collect($customerData)->pluck('id')->toArray();
+                
                 $customers = \App\Models\Customer::whereIn('id', $customerIds)
                     ->select('id', 'code', 'company')
                     ->get();

@@ -24,11 +24,10 @@ class UpdateUserRequest extends FormRequest
      */
     public function rules()
     {
-        $id = $this->route('user');
         $rules = [
             'name'          => 'required',
-            'email'         => 'required|email|unique:users,email,'.Crypt::decrypt($id),
-            'invoice_code'  => 'nullable|string|max:255|unique:users,invoice_code,'.Crypt::decrypt($id),
+            'email'         => 'required|email',
+            'invoice_code'  => 'nullable|string|max:255',
             'role_id'       => 'required',
             'update_password' => 'boolean' // Add this rule
         ];

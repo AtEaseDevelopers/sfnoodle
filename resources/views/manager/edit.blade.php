@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
           <li class="breadcrumb-item">
-             <a href="{!! route('users.index') !!}">User</a>
+             <a href="{!! route('Managerusers.index') !!}">Inventory Manager</a>
           </li>
-          <li class="breadcrumb-item active">Edit</li>
+          <li class="breadcrumb-item active">{{ __('user.edit') }}</li>
         </ol>
     <div class="container-fluid">
          <div class="animated fadeIn">
@@ -15,12 +15,12 @@
                       <div class="card">
                           <div class="card-header">
                               <i class="fa fa-edit fa-lg"></i>
-                              <strong>{{ __('user.edit_user') }}</strong>
+                              <strong>Edit Inventory Manager</strong>
                           </div>
                           <div class="card-body">
-                              {!! Form::model($user, ['route' => ['users.update', Crypt::encrypt($user->id)], 'method' => 'patch']) !!}
+                              {!! Form::model($user, ['route' => ['Managerusers.update', Crypt::encrypt($user->id)], 'method' => 'patch']) !!}
 
-                              @include('users.fields')
+                              @include('manager.fields')
 
                               {!! Form::close() !!}
                             </div>

@@ -6,7 +6,7 @@ use App\Models\User;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
 
-class UserDataTable extends DataTable
+class ManagerUserDataTable extends DataTable
 {
     /**
      * Build DataTable class.
@@ -18,7 +18,7 @@ class UserDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'users.datatables_actions');
+        return $dataTable->addColumn('action', 'manager.datatables_actions');
     }
 
     /**
@@ -36,7 +36,7 @@ class UserDataTable extends DataTable
             ->join('roles', function ($join) {
                 $join->on('roles.id', '=', 'model_has_roles.role_id');
             })
-            ->where('roles.name', '!=', 'Inventory Admin')
+            ->where('roles.name', '!=', 'admin')
             ->select(
                 'users.id',
                 'users.name',

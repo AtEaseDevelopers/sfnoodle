@@ -85,6 +85,9 @@ class Driver extends Model
             return '';
         }
     }
-
+     public function inventoryBalances()
+    {
+        return $this->hasMany(\App\Models\InventoryBalance::class, 'driver_id', 'id');
+    }
 
 }

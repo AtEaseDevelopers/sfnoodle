@@ -517,7 +517,7 @@
                 <div class="notification-list">
                     @forelse($notifications as $notification)
                         @php
-                            $tripId = $notification->trip_id ?? null;
+                            $tripId = $notification->trip->uuid ?? null;
                             $reportUrl = $tripId ? route('tripsummaries', $tripId) . '?notification_id=' . $notification->id : '#';  
                         @endphp
                         

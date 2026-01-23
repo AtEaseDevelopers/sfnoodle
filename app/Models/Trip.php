@@ -56,7 +56,7 @@ class Trip extends Model
     {
         do {
             // Generate a random integer (adjust range as needed)
-            $reference = mt_rand(100000000, 999999999); // 9-digit number
+            $reference = mt_rand(100000, 999999); // 6-digit number
             
             // Add timestamp prefix for more uniqueness
             // $reference = (int) (time() . mt_rand(1000, 9999));

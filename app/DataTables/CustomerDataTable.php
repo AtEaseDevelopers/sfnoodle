@@ -21,31 +21,60 @@ class CustomerDataTable extends DataTable
         return $dataTable
             ->addColumn('action', 'customers.datatables_actions')
             ->addColumn('customer_groups', function ($customer) {
-                // Get customer groups
-                $groups = \App\Models\CustomerGroup::whereJsonContains('customer_ids', $customer->id)
+                // Get ALL customer groups and filter in PHP (simpler but less efficient for large datasets)
+                $allGroups = \App\Models\CustomerGroup::withTrashed() // Include soft deleted if needed
                     ->orderBy('name')
                     ->get();
                 
-                if ($groups->isEmpty()) {
+                $customerGroups = collect();
+                
+                foreach ($allGroups as $group) {
+                    $customerIds = $group->customer_ids ?? [];
+                    
+                    // Check if customer ID exists in the group
+                    foreach ($customerIds as $item) {
+                        if (isset($item['id']) && $item['id'] == $customer->id) {
+                            $customerGroups->push($group->name);
+                            break; // No need to check further in this group
+                        }
+                    }
+                }
+                
+                if ($customerGroups->isEmpty()) {
                     return '-';
                 }
                 
-                // Return comma-separated group names
-                return $groups->pluck('name')->implode(', ');
+                return $customerGroups->implode(', ');
             })
             ->filterColumn('customer_groups', function ($query, $keyword) {
-                // Search in customer groups
-                $query->whereHas('customerGroups', function ($q) use ($keyword) {
-                    $q->where('name', 'like', "%{$keyword}%");
-                });
+                if (!empty($keyword)) {
+                    // For filtering, we need to use a subquery
+                    $query->whereExists(function ($subQuery) use ($keyword) {
+                        $subQuery->select(\DB::raw(1))
+                            ->from('customer_groups')
+                            ->whereRaw('customer_groups.name LIKE ?', ["%{$keyword}%"])
+                            ->whereRaw("(
+                                customer_groups.customer_ids LIKE CONCAT('%\"id\":', customers.id, ',%') OR
+                                customer_groups.customer_ids LIKE CONCAT('%\"id\":', customers.id, '}%') OR
+                                customer_groups.customer_ids LIKE CONCAT('%\"id\": ', customers.id, ',%') OR
+                                customer_groups.customer_ids LIKE CONCAT('%\"id\": ', customers.id, '}%')
+                            )");
+                    });
+                }
             })
             ->orderColumn('customer_groups', function ($query, $order) {
-                // Order by customer groups
+                // For ordering, use a subquery with LIKE pattern
                 $query->orderBy(
-                    \App\Models\CustomerGroup::select('name')
-                        ->whereRaw("JSON_CONTAINS(customer_groups.customer_ids, CAST(customers.id as JSON), '$')")
-                        ->orderBy('name', $order)
-                        ->limit(1),
+                    \DB::raw("(
+                        SELECT GROUP_CONCAT(cg.name ORDER BY cg.name SEPARATOR ', ')
+                        FROM customer_groups cg
+                        WHERE (
+                            cg.customer_ids LIKE CONCAT('%\"id\":', customers.id, ',%') OR
+                            cg.customer_ids LIKE CONCAT('%\"id\":', customers.id, '}%') OR
+                            cg.customer_ids LIKE CONCAT('%\"id\": ', customers.id, ',%') OR
+                            cg.customer_ids LIKE CONCAT('%\"id\": ', customers.id, '}%')
+                        )
+                    )"),
                     $order
                 );
             })

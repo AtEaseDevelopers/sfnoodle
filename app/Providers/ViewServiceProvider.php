@@ -407,10 +407,13 @@ class ViewServiceProvider extends ServiceProvider
             $view->with('userItems', $userItems);
         });
         View::composer(['users.fields'], function ($view) {
-            $roleItems = Role::pluck('name','id')->toArray();
+            $roleItems = Role::where('name', '!=', 'Inventory Admin')->pluck('name', 'id')->toArray();
             $view->with('roleItems', $roleItems);
         });
-
+        View::composer(['manager.fields'], function ($view) {
+            $roleItems = Role::where('name', '!=', 'admin')->pluck('name', 'id')->toArray();
+            $view->with('roleItems', $roleItems);
+        });
         View::composer(['role_has_permissions.fields'], function ($view) {
             $roleItems = Role::pluck('name','id')->toArray();
             $view->with('roleItems', $roleItems);

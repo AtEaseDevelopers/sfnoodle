@@ -3,9 +3,12 @@
     <button type="button" class="btn btn-ghost-success view-request-btn" title="View"
             data-id="{{ $request->id }}"
             data-request='{
+                "id": "{{ $request->id }}",
+                "driver_id": "{{ $request->driver_id }}",
                 "driver_name": "{{ $request->driver->name ?? 'N/A' }}",
-                "product_name": "{{ $request->product->name ?? 'N/A' }}",
-                "quantity": "{{ $request->quantity }}",
+                "items": {{ json_encode($request->items ?? []) }},
+                "total_quantity": "{{ $request->total_quantity }}",
+                "item_count": "{{ $request->item_count }}",
                 "status": "{{ $request->status }}",
                 "remarks": "{{ $request->remarks ?? 'No remarks' }}",
                 "created_at": "{{ $request->created_at ? $request->created_at->format('d-m-Y H:i') : 'N/A' }}",
@@ -17,26 +20,26 @@
             }'>
         <i class="fa fa-eye"></i>
     </button>
+    
     @php
         $user = auth()->user();
         $isAdmin = $user->hasRole('admin'); 
     @endphp
-    @if($request->status != 'approved' | $isAdmin )
+    
+    @if($request->status == 'pending')
     <!-- Edit Button (Modal Trigger) -->
     <button type="button" class="btn btn-ghost-primary edit-request-btn" title="Edit"
             data-id="{{ $request->id }}"
             data-request='{
                 "driver_id": "{{ $request->driver_id }}",
                 "driver_name": "{{ $request->driver->name ?? 'N/A' }}",
-                "product_id": "{{ $request->product_id }}",
-                "product_name": "{{ $request->product->name ?? 'N/A' }}",
-                "quantity": "{{ $request->quantity }}",
-                "status": "{{ $request->status }}",
+                "items": {{ json_encode($request->items ?? []) }},
                 "remarks": "{{ $request->remarks ?? '' }}"
             }'>
         <i class="fa fa-edit"></i>
     </button>
     @endif
+    
     @if($request->status == 'pending' && auth()->user()->can('inventoryrequest'))
     <!-- Approve Button -->
     <form action="{{ route('inventoryRequests.approve', $request->id) }}" method="POST" style="display: inline;">

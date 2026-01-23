@@ -68,7 +68,7 @@ class Customer extends Model
      */
     public function customerGroups()
     {
-        return CustomerGroup::whereJsonContains('customer_ids', $this->id);
+        return CustomerGroup::whereRaw("JSON_CONTAINS(customer_ids, '" . $this->id . "', '$[*].id')");
     }
 
     /**

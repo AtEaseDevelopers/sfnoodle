@@ -3,9 +3,9 @@
 @section('content')
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-         <a href="{!! route('users.index') !!}">User</a>
+         <a href="{!! route('Managerusers.index') !!}">Inventory Manager</a>
       </li>
-      <li class="breadcrumb-item active">{{ __('user.create') }}</li>
+      <li class="breadcrumb-item active">Create</li>
     </ol>
      <div class="container-fluid">
           <div class="animated fadeIn">
@@ -15,12 +15,12 @@
                         <div class="card">
                             <div class="card-header">
                                 <i class="fa fa-plus-square-o fa-lg"></i>
-                                <strong>{{ __('user.create_user') }}</strong>
+                                <strong>Create Inventory Manager</strong>
                             </div>
                             <div class="card-body">
-                                {!! Form::open(['route' => 'users.store']) !!}
+                                {!! Form::open(['route' => 'Managerusers.store']) !!}
 
-                                   @include('users.fields')
+                                   @include('manager.fields')
 
                                 {!! Form::close() !!}
                             </div>

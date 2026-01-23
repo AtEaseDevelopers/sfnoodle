@@ -20,27 +20,21 @@ class InventoryRequest extends Model
 
     public $fillable = [
         'driver_id',
-        'product_id',
-        'quantity',
+        'items',
         'status',
         'approved_by',
         'rejected_by',
         'rejection_reason',
         'approved_at',
         'rejected_at',
-        'trip_id'
+        'trip_id',
+        'remarks', 
     ];
 
-    /**
-     * The attributes that should be casted to native types.
-     *
-     * @var array
-     */
     protected $casts = [
         'id' => 'integer',
         'driver_id' => 'integer',
-        'product_id' => 'integer',
-        'quantity' => 'integer',
+        'items' => 'array', // Cast items to array
         'status' => 'string',
         'rejection_reason' => 'string',
         'remarks' => 'string',
@@ -50,31 +44,14 @@ class InventoryRequest extends Model
         'rejected_at' => 'datetime'
     ];
 
-    /**
-     * Validation rules
-     *
-     * @var array
-     */
     public static $rules = [
         'driver_id' => 'required|exists:drivers,id',
-        'product_id' => 'required|exists:products,id',
-        'quantity' => 'required|integer|min:1',
+        'items' => 'required|array|min:1',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.quantity' => 'required|integer|min:1',
         'rejection_reason' => 'nullable|string|required_if:status,rejected',
         'remarks' => 'nullable|string|max:500'
-
     ];
-
-    /**
-     * Get status options
-     */
-    public static function getStatusOptions()
-    {
-        return [
-            self::STATUS_PENDING => 'Pending',
-            self::STATUS_APPROVED => 'Approved',
-            self::STATUS_REJECTED => 'Rejected',
-        ];
-    }
 
     public function driver()
     {
@@ -143,4 +120,49 @@ class InventoryRequest extends Model
     {
         return $this->status === self::STATUS_PENDING;
     }
+    
+    /**
+     * Get total quantity of all items
+     */
+    public function getTotalQuantityAttribute()
+    {
+        if (!$this->items) return 0;
+        return collect($this->items)->sum('quantity');
+    }
+    
+    /**
+     * Get item count
+     */
+    public function getItemCountAttribute()
+    {
+        if (!$this->items) return 0;
+        return count($this->items);
+    }
+
+    /**
+     * Get product names with quantities
+     */
+    public function getProductSummaryAttribute()
+    {
+        if (!$this->items) return '';
+        
+        $productNames = [];
+        foreach ($this->items as $item) {
+            $product = Product::find($item['product_id']);
+            if ($product) {
+                $productNames[] = $product->name . ' (x' . $item['quantity'] . ')';
+            }
+        }
+        return implode(', ', $productNames);
+    }
+
+    public static function getStatusOptions()
+    {
+        return [
+            self::STATUS_PENDING => 'Pending',
+            self::STATUS_APPROVED => 'Approved',
+            self::STATUS_REJECTED => 'Rejected',
+        ];
+    }
+    
 }

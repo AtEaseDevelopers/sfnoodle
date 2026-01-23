@@ -20,15 +20,15 @@ class InventoryReturn extends Model
 
     public $fillable = [
         'driver_id',
-        'product_id',
-        'quantity',
+        'items', // Changed from product_id to items array
         'status',
         'approved_by',
         'rejected_by',
         'rejection_reason',
         'approved_at',
         'rejected_at',
-        'trip_id'
+        'trip_id',
+        'remarks' // Added remarks field
 
     ];
 
@@ -40,8 +40,7 @@ class InventoryReturn extends Model
     protected $casts = [
         'id' => 'integer',
         'driver_id' => 'integer',
-        'product_id' => 'integer',
-        'quantity' => 'integer',
+        'items' => 'array', // Cast items to array
         'status' => 'string',
         'rejection_reason' => 'string',
         'remarks' => 'string',
@@ -58,11 +57,10 @@ class InventoryReturn extends Model
      */
     public static $rules = [
         'driver_id' => 'required|exists:drivers,id',
-        'product_id' => 'required|exists:products,id',
-        'quantity' => 'required|integer|min:1',
-        'rejection_reason' => 'nullable|string|required_if:status,rejected',
+        'items' => 'required|array|min:1', // Changed to validate items array
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.quantity' => 'required|integer|min:1',
         'remarks' => 'nullable|string|max:500'
-
     ];
 
     /**
@@ -82,6 +80,7 @@ class InventoryReturn extends Model
         return $this->belongsTo(\App\Models\Driver::class, 'driver_id', 'id');
     }
 
+    // Removed single product relationship since we now have multiple products
     public function product()
     {
         return $this->belongsTo(\App\Models\Product::class, 'product_id', 'id');
@@ -89,17 +88,26 @@ class InventoryReturn extends Model
 
     public function getProductDetailsAttribute()
     {
-        if ($this->product) {
-            return [
-                'id' => $this->product->id,
-                'name' => $this->product->name,
-                'price' => $this->product->price,
-                'code' => $this->product->code,
-                'category' => $this->product->category->name ?? 'N/A', // Added null check
-            ];
+        if (!$this->items) {
+            return [];
         }
         
-        return null;
+        $productDetails = [];
+        foreach ($this->items as $item) {
+            $product = Product::find($item['product_id']);
+            if ($product) {
+                $productDetails[] = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'code' => $product->code,
+                    'category' => $product->category->name ?? 'N/A',
+                    'quantity' => $item['quantity']
+                ];
+            }
+        }
+        
+        return $productDetails;
     }
 
     public function approver()
@@ -158,5 +166,40 @@ class InventoryReturn extends Model
     public function canBeRejected()
     {
         return $this->status === self::STATUS_PENDING;
+    }
+    
+    /**
+     * Get total quantity of all items
+     */
+    public function getTotalQuantityAttribute()
+    {
+        if (!$this->items) return 0;
+        return collect($this->items)->sum('quantity');
+    }
+    
+    /**
+     * Get item count
+     */
+    public function getItemCountAttribute()
+    {
+        if (!$this->items) return 0;
+        return count($this->items);
+    }
+
+    /**
+     * Get product names with quantities
+     */
+    public function getProductSummaryAttribute()
+    {
+        if (!$this->items) return '';
+        
+        $productNames = [];
+        foreach ($this->items as $item) {
+            $product = Product::find($item['product_id']);
+            if ($product) {
+                $productNames[] = $product->name . ' (x' . $item['quantity'] . ')';
+            }
+        }
+        return implode(', ', $productNames);
     }
 }

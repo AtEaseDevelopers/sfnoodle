@@ -79,6 +79,7 @@ class CustomerGroup extends Model
         return Customer::whereIn('id', $customerIds);
     }
 
+    
     /**
      * Get all assignments for this group
      */

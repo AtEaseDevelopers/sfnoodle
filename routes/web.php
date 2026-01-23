@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ManagerUserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
 use App\Models\User;
@@ -506,6 +507,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/inventoryReturns/store', [App\Http\Controllers\InventoryReturnController::class, 'store'])->name('inventoryReturns.store');
         // Show
         Route::get('/inventoryReturns/show/{id}', [App\Http\Controllers\InventoryReturnController::class, 'show'])->name('inventoryReturns.show');
+        Route::get('/inventory/get-driver-inventory', [App\Http\Controllers\InventoryReturnController::class, 'getDriverInventory'])->name('inventory.getDriverInventory');
         // Update
         Route::put('/inventoryReturns/update/{id}', [App\Http\Controllers\InventoryReturnController::class, 'update'])->name('inventoryReturns.update');
         Route::post('/inventoryReturns/update/{id}', [App\Http\Controllers\InventoryReturnController::class, 'update']); // Alternative
@@ -579,6 +581,8 @@ Route::group(['middleware' => ['auth']], function() {
     });
     Route::group(['middleware' => ['permission:user']], function() {
         Route::resource('users', UserController::class);
+        Route::resource('Managerusers', ManagerUserController::class);
+
     });
     Route::group(['middleware' => ['permission:userrole']], function() {
         Route::resource('userHasRoles', App\Http\Controllers\UserHasRoleController::class);

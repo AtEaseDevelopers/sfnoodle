@@ -1,40 +1,46 @@
 <div class="btn-group" role="group">
-    <!-- View Button (Modal Trigger) -->
-    <button type="button" class="btn btn-ghost-success view-request-btn" title="View"
+    <!-- View Button (Modal Trigger) - UPDATED for multiple products -->
+    <button type="button" class="btn btn-ghost-success view-return-btn" title="View"
             data-id="{{ $request->id }}"
             data-request='{
+                "id": "{{ $request->id }}",
+                "driver_id": "{{ $request->driver_id }}",
                 "driver_name": "{{ $request->driver->name ?? 'N/A' }}",
-                "product_name": "{{ $request->product->name ?? 'N/A' }}",
-                "quantity": "{{ $request->quantity }}",
+                "items": @json($request->items ?: []),
+                "item_count": "{{ $request->item_count }}",
+                "total_quantity": "{{ $request->total_quantity }}",
                 "status": "{{ $request->status }}",
-                "remarks": "{{ $request->remarks ?? 'No remarks' }}",
+                "remarks": "{{ addslashes($request->remarks ?? 'No remarks') }}",
                 "created_at": "{{ $request->created_at ? $request->created_at->format('d-m-Y H:i') : 'N/A' }}",
                 "approved_by": "{{ $request->approver->name ?? 'N/A' }}",
                 "approved_at": "{{ $request->approved_at ? $request->approved_at->format('d-m-Y H:i') : 'N/A' }}",
                 "rejected_by": "{{ $request->rejector->name ?? 'N/A' }}",
                 "rejected_at": "{{ $request->rejected_at ? $request->rejected_at->format('d-m-Y H:i') : 'N/A' }}",
-                "rejection_reason": "{{ $request->rejection_reason ?? 'N/A' }}"
+                "rejection_reason": "{{ addslashes($request->rejection_reason ?? 'N/A') }}"
             }'>
         <i class="fa fa-eye"></i>
     </button>
     
-    <!-- Edit Button (Modal Trigger) -->
-    <button type="button" class="btn btn-ghost-primary edit-request-btn" title="Edit"
+    <!-- Edit Button (Modal Trigger) - Updated for multiple products -->
+    @if($request->status == 'pending')
+    <button type="button" class="btn btn-ghost-primary edit-return-btn" title="Edit"
             data-id="{{ $request->id }}"
             data-request='{
+                "id": "{{ $request->id }}",
                 "driver_id": "{{ $request->driver_id }}",
                 "driver_name": "{{ $request->driver->name ?? 'N/A' }}",
-                "product_id": "{{ $request->product_id }}",
-                "product_name": "{{ $request->product->name ?? 'N/A' }}",
-                "quantity": "{{ $request->quantity }}",
+                "items": @json($request->items ?: []),
+                "item_count": "{{ $request->item_count }}",
+                "total_quantity": "{{ $request->total_quantity }}",
                 "status": "{{ $request->status }}",
-                "remarks": "{{ $request->remarks ?? '' }}"
+                "remarks": "{{ addslashes($request->remarks ?? '') }}"
             }'>
         <i class="fa fa-edit"></i>
     </button>
+    @endif
     
     @if($request->status == 'pending' && auth()->user()->can('inventoryreturn'))
-    <!-- Approve Button -->
+    <!-- Approve Button - NOTE: Returns are auto-approved when created, so this might not be needed -->
     <form action="{{ route('inventoryReturns.approve', $request->id) }}" method="POST" style="display: inline;">
         @csrf
         <button type="submit" class="btn btn-ghost-success" title="Approve" onclick="return confirm('Are you sure you want to approve this return?')">
@@ -54,7 +60,7 @@
                 <form action="{{ route('inventoryReturns.reject', $request->id) }}" method="POST">
                     @csrf
                     <div class="modal-header">
-                        <h5 class="modal-title">Reject Request #{{ $request->id }}</h5>
+                        <h5 class="modal-title">Reject Return #{{ $request->id }}</h5>
                         <button type="button" class="close" data-dismiss="modal">
                             <span>&times;</span>
                         </button>
@@ -80,7 +86,7 @@
     <form action="{{ route('inventoryReturns.destroy', $request->id) }}" method="POST" style="display: inline;">
         @csrf
         @method('DELETE')
-        <button type="submit" class="btn btn-ghost-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this request?')">
+        <button type="submit" class="btn btn-ghost-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this return?')">
             <i class="fa fa-trash"></i>
         </button>
     </form>

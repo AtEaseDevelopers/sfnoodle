@@ -263,12 +263,17 @@ class AssignController extends AppBaseController
             }
             
             // Get customer details using Customer model directly
-            $customerIds = $customerGroup->customer_ids;
-            $customers = [];
+            $customerIds = [];
+            $customerData = $customerGroup->customer_ids;
             
-            if (!empty($customerIds) && is_array($customerIds)) {
-                // Use the Customer model directly
-                $customers =Customer::whereIn('id', $customerIds)
+            if (!empty($customerData) && is_array($customerData)) {
+                // Extract just the IDs from the JSON structure
+                $customerIds = collect($customerData)->pluck('id')->toArray();
+            }
+            
+            $customers = [];
+            if (!empty($customerIds)) {
+                $customers = \App\Models\Customer::whereIn('id', $customerIds)
                     ->select('id', 'company')
                     ->get()
                     ->toArray();
@@ -331,6 +336,7 @@ class AssignController extends AppBaseController
     /**
      * Get all customers a driver can invoice (from all assigned customer groups)
      */
+
     public function getDriverInvoiceCustomers($driverId)
     {
         try {
@@ -342,7 +348,10 @@ class AssignController extends AppBaseController
             
             foreach ($assignments as $assignment) {
                 if ($assignment->customerGroup && !empty($assignment->customerGroup->customer_ids)) {
-                    $allCustomerIds = array_merge($allCustomerIds, $assignment->customerGroup->customer_ids);
+                    // Extract IDs from JSON structure
+                    $customerData = $assignment->customerGroup->customer_ids;
+                    $ids = collect($customerData)->pluck('id')->toArray();
+                    $allCustomerIds = array_merge($allCustomerIds, $ids);
                 }
             }
             
@@ -368,7 +377,7 @@ class AssignController extends AppBaseController
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => "Something went wrong"
+                'message' => "Something went wrong: " . $e->getMessage()
             ], 400);
         }
     }

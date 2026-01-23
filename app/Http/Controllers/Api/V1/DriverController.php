@@ -4205,7 +4205,7 @@ class DriverController extends Controller
         // Validate request for cash payment
         $validator = Validator::make($request->all(), [
             'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf,gif|max:5120',
-            'amount' => 'required|numeric|min:0|max:' . $salesInvoice->total,
+            'amount' => 'required|numeric',
             'remark' => 'nullable|string|max:255'
         ]);
 
@@ -5005,7 +5005,6 @@ class DriverController extends Controller
         }
 
         try {
-
             // Start building the query
             $query = Invoice::where('is_driver', true)
                 ->where('created_by', $driver->id);
@@ -5016,68 +5015,39 @@ class DriverController extends Controller
             }
 
             // Get sales invoices
-            $Invoices = $query->with(['customer:id,company,phone,paymentterm', 'invoiceDetails.product:id,name'])
+            $invoices = $query->with(['customer:id,company,phone,paymentterm', 'invoiceDetails.product:id,name'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
             // Get driver's current trip ID
-            $driverTripId = $driver->trip_id;
+            $driverTripId = $driver->trip_id ?? null;
 
-            // Helper function to check if invoice can be cancelled
-            $canCancelInvoice = function($invoice, $driverTripId) {
+            // Define cancellable statuses
+            $cancellableStatuses = [Invoice::STATUS_COMPLETED];
+
+            // Format the response
+            $formattedInvoices = $invoices->map(function($invoice) use ($driverTripId, $cancellableStatuses) {
+                
+                // Check if this specific invoice can be cancelled
+                $allowCancel = true;
+                
                 // Rule 1: Driver must have an active trip
                 if (!$driverTripId) {
-                    return false;
+                    $allowCancel = false;
                 }
                 
                 // Rule 2: Invoice must belong to the same trip as driver's current trip
+                // If invoice has no trip_id OR doesn't match driver's current trip, cannot cancel
                 if (!$invoice->trip_id || $driverTripId != $invoice->trip_id) {
-                    return false;
+                    $allowCancel = false;
                 }
                 
                 // Rule 3: Invoice must be in a cancellable status
-                // Assuming you have a status field - adjust based on your actual status values
-                $cancellableStatuses = ['pending', 'draft', 'unpaid'];
                 if (isset($invoice->status) && !in_array($invoice->status, $cancellableStatuses)) {
-                    return false;
+                    $allowCancel = false;
                 }
                 
-                // Rule 4: Check if invoice is not too old (optional)
-                // $maxAgeInHours = 24; // Can only cancel invoices within 24 hours
-                // $invoiceAge = now()->diffInHours($invoice->created_at);
-                // if ($invoiceAge > $maxAgeInHours) {
-                //     return false;
-                // }
-                
-                // Rule 5: Check if invoice is already paid (optional)
-                // if ($invoice->is_paid) {
-                //     return false;
-                // }
-                
-                return true;
-            };
-
-            // Format the response
-            $formattedInvoices = $Invoices->map(function($invoice) use ($driverTripId, $canCancelInvoice) {
-                
-                // Determine if invoice can be cancelled
-                $allowCancel = $canCancelInvoice($invoice, $driverTripId);
-                
-                // Get cancellation reason if not allowed
-                $cancelReason = '';
-                if (!$allowCancel) {
-                    if (!$driverTripId) {
-                        $cancelReason = 'Driver has no active trip';
-                    } elseif (!$invoice->trip_id) {
-                        $cancelReason = 'Invoice not associated with any trip';
-                    } elseif ($driverTripId != $invoice->trip_id) {
-                        $cancelReason = 'Invoice belongs to a different trip';
-                    } elseif (isset($invoice->status) && !in_array($invoice->status, ['pending', 'draft', 'unpaid'])) {
-                        $cancelReason = 'Invoice status does not allow cancellation';
-                    } else {
-                        $cancelReason = 'Cannot cancel invoice';
-                    }
-                }
+                // If any rule failed, set to false (already done above)
                 
                 return [
                     'id' => $invoice->id,
@@ -5101,7 +5071,6 @@ class DriverController extends Controller
                     'trip_id' => $invoice->trip_id,
                     'items_count' => $invoice->invoiceDetails->count(),
                     'allow_cancel' => $allowCancel,
-                    'cancel_reason' => $cancelReason, // Optional: provide reason why cancellation is not allowed
                     'items' => $invoice->invoiceDetails->map(function($detail) {
                         return [
                             'product_id' => $detail->product_id,
@@ -5120,7 +5089,7 @@ class DriverController extends Controller
                 'result' => true,
                 'message' => __LINE__ . $this->message_separator . 'Sales invoices retrieved successfully',
                 'data' => [
-                    'count' => $Invoices->count(),
+                    'count' => $invoices->count(),
                     'driver_trip_id' => $driverTripId,
                     'invoices_with_cancel_permission' => $formattedInvoices->where('allow_cancel', true)->count(),
                     'invoices' => $formattedInvoices->toArray()
@@ -5135,7 +5104,6 @@ class DriverController extends Controller
             ], 200);
         }
     }
-
     public function getInvoiceById(Request $request, $id)
     {
         // Validate session
@@ -5150,7 +5118,7 @@ class DriverController extends Controller
 
         try {
             // Get sales invoice with proper authorization check
-            $salesInvoice = Invoice::where('is_driver', true)
+            $invoice = Invoice::where('is_driver', true)
                 ->where('created_by', $driver->id)
                 ->where('id', $id)
                 ->with([
@@ -5159,7 +5127,7 @@ class DriverController extends Controller
                 ])
                 ->first();
 
-            if (!$salesInvoice) {
+            if (!$invoice) {
                 return response()->json([
                     'result' => false,
                     'message' => __LINE__ . $this->message_separator . 'Sales order not found or not authorized',
@@ -5167,27 +5135,49 @@ class DriverController extends Controller
                 ], 200);
             }
 
+            // Get driver's current trip ID
+            $driverTripId = $driver->trip_id;
+            
+            $allowCancel = true;
+                
+                // Rule 1: Driver must have an active trip
+            if (!$driverTripId) {
+                $allowCancel =  false;
+            }
+
+            // Rule 2: Invoice must belong to the same trip as driver's current trip
+            if (!$invoice->trip_id || $driverTripId != $invoice->trip_id) {
+                $allowCancel =  false;
+            }
+            // Rule 3: Invoice must be in a cancellable status
+            $cancellableStatuses = [Invoice::STATUS_COMPLETED];
+
+            if (isset($invoice->status) && !in_array($invoice->status, $cancellableStatuses)) {
+                $allowCancel =  false;
+            }
+            
             // Format the response
             $formattedInvoice = [
-                'id' => $salesInvoice->id,
-                'invoiceno' => $salesInvoice->invoiceno,
-                'date' => $salesInvoice->date, // Already formatted in getDateAttribute
-                'customer_id' => $salesInvoice->customer_id,
+                'id' => $invoice->id,
+                'invoiceno' => $invoice->invoiceno,
+                'date' => $invoice->date, // Already formatted in getDateAttribute
+                'customer_id' => $invoice->customer_id,
                 'customer' => [
-                    'id' => $salesInvoice->customer_id,
-                    'name' => $salesInvoice->customer->company ?? 'N/A',
-                    'paymentterm' => $salesInvoice->customer->paymentterm ?? '',
-                    'phone' => $salesInvoice->customer->phone ?? '',
+                    'id' => $invoice->customer_id,
+                    'name' => $invoice->customer->company ?? 'N/A',
+                    'paymentterm' => $invoice->customer->paymentterm ?? '',
+                    'phone' => $invoice->customer->phone ?? '',
                 ],
-                'paymentterm' => $salesInvoice->paymentterm,
-                'status' => $salesInvoice->getStatusTextAttribute(),
-                'remark' => $salesInvoice->remark,
-                'total' => number_format($salesInvoice->total, 2),
-                'is_driver' => $salesInvoice->is_driver,
-                'created_by' => $salesInvoice->created_by,
-                'created_at' => $salesInvoice->created_at->format('Y-m-d H:i:s'),
-                'items_count' => $salesInvoice->invoiceDetails->count(),
-                'items' => $salesInvoice->invoiceDetails->map(function($detail) {
+                'paymentterm' => $invoice->paymentterm,
+                'status' => $invoice->getStatusTextAttribute(),
+                'remark' => $invoice->remark,
+                'total' => number_format($invoice->total, 2),
+                'is_driver' => $invoice->is_driver,
+                'created_by' => $invoice->created_by,
+                'created_at' => $invoice->created_at->format('Y-m-d H:i:s'),
+                'items_count' => $invoice->invoiceDetails->count(),
+                'allow_cancel' => $allowCancel,
+                'items' => $invoice->invoiceDetails->map(function($detail) {
                     return [
                         'id' => $detail->id,
                         'product_id' => $detail->product_id,
@@ -5199,7 +5189,7 @@ class DriverController extends Controller
                         'total_formatted' => number_format($detail->totalprice, 2)
                     ];
                 })->toArray(),
-                'pdf_url' => $this->getinvoicepdf($salesInvoice->id)
+                'pdf_url' => $this->getinvoicepdf($invoice->id)
             ];
 
             return response()->json([
@@ -5565,30 +5555,46 @@ class DriverController extends Controller
             ], 200);
         }
 
-        $rules = [
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-        ];
-        
-        $validator = Validator::make($request->all(), $rules);
+            $rules = [
+                'items' => 'required|array|min:1',
+                'items.*.product_id' => 'required|exists:products,id',
+                'items.*.quantity' => 'required|integer|min:1',
+                'remarks' => 'nullable|string|max:500'
+            ];
+            
+            $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'result' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-                'data' => null
-            ], 200);
-        }
+            if ($validator->fails()) {
+                return response()->json([
+                    'result' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                    'data' => null
+                ], 200);
+            }
 
-        try {
-            $inventoryRequest = InventoryRequest::create([
-                'driver_id' => $driver->id,
-                'product_id' => $request->product_id,
-                'quantity' => $request->quantity,
-                'status' => InventoryRequest::STATUS_PENDING,
-                'trip_id' => $driver->trip_id,
-            ]);
+            try {
+                // Get items from request
+                $items = $request->items;
+                
+                // Check for duplicate products
+                $productIds = array_column($items, 'product_id');
+                if (count($productIds) !== count(array_unique($productIds))) {
+                    return response()->json([
+                        'result' => false,
+                        'message' => 'Duplicate products are not allowed in the same request',
+                        'data' => null
+                    ], 200);
+                }
+
+                // Create inventory request with items array
+                $inventoryRequest = InventoryRequest::create([
+                    'driver_id' => $driver->id,
+                    'items' => $items, // Store as JSON array
+                    'status' => InventoryRequest::STATUS_PENDING,
+                    'trip_id' => $driver->trip_id,
+                    'remarks' => $request->remarks ?? null,
+                ]);
 
             return response()->json([
                 'success' => true,
@@ -5605,7 +5611,6 @@ class DriverController extends Controller
 
     public function getStockRequestRecord(Request $request)
     {
-
         // Validate session
         $driver = Driver::where('session', $request->header('session'))->first();
         if(empty($driver)){
@@ -5616,7 +5621,7 @@ class DriverController extends Controller
             ], 401);
         }
 
-        if($driver->trip_id == NULL ){
+        if($driver->trip_id == NULL){
             return response()->json([
                 'result' => false,
                 'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
@@ -5626,20 +5631,53 @@ class DriverController extends Controller
         
         try {
             $inventoryRequests = InventoryRequest::where('driver_id', $driver->id)
-            ->where('trip_id', $driver->trip_id)
-            ->get()
-            ->map(function ($request) {
-                // Add the user name to each request
-                $request->rejected_by_name = User::find($request->rejected_by)->name ?? 'N/A';
-                $request->product = Product::find($request->product_id);
-                return $request;
-            });
+                ->where('trip_id', $driver->trip_id)
+                ->get()
+                ->map(function ($inventoryRequest) {
+                    // Get approver and rejector names
+                    $approver = $inventoryRequest->approved_by ? User::find($inventoryRequest->approved_by) : null;
+                    $rejector = $inventoryRequest->rejected_by ? User::find($inventoryRequest->rejected_by) : null;
+                    
+                    // Process items array to add product names
+                    $itemsWithProductNames = [];
+                    if ($inventoryRequest->items && is_array($inventoryRequest->items)) {
+                        foreach ($inventoryRequest->items as $item) {
+                            $product = Product::find($item['product_id'] ?? null);
+                            $itemsWithProductNames[] = [
+                                'product_id' => $item['product_id'] ?? null,
+                                'product_name' => $product ? $product->name : 'Unknown Product',
+                                'quantity' => $item['quantity'] ?? 0
+                            ];
+                        }
+                    }
+                    
+                    // Return formatted data
+                    return [
+                        'id' => $inventoryRequest->id,
+                        'driver_id' => $inventoryRequest->driver_id,
+                        'trip_id' => $inventoryRequest->trip_id,
+                        'items' => $itemsWithProductNames,
+                        'status' => $inventoryRequest->status,
+                        'remarks' => $inventoryRequest->remarks,
+                        'rejection_reason' => $inventoryRequest->rejection_reason,
+                        'approved_by' => $inventoryRequest->approved_by,
+                        'approved_by_name' => $approver ? $approver->name : null,
+                        'rejected_by' => $inventoryRequest->rejected_by,
+                        'rejected_by_name' => $rejector ? $rejector->name : null,
+                        'approved_at' => $inventoryRequest->approved_at,
+                        'rejected_at' => $inventoryRequest->rejected_at,
+                        'created_at' => $inventoryRequest->created_at,
+                        'updated_at' => $inventoryRequest->updated_at,
+                        'item_count' => $inventoryRequest->item_count,
+                        'total_quantity' => $inventoryRequest->total_quantity,
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
                 'message' => 'Stock Request Record retrieved successfully.',
                 'data' => $inventoryRequests
-            ]);
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -5647,10 +5685,10 @@ class DriverController extends Controller
             ], 200);
         }
     }
+    
 
     public function getStockReturnRecord(Request $request)
     {
-
         // Validate session
         $driver = Driver::where('session', $request->header('session'))->first();
         if(empty($driver)){
@@ -5661,36 +5699,144 @@ class DriverController extends Controller
             ], 401);
         }
 
-        if($driver->trip_id == NULL ){
+        if($driver->trip_id == NULL){
             return response()->json([
                 'result' => false,
                 'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
                 'data' => null
             ], 200);
         }
-    
+        
         try {
             $inventoryReturns = InventoryReturn::where('driver_id', $driver->id)
-            ->where('trip_id', $driver->trip_id)
-            ->get()
-            ->map(function ($request) {
-                // Add the user name to each request
-                $request->rejected_by_name = User::find($request->rejected_by)->name ?? 'N/A';
-                $request->product = Product::find($request->product_id);
-
-                return $request;
-            });
+                ->where('trip_id', $driver->trip_id)
+                ->get()
+                ->map(function ($inventoryReturn) {
+                    // Get approver and rejector names
+                    $approver = $inventoryReturn->approved_by ? User::find($inventoryReturn->approved_by) : null;
+                    $rejector = $inventoryReturn->rejected_by ? User::find($inventoryReturn->rejected_by) : null;
+                    
+                    // Process items array to add product names
+                    $itemsWithProductNames = [];
+                    if ($inventoryReturn->items && is_array($inventoryReturn->items)) {
+                        foreach ($inventoryReturn->items as $item) {
+                            $product = Product::find($item['product_id'] ?? null);
+                            $itemsWithProductNames[] = [
+                                'product_id' => $item['product_id'] ?? null,
+                                'product_name' => $product ? $product->name : 'Unknown Product',
+                                'quantity' => $item['quantity'] ?? 0
+                            ];
+                        }
+                    }
+                    
+                    // Return formatted data
+                    return [
+                        'id' => $inventoryReturn->id,
+                        'driver_id' => $inventoryReturn->driver_id,
+                        'trip_id' => $inventoryReturn->trip_id,
+                        'items' => $itemsWithProductNames,
+                        'status' => $inventoryReturn->status,
+                        'remarks' => $inventoryReturn->remarks,
+                        'rejection_reason' => $inventoryReturn->rejection_reason,
+                        'approved_by' => $inventoryReturn->approved_by,
+                        'approved_by_name' => $approver ? $approver->name : null,
+                        'rejected_by' => $inventoryReturn->rejected_by,
+                        'rejected_by_name' => $rejector ? $rejector->name : null,
+                        'approved_at' => $inventoryReturn->approved_at,
+                        'rejected_at' => $inventoryReturn->rejected_at,
+                        'created_at' => $inventoryReturn->created_at,
+                        'updated_at' => $inventoryReturn->updated_at,
+                        'item_count' => $inventoryReturn->item_count,
+                        'total_quantity' => $inventoryReturn->total_quantity,
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
                 'message' => 'Stock Return Record retrieved successfully.',
                 'data' => $inventoryReturns
-            ]);
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to get stock request record: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Failed to get stock return record: ' . $e->getMessage()
+            ], 200);
+        }
+    }
+    public function getStockReturn(Request $request)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        if($driver->trip_id == NULL){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
+                'data' => null
+            ], 200);
+        }
+        
+        try {
+            $inventoryReturns = InventoryReturn::where('driver_id', $driver->id)
+                ->where('trip_id', $driver->trip_id)
+                ->get()
+                ->map(function ($inventoryReturn) {
+                    // Get approver and rejector names
+                    $approver = $inventoryReturn->approved_by ? User::find($inventoryReturn->approved_by) : null;
+                    $rejector = $inventoryReturn->rejected_by ? User::find($inventoryReturn->rejected_by) : null;
+                    
+                    // Process items array to add product names
+                    $itemsWithProductNames = [];
+                    if ($inventoryReturn->items && is_array($inventoryReturn->items)) {
+                        foreach ($inventoryReturn->items as $item) {
+                            $product = Product::find($item['product_id'] ?? null);
+                            $itemsWithProductNames[] = [
+                                'product_id' => $item['product_id'] ?? null,
+                                'product_name' => $product ? $product->name : 'Unknown Product',
+                                'quantity' => $item['quantity'] ?? 0
+                            ];
+                        }
+                    }
+                    
+                    // Return formatted data
+                    return [
+                        'id' => $inventoryReturn->id,
+                        'driver_id' => $inventoryReturn->driver_id,
+                        'trip_id' => $inventoryReturn->trip_id,
+                        'items' => $itemsWithProductNames,
+                        'status' => $inventoryReturn->status,
+                        'remarks' => $inventoryReturn->remarks,
+                        'rejection_reason' => $inventoryReturn->rejection_reason,
+                        'approved_by' => $inventoryReturn->approved_by,
+                        'approved_by_name' => $approver ? $approver->name : null,
+                        'rejected_by' => $inventoryReturn->rejected_by,
+                        'rejected_by_name' => $rejector ? $rejector->name : null,
+                        'approved_at' => $inventoryReturn->approved_at,
+                        'rejected_at' => $inventoryReturn->rejected_at,
+                        'created_at' => $inventoryReturn->created_at,
+                        'updated_at' => $inventoryReturn->updated_at,
+                        'item_count' => $inventoryReturn->item_count,
+                        'total_quantity' => $inventoryReturn->total_quantity,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock Return Record retrieved successfully.',
+                'data' => $inventoryReturns
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get stock return record: ' . $e->getMessage()
+            ], 200);
         }
     }
 
@@ -5922,7 +6068,10 @@ class DriverController extends Controller
         }
 
         try {
-            
+
+        // **UPDATE INVENTORY BALANCE BASED ON INVENTORY COUNT**
+            $this->updateInventoryBalanceFromCount($driver->id, $inventoryCount);
+
             $currentStock = InventoryBalance::where('driver_id', $driver->id)
             ->with('product')
             ->get()
@@ -5997,6 +6146,37 @@ class DriverController extends Controller
                 'success' => false,
                 'message' => 'Failed to end trip: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function updateInventoryBalanceFromCount($driverId, InventoryCount $inventoryCount)
+    {
+        // Loop through each item in the inventory count
+        foreach ($inventoryCount->items as $item) {
+            $productId = $item['product_id'];
+            $countedQuantity = (int) $item['counted_quantity'];
+            
+            // Find or create inventory balance record for this driver and product
+            $inventoryBalance = InventoryBalance::where('driver_id', $driverId)
+                ->where('product_id', $productId)
+                ->first();
+            
+            if ($inventoryBalance) {
+                // Update existing balance with counted quantity
+                $inventoryBalance->quantity = $countedQuantity;
+                $inventoryBalance->save();
+                
+            } else {
+                // Create new inventory balance record
+                InventoryBalance::create([
+                    'driver_id' => $driverId,
+                    'product_id' => $productId,
+                    'quantity' => $countedQuantity,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+            }
         }
     }
 
@@ -6627,6 +6807,14 @@ class DriverController extends Controller
             $data = $request->all();
             $user = User::where('email', $data['employeeid'])->first();
 
+            if (empty($user) || !$user) {
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'User not found.',
+                    'data' => null
+                ], 401);
+            }
+          
             if (Hash::check($data['password'], $user->password)) {
                 
                 $session = $user->session;
@@ -6712,27 +6900,70 @@ class DriverController extends Controller
             ], 401);
         }
         
-         $inventoryRequests = InventoryRequest::with([
+        try {
+            $inventoryRequests = InventoryRequest::with([
                 'driver:id,name',
-                'product:id,name,category_id', // Keep category_id for the relationship
-                'product.category:id,name',
-                'approver:id,name'
+                'approver:id,name',    // User who approved
+                'rejector:id,name',    // User who rejected
+                // Removed single product relationship since we now have multiple products
             ])->get();
-        
-        // Hide category_id from each product
-        $inventoryRequests->transform(function($request) {
-            if ($request->product) {
-                $request->product->makeHidden('category_id');
-            }
-            return $request;
-        });
+            
+            // Transform the data to include product names in items array
+            $inventoryRequests->transform(function($request) {
+                // Get approver and rejector names from relationships
+                $approverName = $request->approver ? $request->approver->name : null;
+                $rejectorName = $request->rejector ? $request->rejector->name : null;
+                
+                // Process items array to add product names
+                $itemsWithProductNames = [];
+                if ($request->items && is_array($request->items)) {
+                    foreach ($request->items as $item) {
+                        $product = Product::with('category:id,name')->find($item['product_id'] ?? null);
+                        $itemsWithProductNames[] = [
+                            'product_id' => $item['product_id'] ?? null,
+                            'product_name' => $product ? $product->name : 'Unknown Product',
+                            'quantity' => $item['quantity'] ?? 0,
+                            'product_category' => $product && $product->category ? $product->category->name : null,
+                            'product_code' => $product ? $product->code : null,
+                            'product_price' => $product ? $product->price : null
+                        ];
+                    }
+                }
+                
+                // Convert to array and add the processed data
+                $requestArray = $request->toArray();
+                
+                // Add processed items with product names
+                $requestArray['items'] = $itemsWithProductNames;
+                
+                // Add approver/rejector names
+                $requestArray['approved_by_name'] = $approverName;
+                $requestArray['rejected_by_name'] = $rejectorName;
+                
+                // Add useful metadata
+                $requestArray['item_count'] = $request->item_count;
+                $requestArray['total_quantity'] = $request->total_quantity;
+                
+                // Remove old single product fields if they exist
+                unset($requestArray['product']);
+                unset($requestArray['product_id']);
+                
+                return $requestArray;
+            });
 
-
-        return response()->json([
-            'result' => true,
-            'message' => '' . __LINE__ . $this->message_separator . 'Stock Request list retrieved successfully',
-            'data' => $inventoryRequests
-        ], 200);
+            return response()->json([
+                'result' => true,
+                'message' => '' . __LINE__ . $this->message_separator . 'Stock Request list retrieved successfully',
+                'data' => $inventoryRequests
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => '' . __LINE__ . $this->message_separator . 'Failed to get stock requests: ' . $e->getMessage(),
+                'data' => null
+            ], 200);
+        }
     }
 
     public function approveStockRequest(Request $request)
@@ -6749,8 +6980,9 @@ class DriverController extends Controller
 
         $validator = Validator::make($request->all(), [
             'id' => 'required|exists:inventory_requests,id',
-            'product_id' => 'sometimes|exists:products,id',
-            'quantity' => 'sometimes|numeric|min:0'
+            'items' => 'sometimes|array',
+            'items.*.product_id' => 'required_with:items|exists:products,id',
+            'items.*.quantity' => 'required_with:items|numeric|min:1'
         ]);
 
         if ($validator->fails()) {
@@ -6775,74 +7007,142 @@ class DriverController extends Controller
         }
         
         try {
-            // Check if new product_id is provided, if yes, validate it exists
-            if (isset($data['product_id'])) {
-                $productExists = Product::find($data['product_id']);
-                if (!$productExists) {
+            // Get original items from the request
+            $originalItems = $inventoryRequest->items ?? [];
+            
+            // Check if admin wants to modify items
+            if (isset($data['items']) && is_array($data['items']) && !empty($data['items'])) {
+                // Admin is modifying items during approval
+                $modifiedItems = $data['items'];
+                
+                // Validate modified items
+                if (empty($modifiedItems)) {
                     return response()->json([
                         'result' => false,
-                        'message' => '' . __LINE__ . $this->message_separator . 'Product not found.',
+                        'message' => '' . __LINE__ . $this->message_separator . 'Items array cannot be empty.',
                         'data' => null
                     ], 200);
                 }
-            }
-            
-            // Determine final product_id and quantity
-            $finalProductId = $data['product_id'] ?? $inventoryRequest->product_id;
-            $finalQuantity = isset($data['quantity']) ? floatval($data['quantity']) : $inventoryRequest->quantity;
-            
-            // Update the inventory request record if new values are provided
-            if (isset($data['product_id']) || isset($data['quantity'])) {
-                $updateData = [
+                
+                // Check for duplicate products in modified items
+                $productIds = array_column($modifiedItems, 'product_id');
+                if (count($productIds) !== count(array_unique($productIds))) {
+                    return response()->json([
+                        'result' => false,
+                        'message' => '' . __LINE__ . $this->message_separator . 'Duplicate products are not allowed.',
+                        'data' => null
+                    ], 200);
+                }
+
+                // Update the request with modified items
+                $inventoryRequest->update([
+                    'items' => $modifiedItems,
                     'status' => InventoryRequest::STATUS_APPROVED,
                     'approved_by' => $user->id,
                     'approved_at' => now(),
-                ];
+                ]);
                 
-                if (isset($data['product_id'])) {
-                    $updateData['product_id'] = $finalProductId;
+                // Process each modified item
+                foreach ($modifiedItems as $item) {
+                    // Update inventory balance for the driver
+                    $inventoryBalance = InventoryBalance::firstOrNew([
+                        'driver_id' => $inventoryRequest->driver_id,
+                        'product_id' => $item['product_id']
+                    ]);
+                    
+                    // Add the requested quantity to existing balance
+                    $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $item['quantity'];
+                    $inventoryBalance->save();
+
+                    // Create inventory transaction record for STOCK IN
+                    InventoryTransaction::createTransaction(
+                        $inventoryRequest->driver_id,
+                        $item['product_id'],
+                        $item['quantity'],
+                        InventoryTransaction::TYPE_STOCK_IN,
+                        'Stock Request Approval - Approved by: ' . $user->name,
+                    );
                 }
                 
-                if (isset($data['quantity'])) {
-                    $updateData['quantity'] = $finalQuantity;
+                $approvalMessage = 'Stock Request approved successfully with modified items.';
+                
+            } else {
+                // No modification, approve with original items
+                if (empty($originalItems) || !is_array($originalItems)) {
+                    return response()->json([
+                        'result' => false,
+                        'message' => '' . __LINE__ . $this->message_separator . 'No items found in this request.',
+                        'data' => null
+                    ], 200);
                 }
                 
-                $inventoryRequest->update($updateData);
-            }
-            
-            // Update inventory balance for the driver
-            $inventoryBalance = InventoryBalance::firstOrNew([
-                'driver_id' => $inventoryRequest->driver_id,
-                'product_id' => $finalProductId // Use final product_id
-            ]);
-            
-            // Add the requested quantity to existing balance
-            $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $finalQuantity; // Use final quantity
-            $inventoryBalance->save();
-
-            // Create inventory transaction record for STOCK IN
-            InventoryTransaction::createTransaction(
-                $inventoryRequest->driver_id,
-                $finalProductId, // Use final product_id
-                $finalQuantity, // Use final quantity
-                InventoryTransaction::TYPE_STOCK_IN,
-                'Stock Request Approval' . (isset($data['product_id']) || isset($data['quantity']) ? ' (Modified)' : ''),
-            );
-
-            // If product_id was changed, also update the original inventory request record
-            if (!isset($data['product_id']) && !isset($data['quantity'])) {
-                // Only update status if no changes were made
+                // Update request status
                 $inventoryRequest->update([
                     'status' => InventoryRequest::STATUS_APPROVED,
                     'approved_by' => $user->id,
                     'approved_at' => now(),
                 ]);
-            }
+                
+                // Process each original item
+                foreach ($originalItems as $item) {
+                    if (!isset($item['product_id']) || !isset($item['quantity'])) {
+                        continue; // Skip invalid items
+                    }
+                    
+                    // Update inventory balance for the driver
+                    $inventoryBalance = InventoryBalance::firstOrNew([
+                        'driver_id' => $inventoryRequest->driver_id,
+                        'product_id' => $item['product_id']
+                    ]);
+                    
+                    // Add the requested quantity to existing balance
+                    $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $item['quantity'];
+                    $inventoryBalance->save();
 
+                    // Create inventory transaction record for STOCK IN
+                    InventoryTransaction::createTransaction(
+                        $inventoryRequest->driver_id,
+                        $item['product_id'],
+                        $item['quantity'],
+                        InventoryTransaction::TYPE_STOCK_IN,
+                        'Stock Request Approval - Approved by: ' . $user->name,
+                    );
+                }
+                
+                $approvalMessage = 'Stock Request approved successfully.';
+            }
+            
+            // Add product details to response
+            $itemsWithDetails = [];
+            $finalItems = isset($modifiedItems) ? $modifiedItems : $originalItems;
+            
+            foreach ($finalItems as $item) {
+                $product = Product::find($item['product_id']);
+                $itemsWithDetails[] = [
+                    'product_id' => $item['product_id'],
+                    'product_name' => $product ? $product->name : 'Unknown Product',
+                    'quantity' => $item['quantity']
+                ];
+            }
+            
             return response()->json([
                 'result' => true,
-                'message' => '' . __LINE__ . $this->message_separator . 'Stock Request approved successfully',
-                'data' => $inventoryRequest
+                'message' => '' . __LINE__ . $this->message_separator . $approvalMessage,
+                'data' => [
+                    'id' => $inventoryRequest->id,
+                    'driver_id' => $inventoryRequest->driver_id,
+                    'trip_id' => $inventoryRequest->trip_id,
+                    'items' => $itemsWithDetails,
+                    'status' => $inventoryRequest->status,
+                    'remarks' => $inventoryRequest->remarks,
+                    'approved_by' => $inventoryRequest->approved_by,
+                    'approved_by_name' => $user->name,
+                    'approved_at' => $inventoryRequest->approved_at,
+                    'created_at' => $inventoryRequest->created_at,
+                    'updated_at' => $inventoryRequest->updated_at,
+                    'item_count' => $inventoryRequest->item_count,
+                    'total_quantity' => $inventoryRequest->total_quantity,
+                ]
             ], 200);
 
         } catch (\Exception $e) {
@@ -7138,8 +7438,17 @@ class DriverController extends Controller
                 'data' => null
             ], 401);
         }
+        
         $driver = Driver::find($request->driver_id);
-        if($driver->trip_id == NULL ){
+        if(!$driver){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver not found',
+                'data' => null
+            ], 200);
+        }
+        
+        if($driver->trip_id == NULL){
             return response()->json([
                 'result' => false,
                 'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
@@ -7147,10 +7456,13 @@ class DriverController extends Controller
             ], 200);
         }
 
+        // Updated validation for multiple items
         $validator = Validator::make($request->all(), [
-            'driver_id' => 'required',
-            'product_id' => 'required',
-            'quantity' => 'required',
+            'driver_id' => 'required|exists:drivers,id',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'remarks' => 'nullable|string|max:500'
         ]);
 
         if ($validator->fails()) {
@@ -7161,65 +7473,127 @@ class DriverController extends Controller
             ], 200);
         }
 
-        try{
-
-            $inventoryReturn = InventoryReturn::create([
-                'driver_id' => $request->driver_id,
-                'product_id' => $request->product_id,
-                'quantity' => $request->quantity,
-                'status' => InventoryReturn::STATUS_APPROVED,
-                'remarks' => $request->remarks,
-                'approved_by' => $user->id,
-                'approved_at' => now(),
-                'trip_id'=> $driver->trip_id,
-            ]);
-
-            $inventoryBalance = InventoryBalance::firstOrNew([
-                'driver_id' => $inventoryReturn->driver_id,
-                'product_id' => $inventoryReturn->product_id
-            ]);
-
-            // Ensure quantity is not negative (validate driver has enough stock)
-            $currentBalance = $inventoryBalance->quantity ?? 0;
-            if ($currentBalance < $inventoryReturn->quantity) {
-                // If driver doesn't have enough stock, delete the return and return error
-                $inventoryReturn->delete();
-                
-                Flash::error('Driver does not have enough stock to return. Available: ' . $currentBalance);
-                return redirect()->back()->withInput();
+        try {
+            // Validate items array
+            $items = $request->items;
+            if (!is_array($items) || empty($items)) {
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'Please add at least one item',
+                    'data' => null
+                ], 200);
             }
 
-            // Subtract the returned quantity from existing balance
-            $inventoryBalance->quantity = $currentBalance - $inventoryReturn->quantity;
-            $inventoryBalance->save();
+            // Check for duplicate products
+            $productIds = array_column($items, 'product_id');
+            if (count($productIds) !== count(array_unique($productIds))) {
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'Duplicate products are not allowed in the same return',
+                    'data' => null
+                ], 200);
+            }
 
-            // Create inventory transaction record for STOCK OUT
-            InventoryTransaction::createTransaction(
-                $inventoryReturn->driver_id,
-                $inventoryReturn->product_id,
-                $inventoryReturn->quantity,
-                InventoryTransaction::TYPE_STOCK_OUT,
-                'Stock Return',
-            );
-        
+            // Check if driver has enough stock for all items
+            $errors = [];
+            foreach ($items as $item) {
+                $inventoryBalance = InventoryBalance::where([
+                    'driver_id' => $request->driver_id,
+                    'product_id' => $item['product_id']
+                ])->first();
+
+                $currentBalance = $inventoryBalance->quantity ?? 0;
+                if ($currentBalance < $item['quantity']) {
+                    $product = Product::find($item['product_id']);
+                    $errors[] = $product->name . ': Available stock: ' . $currentBalance . ', Requested: ' . $item['quantity'];
+                }
+            }
+
+            if (!empty($errors)) {
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'Insufficient stock for some items: ' . implode(', ', $errors),
+                    'data' => null
+                ], 200);
+            }
+
+            // Create inventory return with items array
+            $inventoryReturn = InventoryReturn::create([
+                'driver_id' => $request->driver_id,
+                'items' => $items, // Store as JSON array
+                'status' => InventoryReturn::STATUS_APPROVED, // Auto-approved
+                'remarks' => $request->remarks ?? null,
+                'approved_by' => $user->id,
+                'approved_at' => now(),
+                'trip_id' => $driver->trip_id,
+            ]);
+
+            // Process each item
+            foreach ($items as $item) {
+                $inventoryBalance = InventoryBalance::firstOrNew([
+                    'driver_id' => $inventoryReturn->driver_id,
+                    'product_id' => $item['product_id']
+                ]);
+
+                // Subtract the returned quantity from existing balance
+                $currentBalance = $inventoryBalance->quantity ?? 0;
+                $inventoryBalance->quantity = $currentBalance - $item['quantity'];
+                $inventoryBalance->save();
+
+                // Create inventory transaction record for STOCK OUT
+                InventoryTransaction::createTransaction(
+                    $inventoryReturn->driver_id,
+                    $item['product_id'],
+                    $item['quantity'],
+                    InventoryTransaction::TYPE_STOCK_OUT,
+                    'Stock Return - Return ID: ' . $inventoryReturn->id . ' - Approved by: ' . $user->name,
+                );
+            }
+
+            // Add product details to response
+            $itemsWithDetails = collect($items)->map(function($item) {
+                $product = Product::find($item['product_id']);
+                return [
+                    'product_id' => $item['product_id'],
+                    'product_name' => $product ? $product->name : 'Unknown Product',
+                    'quantity' => $item['quantity']
+                ];
+            });
 
             return response()->json([
                 'result' => true,
                 'message' => '' . __LINE__ . $this->message_separator . 'Stock Return approved successfully',
-                'data' => $inventoryReturn
+                'data' => [
+                    'id' => $inventoryReturn->id,
+                    'driver_id' => $inventoryReturn->driver_id,
+                    'driver_name' => $driver->name,
+                    'trip_id' => $inventoryReturn->trip_id,
+                    'items' => $itemsWithDetails,
+                    'status' => $inventoryReturn->status,
+                    'remarks' => $inventoryReturn->remarks,
+                    'approved_by' => $inventoryReturn->approved_by,
+                    'approved_by_name' => $user->name,
+                    'approved_at' => $inventoryReturn->approved_at,
+                    'created_at' => $inventoryReturn->created_at,
+                    'updated_at' => $inventoryReturn->updated_at,
+                    'item_count' => $inventoryReturn->item_count,
+                    'total_quantity' => $inventoryReturn->total_quantity,
+                ]
             ], 200);
 
-        }catch (\Exception $e){
-
+        } catch (\Exception $e) {
+            \Log::error('Stock Return Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+                'user_id' => $user->id ?? null
+            ]);
+            
             return response()->json([
                 'result' => false,
-                'message' => '' . __LINE__ . $this->message_separator . 'Stock Return Failed approved',
-                'data' =>null
+                'message' => '' . __LINE__ . $this->message_separator . 'Stock Return Failed: ' . $e->getMessage(),
+                'data' => null
             ], 200);
         }
-        
-
-
     }
 
     public function getDriverProduct(Request $request)
