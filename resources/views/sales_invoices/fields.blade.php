@@ -312,6 +312,9 @@
                 return; // Stop further execution
             }
             
+            // Store the current customer ID
+            var currentCustomerId = $('#customer_id').val();
+            
             // Initialize datetime picker (only if not converted)
             $('#date').datetimepicker({
                 format: 'DD-MM-YYYY',
@@ -340,15 +343,90 @@
             // Customer payment terms from PHP
             var customerPaymentTerms = {!! $customerPaymentTerms ?? '{}' !!};
 
+            // Function to update product prices based on selected customer
+            function updateProductPricesForCustomer(customerId) {
+                if (!customerId) return;
+                
+                // Show loading indicator
+                $('.price').each(function() {
+                    $(this).val('Loading...').prop('readonly', true);
+                });
+                
+                // AJAX call to get customer-specific prices
+                $.ajax({
+                    url: "{{ route('salesInvoices.getCustomerPrices', '') }}/" + customerId,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            // Update the global productPrices variable
+                            productPrices = response.product_prices;
+                            
+                            // Update prices for all existing product rows
+                            $('.item-row').each(function() {
+                                var productSelect = $(this).find('.product-select');
+                                var priceField = $(this).find('.price');
+                                var productId = productSelect.val();
+                                
+                                if (productId && productPrices[productId]) {
+                                    // Only update if the price field is enabled (not manually edited)
+                                    if (!priceField.data('manually-edited')) {
+                                        priceField.val(productPrices[productId]);
+                                        priceField.removeClass('auto-filled').addClass('customer-price');
+                                        
+                                        // Recalculate row total
+                                        calculateRowTotal($(this));
+                                    }
+                                }
+                            });
+                            
+                            // Recalculate grand total
+                            calculateGrandTotal();
+                            
+                            // Enable price fields
+                            $('.price').prop('readonly', false);
+                        } else {
+                            console.error('Failed to load customer prices:', response.message);
+                            // Restore original prices or keep as is
+                            $('.price').prop('readonly', false);
+                            $('.price').each(function() {
+                                if ($(this).val() === 'Loading...') {
+                                    $(this).val('');
+                                }
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error loading customer prices:', error);
+                        // Restore original prices or keep as is
+                        $('.price').prop('readonly', false);
+                        $('.price').each(function() {
+                            if ($(this).val() === 'Loading...') {
+                                $(this).val('');
+                            }
+                        });
+                    }
+                });
+            }
+
             // When customer is selected
             $("#customer_id").change(function(){
                 var customerId = $(this).val();
+                currentCustomerId = customerId;
+                
                 if(customerId && customerPaymentTerms[customerId]) {
                     updatePaymentTermDisplay(customerPaymentTerms[customerId]);
+                    
+                    // Update product prices for this customer
+                    updateProductPricesForCustomer(customerId);
+                    
                 } else {
                     // Hide payment term if no customer selected or no payment term
                     $('#paymentterm-container').hide();
                     $('#cheque-container').hide();
+                    
+                    // Clear product prices if no customer selected
+                    productPrices = {};
                 }
             });
 
@@ -369,6 +447,7 @@
             var customerId = $('#customer_id').val();
             if(isEditMode && customerId && customerPaymentTerms[customerId]) {
                 updatePaymentTermDisplay(customerPaymentTerms[customerId]);
+                // Don't update prices on initial load if editing, prices should already be set
             }
 
             // Function to auto-fill price when product is selected
@@ -377,20 +456,39 @@
                 var priceField = selectElement.closest('tr').find('.price');
                 
                 if (productId && productPrices[productId]) {
-                    // Auto-fill the price
-                    priceField.val(productPrices[productId]);
-                    
-                    // Calculate row total
-                    calculateRowTotal(selectElement.closest('tr'));
-                    calculateGrandTotal();
-                    
-                    // Highlight the field to indicate it was auto-filled
-                    priceField.addClass('auto-filled');
-                    setTimeout(function() {
-                        priceField.removeClass('auto-filled');
-                    }, 1000);
+                    // Auto-fill the price only if not manually edited
+                    if (!priceField.data('manually-edited')) {
+                        priceField.val(productPrices[productId]);
+                        priceField.addClass('customer-price');
+                        
+                        // Calculate row total
+                        calculateRowTotal(selectElement.closest('tr'));
+                        calculateGrandTotal();
+                        
+                        // Highlight the field to indicate it was auto-filled
+                        priceField.addClass('auto-filled');
+                        setTimeout(function() {
+                            priceField.removeClass('auto-filled');
+                        }, 1000);
+                    }
+                } else {
+                    // Clear price if product is deselected
+                    if (!priceField.data('manually-edited')) {
+                        priceField.val('');
+                        priceField.removeClass('customer-price');
+                    }
                 }
             }
+
+            // Track manual price edits
+            $(document).on('keyup', '.price', function() {
+                if ($(this).val().trim() !== '') {
+                    $(this).data('manually-edited', true);
+                    $(this).removeClass('customer-price');
+                } else {
+                    $(this).data('manually-edited', false);
+                }
+            });
 
             // Handle product selection change
             $(document).on('change', '.product-select', function() {
@@ -398,7 +496,7 @@
             });
             
             // Add new row
-            let rowCount = 1;
+            let rowCount = {{ isset($salesInvoiceDetails) && count($salesInvoiceDetails) > 0 ? count($salesInvoiceDetails) : 1 }};
             $('#addRow').click(function() {
                 const newRow = `
                     <tr class="item-row">
@@ -414,7 +512,7 @@
                             <input type="number" name="details[${rowCount}][quantity]" class="form-control quantity" min="0.01" step="0.01" required>
                         </td>
                         <td>
-                            <input type="number" name="details[${rowCount}][price]" class="form-control price" min="0" step="0.01" required>
+                            <input type="number" name="details[${rowCount}][price]" class="form-control price" min="0" step="0.01" required data-manually-edited="false">
                         </td>
                         <td>
                             <input type="text" class="form-control total" readonly value="0.00">
@@ -496,11 +594,23 @@
                 var productId = $(this).val();
                 if (productId && productPrices[productId]) {
                     var priceField = $(this).closest('tr').find('.price');
-                    // Only auto-fill if price field is empty
-                    if (!priceField.val() || priceField.val() == '0' || priceField.val() == '0.00') {
+                    // Only auto-fill if price field is empty or if it's not manually edited
+                    if (!priceField.val() || priceField.val() == '0' || priceField.val() == '0.00' || !priceField.data('manually-edited')) {
                         priceField.val(productPrices[productId]);
+                        priceField.addClass('customer-price');
                         calculateRowTotal($(this).closest('tr'));
                     }
+                }
+            });
+            
+            // Initialize manually-edited flag for existing price fields
+            $('.price').each(function() {
+                if ($(this).val()) {
+                    // If price is already set (from database), mark it as manually edited
+                    // so it won't be changed when customer changes
+                    $(this).data('manually-edited', true);
+                } else {
+                    $(this).data('manually-edited', false);
                 }
             });
             
@@ -603,8 +713,7 @@
             min-height: 38px;
             display: flex;
             align-items: center;
-            cursor: not-allowed;
-        }
+                    }
         
         .is-invalid {
             border-color: #dc3545 !important;
@@ -631,6 +740,18 @@
         
         .btn:disabled {
             cursor: not-allowed !important;
+        }
+        
+        /* Style for auto-filled prices */
+        .auto-filled {
+            background-color: #e8f5e8 !important;
+            border-color: #28a745 !important;
+            transition: background-color 0.5s ease;
+        }
+        
+        .customer-price {
+            background-color: #f0f8ff !important;
+            border-color: #17a2b8 !important;
         }
     </style>
 @endpush

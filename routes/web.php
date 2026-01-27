@@ -418,6 +418,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('salesInvoices/{id}/cancel', [ App\Http\Controllers\ControllersSalesInvoiceController::class, 'cancel'])->name('salesInvoices.cancel');
         Route::post('/salesInvoices/convert-to-invoice', [App\Http\Controllers\SalesInvoiceController::class, 'convertToInvoice'])->name('salesInvoices.convertToInvoice');
         Route::post('/salesInvoices/convert-with-payment', [App\Http\Controllers\SalesInvoiceController::class, 'convertWithPayment'])->name('salesInvoices.convertWithPayment');
+        Route::get('sales-invoices/get-customer-prices/{customerId}', [App\Http\Controllers\SalesInvoiceController::class, 'getCustomerProductPrices'])->name('salesInvoices.getCustomerPrices');
 
         //Sales Invoice Detail
         Route::get('salesInvoiceDetails/getprice/{invoice_id}/{product_id}', [App\Http\Controllers\SalesInvoiceDetailController::class, 'getprice']);

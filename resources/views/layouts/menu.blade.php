@@ -363,8 +363,8 @@
             </li>
         </ul>
     @endcan
-
-    <!-- @can('specialprice')
+ 
+    @can('specialprice')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('specialprices*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('specialprices*') ? 'active' : '' }}" href="{{ route('specialPrices.index') }}">
@@ -374,7 +374,7 @@
         </ul>
     @endcan
 
-    @can('foc')
+    <!--@can('foc')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('focs*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('focs*') ? 'active' : '' }}" href="{{ route('focs.index') }}">

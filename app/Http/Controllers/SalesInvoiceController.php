@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\Driver;
 use App\Models\Task;
 use App\Models\Code;
+use App\Models\SpecialPrice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Session;
 use Exception;
@@ -55,6 +56,46 @@ class SalesInvoiceController extends AppBaseController
      *
      * @return Response
      */
+    public function getCustomerProductPrices($customerId)
+    {
+        try {
+            $customer = Customer::find($customerId);
+            
+            if (empty($customer)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer not found'
+                ], 404);
+            }
+            
+            // Get all products with their default prices
+            $products = Product::select('id', 'name', 'code', 'price')->get();
+            
+            // Get special prices for this customer
+            $specialPrices = SpecialPrice::where('customer_id', $customerId)
+                ->where('status', 1)
+                ->pluck('price', 'product_id')
+                ->toArray();
+            
+            // Combine: use special price if available, otherwise default price
+            $productPrices = [];
+            foreach ($products as $product) {
+                $productPrices[$product->id] = $specialPrices[$product->id] ?? $product->price;
+            }
+            
+            return response()->json([
+                'success' => true,
+                'product_prices' => $productPrices
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function create()
     {
         $customers = Customer::select('id', 'company', 'paymentterm')->orderBy('company')->get();
@@ -73,6 +114,9 @@ class SalesInvoiceController extends AppBaseController
         $productItems = $products->mapWithKeys(function($product) {
             return [$product->id => $product->name . ' (' . $product->code . ')'];
         });
+
+        $specialPrice = SpecialPrice::all();
+        
         $productPrices = Product::pluck('price', 'id')->toArray();
 
         // Generate next invoice number
