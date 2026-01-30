@@ -5469,7 +5469,7 @@ class DriverController extends Controller
         }
     }
 
-    public function getAllProduct(Request $request)
+    public function getAllProduct(Request $request, $customer_id = null)
     {
         // Validate session
         $driver = Driver::where('session', $request->header('session'))->first();
@@ -5487,6 +5487,15 @@ class DriverController extends Controller
                 ->pluck('quantity', 'product_id')
                 ->toArray();
             
+            // Get special prices if customer_id is provided
+            $specialPrices = [];
+            if ($customer_id) {
+                $specialPrices = SpecialPrice::where('customer_id', $customer_id)
+                    ->where('status', 1)
+                    ->pluck('price', 'product_id')
+                    ->toArray();
+            }
+            
             $categories = ProductCategory::with(['products' => function($query) {
                 $query->select('id', 'name', 'category_id', 'price', 'status')
                     ->where('status', 1)
@@ -5497,19 +5506,22 @@ class DriverController extends Controller
             ->get();
 
             // Format the response with driver's inventory quantity
-            $output = $categories->map(function($category) use ($driverInventory) {
+            $output = $categories->map(function($category) use ($driverInventory, $specialPrices) {
                 return [
                     'category_id' => $category->id,
                     'category_name' => $category->name,
-                    'products' => $category->products->map(function($product) use ($driverInventory) {
+                    'products' => $category->products->map(function($product) use ($driverInventory, $specialPrices) {
                         // Get quantity from driver's inventory, default to 0 if not found
                         $quantity = $driverInventory[$product->id] ?? 0;
+                        
+                        // Get price: use special price if available, otherwise default price
+                        $price = $specialPrices[$product->id] ?? $product->price;
                         
                         return [
                             'id' => $product->id,
                             'name' => $product->name,
-                            'price' => $product->price,
-                            'quantity' => $quantity, // Add quantity here
+                            'price' => $price,
+                            'quantity' => $quantity,
                             'status' => $product->getStatusTextAttribute()
                         ];
                     })
@@ -5523,9 +5535,6 @@ class DriverController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            // Rollback transaction on error
-            DB::rollBack();
-            
             return response()->json([
                 'result' => false,
                 'message' => __LINE__ . $this->message_separator . 'Error getting product: ' . $e->getMessage(),

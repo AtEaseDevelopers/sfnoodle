@@ -90,7 +90,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/check-in-out', [App\Http\Controllers\Api\V1\DriverController::class, 'checkInOut']);
 
     //stock
-    Route::get('/driver/get-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getAllProduct']);
+    Route::get('/driver/get-product/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getAllProduct']);
     Route::post('/driver/stock-request', [App\Http\Controllers\Api\V1\DriverController::class, 'StockRequest']);
     Route::post('/driver/stock-count', [App\Http\Controllers\Api\V1\DriverController::class, 'StockCount']);
     Route::get('/driver/stock-count-status', [App\Http\Controllers\Api\V1\DriverController::class, 'StockCountStatus']);
