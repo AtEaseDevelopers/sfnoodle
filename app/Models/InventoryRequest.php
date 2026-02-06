@@ -34,7 +34,7 @@ class InventoryRequest extends Model
     protected $casts = [
         'id' => 'integer',
         'driver_id' => 'integer',
-        'items' => 'array', // Cast items to array
+        'items' => 'array', // Cast items to array 
         'status' => 'string',
         'rejection_reason' => 'string',
         'remarks' => 'string',
@@ -52,6 +52,11 @@ class InventoryRequest extends Model
         'rejection_reason' => 'nullable|string|required_if:status,rejected',
         'remarks' => 'nullable|string|max:500'
     ];
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
 
     public function driver()
     {

@@ -305,6 +305,92 @@
             </div>
         </div>
     </div>
+
+@push('scripts')
+<script>
+    // Auto-open script for inventory requests
+    $(document).ready(function() {
+        console.log('Inventory Requests page loaded');
+        
+        // Check URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewRequestId = urlParams.get('view_request');
+        
+        if (viewRequestId) {
+            console.log('Found view_request parameter:', viewRequestId);
+            localStorage.setItem('pendingInventoryRequestModal', viewRequestId);
+            
+            // Clean up URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+        
+        // Hook into DataTable initialization
+        if (typeof $.fn.DataTable !== 'undefined') {
+            $(document).on('init.dt', function(e, settings) {
+                console.log('Inventory Requests DataTable initialized');
+                
+                // Get the DataTable instance
+                const table = $(settings.nTable).DataTable();
+                
+                // Hook into draw event
+                table.on('draw', function() {
+                    console.log('Inventory Requests DataTable draw event');
+                    
+                    // Check for pending modal
+                    const pendingId = localStorage.getItem('pendingInventoryRequestModal');
+                    if (pendingId) {
+                        console.log('Attempting to open modal for request ID:', pendingId);
+                        
+                        // Try to find and click the button
+                        setTimeout(function() {
+                            const button = $('.view-request-btn[data-id="' + pendingId + '"]');
+                            if (button.length) {
+                                console.log('Found view button, clicking...');
+                                button.click();
+                                localStorage.removeItem('pendingInventoryRequestModal');
+                            } else {
+                                console.log('View button not found yet, will retry...');
+                            }
+                        }, 1000);
+                    }
+                });
+            });
+        }
+        
+        // Also check after page load
+        setTimeout(function() {
+            const pendingId = localStorage.getItem('pendingInventoryRequestModal');
+            if (pendingId) {
+                console.log('Page load check - Pending request ID:', pendingId);
+                
+                // Try multiple times
+                let attempts = 0;
+                const maxAttempts = 5;
+                
+                function tryOpenModal() {
+                    attempts++;
+                    console.log(`Attempt ${attempts} to find button for ID: ${pendingId}`);
+                    
+                    const button = $('.view-request-btn[data-id="' + pendingId + '"]');
+                    if (button.length) {
+                        console.log('Found button on attempt', attempts);
+                        button.click();
+                        localStorage.removeItem('pendingInventoryRequestModal');
+                    } else if (attempts < maxAttempts) {
+                        setTimeout(tryOpenModal, 1000);
+                    } else {
+                        console.log('Could not find button after', maxAttempts, 'attempts');
+                    }
+                }
+                
+                tryOpenModal();
+            }
+        }, 2000);
+    });
+</script>
+@endpush
+
 @endsection
 
 @push('scripts')

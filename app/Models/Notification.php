@@ -13,6 +13,8 @@ class Notification extends Model
         'type',
         'trip_id',
         'driver_id',
+        'inventory_count_id', 
+        'inventory_request_id',
         'is_read',
         'user_id',
     ];
@@ -41,7 +43,20 @@ class Notification extends Model
     {
         return $this->belongsTo(User::class);
     }
+    
+    public function inventoryCount(): BelongsTo
+    {
+        return $this->belongsTo(InventoryCount::class);
+    }
 
+    /**
+     * Get the inventory request associated with the notification
+     */
+    public function inventoryRequest(): BelongsTo
+    {
+        return $this->belongsTo(InventoryRequest::class);
+    }
+    
     /**
      * Mark notification as read
      */

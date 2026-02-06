@@ -5605,6 +5605,9 @@ class DriverController extends Controller
                     'remarks' => $request->remarks ?? null,
                 ]);
 
+                $notificationService = app(NotificationService::class);
+                $notificationService->createStockRequestNotification($driver, $inventoryRequest);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Inventory request created successfully.',
@@ -5905,6 +5908,9 @@ class DriverController extends Controller
                 'status' => InventoryCount::STATUS_PENDING,
                 'trip_id' => $driver->trip_id,
             ]);
+
+            $notificationService = app(NotificationService::class);
+            $notificationService->createStockCountNotification($driver, $inventoryCount);
 
             return response()->json([
                 'success' => true,

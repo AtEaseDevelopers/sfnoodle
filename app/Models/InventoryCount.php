@@ -169,4 +169,9 @@ class InventoryCount extends Model
     {
         return $this->status === self::STATUS_PENDING;
     }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
 }
