@@ -40,6 +40,7 @@ use App\Models\InventoryCount;
 use App\Models\ProductCategory;
 use App\Models\User;
 use App\Models\InventoryReturn;
+use App\Models\Notification;
 use Carbon\Carbon;
 use App\Services\NotificationService;
 use App\Http\Controllers\TripController;
@@ -7700,4 +7701,207 @@ class DriverController extends Controller
             ], 200);
         }
     }
+
+    public function getNotifications(Request $request)
+    {
+        try {
+            $user = User::where('session', $request->header('session'))->first();
+            if(empty($user)){
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                    'data' => null
+                ], 401);
+            }
+            $threeDaysAgo = Carbon::now()->subDays(3);
+
+            $notifications = Notification::where('user_id', $user->id)
+                ->where(function($query) {
+                    $query->whereNotNull('inventory_count_id')
+                        ->orWhereNotNull('inventory_request_id');
+                })
+                ->where('created_at', '>=', $threeDaysAgo)
+                ->get();
+
+
+            return response()->json([
+                'result' => true,
+                'message' => 'Notifications retrieved',
+                'data' => [
+                    'notifications' => $notifications,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
+    }
+
+    public function markAsRead(Request $request)
+    {
+        try {
+            $user = User::where('session', $request->header('session'))->first();
+            if(empty($user)){
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                    'data' => null
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'notification_id' => 'required|exists:notifications,id'
+            ]);
+          
+            // Check if validation fails
+            if ($validator->fails()) {
+                return response()->json([
+                    'result' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                    'data' => null
+                ], 422);
+            }
+    
+            $notification = Notification::where('id', $request->notification_id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($notification) {
+                $notification->update([
+                    'is_read' => true,
+                    'read_at' => now()
+                ]);
+            }
+
+            return response()->json([
+                'result' => true,
+                'message' => 'Notification marked as read',
+                'data' => null
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => 'Error marking notification as read',
+                'data' => null
+            ], 500);
+        }
+    }
+
+    public function markAllAsRead(Request $request)
+    {
+        try {
+            $user = User::where('session', $request->header('session'))->first();
+            if(empty($user)){
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                    'data' => null
+                ], 401);
+            }
+    
+            Notification::where('user_id', $user->id)
+            ->where('is_read', false)
+            ->update([
+                'is_read' => true,
+                'read_at' => now()
+            ]);
+
+            return response()->json([
+                'result' => true,
+                'message' => 'All notifications marked as read',
+                'data' => null
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => 'Error marking notification as read',
+                'data' => null
+            ], 500);
+        }
+    }
+
+    public function registerFCMToken(Request $request)
+    {
+        try {
+
+            $user = User::where('session', $request->header('session'))->first();
+            if(empty($user)){
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                    'data' => null
+                ], 401);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'fcm_token' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'result' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                    'data' => null
+                ], 422);
+            }
+            // Update user with FCM token
+            $user->update([
+                'fcm_token' => $request->fcm_token,
+            ]);
+
+            return response()->json([
+                'result' => true,
+                'message' => 'FCM token registered successfully',
+                'data' => null
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => 'Failed to register FCM token: ' . $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
+    }
+
+    public function removeFCMToken(Request $request)
+    {
+        try {
+            $user = User::where('session', $request->header('session'))->first();
+            if(empty($user)){
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                    'data' => null
+                ], 401);
+            }
+
+            // Remove FCM token
+            $user->update([
+                'fcm_token' => null,
+            ]);
+
+            return response()->json([
+                'result' => true,
+                'message' => 'FCM token removed successfully',
+                'data' => null
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => 'Failed to remove FCM token: ' . $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
+    }
+
 }

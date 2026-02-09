@@ -73,6 +73,14 @@ Route::group(['prefix' => 'v1'], function () {
     //dashboard
     Route::post('/driver/dashboard', [App\Http\Controllers\Api\V1\DriverController::class, 'dashboard']);
 
+    //notification
+    Route::get('/driver/notifications', [App\Http\Controllers\Api\V1\DriverController::class, 'getNotifications']);
+    Route::post('/driver/notifications/read', [App\Http\Controllers\Api\V1\DriverController::class, 'markAsRead']);
+    Route::post('/driver/notifications/read-all', [App\Http\Controllers\Api\V1\DriverController::class, 'markAllAsRead']);
+
+    Route::post('/driver/register-fcm-token', [App\Http\Controllers\Api\V1\DriverController::class, 'registerFCMToken']);
+    Route::post('/driver/remove-fcm-token', [App\Http\Controllers\Api\V1\DriverController::class, 'removeFCMToken']);
+
     //sales Order
     Route::get('/driver/get-sales-order-fields', [App\Http\Controllers\Api\V1\DriverController::class, 'getsalesorderFields']);
     Route::post('/driver/create-sales-order', [App\Http\Controllers\Api\V1\DriverController::class, 'createSalesOrder']);

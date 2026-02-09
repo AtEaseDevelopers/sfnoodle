@@ -8,7 +8,14 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 
 class NotificationService
-{
+{   
+    protected $oneSignalService;
+
+    public function __construct()
+    {
+        $this->oneSignalService = new OneSignalNotificationService();
+    }
+
     /**
      * Create trip end notification for admin
      */
@@ -66,6 +73,23 @@ class NotificationService
                 'user_id' => $user->id,
                 'is_read' => false
             ]);
+
+            if ($user->fcm_token) {
+                $this->oneSignalService->sendToUser(
+                    $user->id,
+                    $title,
+                    $message,
+                    [
+                        'type' => 'stock_request',
+                        'stock_request_id' => $stockRequest->id,
+                        'driver_id' => $driver->id,
+                        'driver_name' => $driver->name,
+                        'trip_id' => $stockRequest->trip_id,
+                        'action' => 'view_stock_request',
+                    ]
+                );
+            }
+
         }
 
         // Flash a success message for the current user if they're an admin
@@ -99,6 +123,23 @@ class NotificationService
                 'user_id' => $user->id,
                 'is_read' => false
             ]);
+
+            if ($user->fcm_token) {
+                $this->oneSignalService->sendToUser(
+                    $user->id,
+                    $title,
+                    $message,
+                    [
+                        'type' => 'stock_count',
+                        'stock_count_id' => $stockCount->id,
+                        'driver_id' => $driver->id,
+                        'driver_name' => $driver->name,
+                        'trip_id' => $stockCount->trip_id,
+                        'action' => 'view_stock_count',
+                    ]
+                );
+            }
+
         }
 
         // Flash a success message for the current user if they're an admin
