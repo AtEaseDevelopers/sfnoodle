@@ -17,7 +17,7 @@
 </div>
 
 <!-- Type Field -->
-<div class="form-group">
+<!-- <div class="form-group">
     {!! Form::label('type', __('products.type')) !!}:
     @switch($product->type)
         @case(1)
@@ -35,7 +35,13 @@
         @default
             <p>{{ __('products.type_other') }}</p>
     @endswitch
-    <!--<p>{{ $product->status == 1 ? "Ice" : "Other" }}</p>-->
+    <p>{{ $product->status == 1 ? "Ice" : "Other" }}</p>
+</div>  -->
+
+<!-- UOM Field --> {{-- Added --}}
+<div class="form-group">
+    {!! Form::label('uom', __('UOM')) !!}:
+    <p>{{ $product->uom ?? 'N/A' }}</p>
 </div>
 
 <!-- Status Field -->

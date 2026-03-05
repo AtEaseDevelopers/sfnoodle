@@ -25,6 +25,14 @@
         ['class' => 'form-control', 'required' => 'required']
     ) }}
 </div>
+
+<!-- UOM Field --> 
+<div class="form-group col-sm-6">
+    {!! Form::label('uom', __('UOM')) !!}
+    {!! Form::text('uom', null, ['class' => 'form-control', 'maxlength' => 50, 'placeholder' => 'e.g., KG, PCS, LITER']) !!}
+    <small class="text-muted">Optional: Enter unit of measurement</small>
+</div>
+
 <!-- Status Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('status', __('products.status')) !!}
