@@ -343,7 +343,7 @@ class TripController extends AppBaseController
             $openingProduct = $opening->firstWhere('product_id', $productId);
             $openingQty = $openingProduct['quantity'] ?? 0;
             $productCode = $openingProduct['product_code'] ?? ($product ? $product->code : '');
-            $productName = $openingProduct['product_name'] ?? ($product ? $product->name : 'Product ' . $productId);
+            $productName = $openingProduct['product_name'] ?? ($product ? $product->name : 'unknown');
             
             // Get stockIn for this product
             $stockInQty = $stockIn->where('product_id', $productId)->sum('quantity');

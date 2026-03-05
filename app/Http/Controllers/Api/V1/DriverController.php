@@ -6828,7 +6828,7 @@ class DriverController extends Controller
                     'result' => false,
                     'message' => __LINE__ . $this->message_separator . 'User not found.',
                     'data' => null
-                ], 401);
+                ], 200);
             }
           
             if (Hash::check($data['password'], $user->password)) {

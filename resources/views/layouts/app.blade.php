@@ -567,11 +567,11 @@
                             class="dropdown-item notification-item {{ !$notification->is_read ? 'unread' : '' }}">
                            <div class="notification-content">
                                 <div class="notification-header">
-                                    <span class="notification-type">
-                                        {!! $notificationType !!}
-                                    </span>
                                     <span class="notification-time">
                                         {{ $notification->created_at->diffForHumans() }}
+                                    </span>    
+                                    <span class="notification-type">
+                                        {!! $notificationType !!}
                                     </span>
                                 </div>
                                 <div class="notification-title">

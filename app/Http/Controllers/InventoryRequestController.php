@@ -434,6 +434,13 @@ class InventoryRequestController extends Controller
         }
     }
 
+    public function getNotificationCounts()
+    {
+        return response()->json([
+            'pendingStockRequests' => \App\Models\InventoryRequest::where('status', \App\Models\InventoryRequest::STATUS_PENDING)->count(),
+            'pendingStockCounts' => \App\Models\InventoryCount::where('status', \App\Models\InventoryCount::STATUS_PENDING)->count(),
+        ]);
+    }
     /**
      * Reject the specified inventory request.
      */

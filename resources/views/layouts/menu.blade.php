@@ -184,6 +184,10 @@
             <li class="nav-item {{ Request::is('inventoryRequests*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('inventoryRequests*') ? 'active' : '' }}" href="{{ route('inventoryRequests.index') }}">
                     <span>{{ trans('Stock Requests') }}</span>
+                    <span id="stockRequestBadge" class="badge badge-danger badge-pill ml-2" 
+                        style="{{ $pendingStockRequestsCount > 0 ? '' : 'display: none;' }}">
+                        {{ $pendingStockRequestsCount }}
+                    </span>
                 </a>
             </li>
         </ul>
@@ -202,6 +206,10 @@
             <li class="nav-item {{ Request::is('inventoryCounts*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('inventoryCounts*') ? 'active' : '' }}" href="{{ route('inventoryCounts.index') }}">
                     <span>{{ trans('Stock Count') }}</span>
+                    <span id="stockCountBadge" class="badge badge-danger badge-pill ml-2" 
+                        style="{{ $pendingStockCountsCount > 0 ? '' : 'display: none;' }}">
+                        {{ $pendingStockCountsCount }}
+                    </span>
                 </a>
             </li>
         </ul>

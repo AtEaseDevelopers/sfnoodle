@@ -480,6 +480,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/inventoryBalances/stockin', [App\Http\Controllers\InventoryBalanceController::class, 'stockin'])->name('inventoryBalances.stockin');
         Route::get('/inventoryBalances/getstock/{lorry_id}/{product_id}', [App\Http\Controllers\InventoryBalanceController::class, 'getstock'])->name('inventoryBalances.getstock');
         Route::post('/inventoryBalances/stockout', [App\Http\Controllers\InventoryBalanceController::class, 'stockout'])->name('inventoryBalances.stockout');
+        Route::get('inventoryBalances/get-products-by-driver', [App\Http\Controllers\InventoryBalanceController::class, 'getProductsByDriver'])->name('inventoryBalances.getProductsByDriver');
     });
 
     Route::group(['middleware' => ['permission:stockrequest']], function() {
@@ -498,6 +499,10 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/inventoryRequests/approve/{id}', [App\Http\Controllers\InventoryRequestController::class, 'approve'])->name('inventoryRequests.approve');
         // Reject
         Route::post('/inventoryRequests/reject/{id}', [App\Http\Controllers\InventoryRequestController::class, 'reject'])->name('inventoryRequests.reject');
+
+        Route::get('/notification-counts', [App\Http\Controllers\InventoryRequestController::class, 'getNotificationCounts'])->name('notification.counts');
+
+
     });
 
     Route::group(['middleware' => ['permission:stockreturn']], function() {

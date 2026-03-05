@@ -1431,6 +1431,7 @@
                         } else {
                             location.reload();
                         }
+                        updateNotificationBadges();
                     } else {
                         showNotification('error', response.message || 'Failed to approve request');
                     }
@@ -1454,6 +1455,30 @@
                     }
                     
                     showNotification('error', errorMessage);
+                }
+            });
+        }
+
+        function updateNotificationBadges() {
+            $.ajax({
+                url: '{{ route("notification.counts") }}',
+                type: 'GET',
+                success: function(data) {
+                    // Update Stock Requests badge
+                    var stockRequestBadge = $('#stockRequestBadge');
+                    if (data.pendingStockRequests > 0) {
+                        stockRequestBadge.text(data.pendingStockRequests).show();
+                    } else {
+                        stockRequestBadge.hide();
+                    }
+                    
+                    // Update Stock Counts badge (in case you want to update both)
+                    var stockCountBadge = $('#stockCountBadge');
+                    if (data.pendingStockCounts > 0) {
+                        stockCountBadge.text(data.pendingStockCounts).show();
+                    } else {
+                        stockCountBadge.hide();
+                    }
                 }
             });
         }
