@@ -30,9 +30,9 @@ class SpecialPriceDataTable extends DataTable
     public function query(SpecialPrice $model)
     {
         return $model->newQuery()
-        ->with('product:id,name')
-        ->with('customer:id,company')
-        ->select('special_prices.*');
+            ->with('product:id,name,uom')  // Added uom to the selected fields
+            ->with('customer:id,company')
+            ->select('special_prices.*');
     }
 
     /**
@@ -52,7 +52,7 @@ class SpecialPriceDataTable extends DataTable
                 'stateDuration' => 0,
                 'processing' => false,
                 'order'     => [[1, 'desc']],
-                'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
+                'lengthMenu' => [[10, 50, 100, 300], ['10 rows', '50 rows', '100 rows', '300 rows']],
                 'buttons' => [
                     [
                         'extend' => 'create',
@@ -114,8 +114,9 @@ class SpecialPriceDataTable extends DataTable
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
                     [
-                    'targets' => 4,
-                    'render' => 'function(data, type){return data == 1 ? "Active" : "Unactive";}'],
+                        'targets' => 5, // Updated index for status column (now after price)
+                        'render' => 'function(data, type){return data == 1 ? "Active" : "Inactive";}'
+                    ],
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
@@ -125,16 +126,16 @@ class SpecialPriceDataTable extends DataTable
                         var column = this;
                         if(columns[index].searchable){
                             if(columns[index].title == \'Status\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Unactive</option></select>\';
-                            }else if(columns[index].title == \'Payment Term\'){
+                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Inactive</option></select>\';
+                            } else if(columns[index].title == \'Payment Term\'){
                                 var input = \'<select class="border-0" style="width: 100%;"><option value="1">Cash</option><option value="2">Bankin</option><option value="3">Credit Note</option></select>\';
-                            }else{
+                            } else {
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
                             $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
                                 column.search($(this).val(),true,false).draw();
                                 ShowLoad();
-                            })
+                            });
                         }
                     });
                 }'
@@ -159,11 +160,20 @@ class SpecialPriceDataTable extends DataTable
             'data' => 'product.name',
             'name' => 'product.name']),
 
+            'uom' => new \Yajra\DataTables\Html\Column([
+                'title' => 'UOM', // Fallback to 'UOM' if translation not available
+                'data' => 'product.uom',
+                'name' => 'product.uom',
+                'searchable' => true,
+                'orderable' => true
+            ]),
+
             'customer_id'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('special_prices.customer'),
             'data' => 'customer.company',
             'name' => 'customer.company']),
             'price',
             'status'
+
         ];
     }
 
