@@ -30,7 +30,7 @@ class SpecialPriceDataTable extends DataTable
     public function query(SpecialPrice $model)
     {
         return $model->newQuery()
-            ->with('product:id,name,uom')  // Added uom to the selected fields
+            ->with('product:id,name')  // Removed uom from here since we don't need it from product anymore
             ->with('customer:id,company')
             ->select('special_prices.*');
     }
@@ -114,7 +114,7 @@ class SpecialPriceDataTable extends DataTable
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
                     [
-                        'targets' => 5, // Updated index for status column (now after price)
+                        'targets' => 6, // Updated index for status column (now after uom and price)
                         'render' => 'function(data, type){return data == 1 ? "Active" : "Inactive";}'
                     ],
                 ],
@@ -127,8 +127,6 @@ class SpecialPriceDataTable extends DataTable
                         if(columns[index].searchable){
                             if(columns[index].title == \'Status\'){
                                 var input = \'<select class="border-0" style="width: 100%;"><option value="1">Active</option><option value="0">Inactive</option></select>\';
-                            } else if(columns[index].title == \'Payment Term\'){
-                                var input = \'<select class="border-0" style="width: 100%;"><option value="1">Cash</option><option value="2">Bankin</option><option value="3">Credit Note</option></select>\';
                             } else {
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
@@ -150,30 +148,45 @@ class SpecialPriceDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'checkbox'=> new \Yajra\DataTables\Html\Column(['title' => '<input type="checkbox" id="selectallcheckbox">',
-            'data' => 'id',
-            'name' => 'id',
-            'orderable' => false,
-            'searchable' => false]),
+            'checkbox'=> new \Yajra\DataTables\Html\Column([
+                'title' => '<input type="checkbox" id="selectallcheckbox">',
+                'data' => 'id',
+                'name' => 'id',
+                'orderable' => false,
+                'searchable' => false
+            ]),
 
-            'product_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('special_prices.product'),
-            'data' => 'product.name',
-            'name' => 'product.name']),
+            'product_id'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('special_prices.product'),
+                'data' => 'product.name',
+                'name' => 'product.name'
+            ]),
 
             'uom' => new \Yajra\DataTables\Html\Column([
-                'title' => 'UOM', // Fallback to 'UOM' if translation not available
-                'data' => 'product.uom',
-                'name' => 'product.uom',
+                'title' => 'UOM',
+                'data' => 'uom',  
+                'name' => 'special_prices.uom',  
                 'searchable' => true,
                 'orderable' => true
             ]),
 
-            'customer_id'=> new \Yajra\DataTables\Html\Column(['title' =>  trans('special_prices.customer'),
-            'data' => 'customer.company',
-            'name' => 'customer.company']),
-            'price',
-            'status'
-
+            'customer_id'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('special_prices.customer'),
+                'data' => 'customer.company',
+                'name' => 'customer.company'
+            ]),
+            
+            'price' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('special_prices.price'),
+                'data' => 'price',
+                'name' => 'special_prices.price'
+            ]),
+            
+            'status' => new \Yajra\DataTables\Html\Column([
+                'title' => trans('special_prices.status'),
+                'data' => 'status',
+                'name' => 'special_prices.status'
+            ])
         ];
     }
 
