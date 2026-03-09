@@ -6,6 +6,12 @@
     <a href="{{ route('invoices.show', encrypt($id)) }}" class='btn btn-ghost-success'>
        <i class="fa fa-eye"></i>
     </a>
+    @php
+      $tripId = \Illuminate\Support\Facades\DB::table('drivers')
+         ->where('trip_id', $trip_id)
+         ->exists();
+   @endphp
+   @if($tripId)
     <a href="{{ route('invoices.edit', encrypt($id)) }}" class='btn btn-ghost-info'>
        <i class="fa fa-edit"></i>
     </a>
@@ -13,5 +19,7 @@
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
         'onclick' => "return confirm('".trans('invoices.are_you_sure_to_delete_the_invoice')."')"    ]) !!}
+
+   @endif
 </div>
 {!! Form::close() !!}

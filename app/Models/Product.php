@@ -35,7 +35,8 @@ class Product extends Model
         'price',
         'uom',
         'status',
-        'category_id'
+        'category_id',
+        'uom'
     ];
 
     /**
@@ -51,6 +52,8 @@ class Product extends Model
         'uom' => 'string',
         'status' => 'integer',
         'category_id' => 'integer',
+        'uom' => 'string'  
+
     ];
 
     /**
@@ -64,6 +67,8 @@ class Product extends Model
         'price' => 'required|numeric|min:0',
         'category_id' => 'required|exists:product_categories,id',
         'status' => 'required|integer|in:0,1',
+        'uom' => 'required|string|max:50',  
+
     ];
 
     /**

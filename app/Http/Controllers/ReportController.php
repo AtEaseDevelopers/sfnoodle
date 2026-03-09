@@ -293,18 +293,41 @@ class ReportController extends AppBaseController
 
         $driver = Driver::find($driverId);
 
-        $starttrip = Trip::where('driver_id', $driverId)->where('type',Trip::START_TRIP)->where('uuid', $tripId)->first();
-        $endtrip = Trip::where('driver_id', $driverId)->where('type',Trip::END_TRIP)->where('uuid', $tripId)->first();
+        $starttrip = Trip::where('driver_id', $driverId)
+            ->where('type', Trip::START_TRIP)
+            ->where('uuid', $tripId)
+            ->first();
+        
+        $endtrip = Trip::where('driver_id', $driverId)
+            ->where('type', Trip::END_TRIP)
+            ->where('uuid', $tripId)
+            ->first();
 
-        // Get all approved inventory counts for this trip
+        // Get all approved inventory counts for this trip with product relationships
         $inventoryCounts = InventoryCount::where('driver_id', $driverId)
             ->where('status', InventoryCount::STATUS_APPROVED)
             ->where('trip_id', $tripId)
             ->get();
 
+        // Pre-load all product IDs from all inventory counts
+        $allProductIds = [];
+        foreach ($inventoryCounts as $count) {
+            $items = $count->items ?? [];
+            foreach ($items as $item) {
+                if (isset($item['product_id'])) {
+                    $allProductIds[] = $item['product_id'];
+                }
+            }
+        }
+        
+        // Remove duplicates
+        $allProductIds = array_unique($allProductIds);
+        
+        // Get all products at once for better performance
+        $allProducts = Product::whereIn('id', $allProductIds)->get()->keyBy('id');
+
         // Process inventory counts to get summary data
         $stockCountSummary = [];
-        $productData = [];
         
         foreach ($inventoryCounts as $count) {
             $items = $count->items ?? [];
@@ -315,9 +338,13 @@ class ReportController extends AppBaseController
                 
                 if ($productId && $countedQty !== '' && $countedQty !== null) {
                     if (!isset($stockCountSummary[$productId])) {
+                        // Get product from preloaded collection
+                        $product = $allProducts[$productId] ?? null;
+                        
                         $stockCountSummary[$productId] = [
                             'product_id' => $productId,
-                            'product_name' => $item['product_name'] ?? 'Product ' . $productId,
+                            'product_name' => $product ? $product->name : ($item['name'] ?? 'Unknown'),
+                            'product_code' => $product ? $product->code : '',
                             'current_quantity' => 0,
                             'counted_quantity' => 0,
                             'difference' => 0
@@ -337,23 +364,6 @@ class ReportController extends AppBaseController
         // Convert to collection for easier handling
         $stockCounts = collect($stockCountSummary)->values();
         
-        // Get product details for all products in the count
-        $productIds = $stockCounts->pluck('product_id')->toArray();
-        $products = \App\Models\Product::whereIn('id', $productIds)
-            ->get()
-            ->keyBy('id');
-        
-        // Update product names from database (more accurate)
-        foreach ($stockCounts as &$count) {
-            $product = $products[$count['product_id']] ?? null;
-            if ($product) {
-                $count['product_name'] = $product->name;
-                $count['product_code'] = $product->code ?? '';
-            } else {
-                $count['product_code'] = '';
-            }
-        }
-        
         // Get latest approved count for approved_by info
         $latestCount = $inventoryCounts->sortByDesc('created_at')->first();
         
@@ -362,7 +372,7 @@ class ReportController extends AppBaseController
         $totalCounted = $stockCounts->sum('counted_quantity');
         $totalDifference = $stockCounts->sum('difference');
         
-        $data =[
+        $data = [
             'company_name' => 'SF Noodles Sdn. Bhd.',
             'roc_no' => '(FKA Soon Fatt Foods Sdn Bhd) ROC No. 201001017887',
             'address' => '48, Jin TPP 1/18, Taman Industri Puchong, 47100 Puchong, Selangor',
@@ -379,7 +389,7 @@ class ReportController extends AppBaseController
             
             // Stock Count Data
             'stock_counts' => $stockCounts,
-            'products' => $products,
+            'products' => $allProducts, // All products for reference
             'total_current' => $totalCurrent,
             'total_counted' => $totalCounted,
             'total_difference' => $totalDifference,

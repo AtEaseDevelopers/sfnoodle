@@ -8,7 +8,14 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 
 class NotificationService
-{
+{   
+    protected $oneSignalService;
+
+    public function __construct()
+    {
+        $this->oneSignalService = new OneSignalNotificationService();
+    }
+
     /**
      * Create trip end notification for admin
      */
@@ -18,13 +25,17 @@ class NotificationService
         $message = "Driver {$driver->name} has end a trip. Trip ID: T-{$trip->uuid}";
 
         $adminUsers = User::role('admin')->get();
-
+        $inventoryAdminUsers = User::role('Inventory Admin')->get();
+        $adminUsers = $adminUsers->merge($inventoryAdminUsers);
+    
         foreach ($adminUsers as $user) {
             Notification::create([
                 'title' => $title,
                 'message' => $message,
                 'type' => 'success',
                 'trip_id' => $trip->id,
+                'inventory_count_id' => null,
+                'inventory_request_id' => null,
                 'driver_id' => $driver->id,
                 'user_id' => $user->id,
                 'is_read' => false
@@ -32,7 +43,7 @@ class NotificationService
         }
 
         // Flash a success message for the current user if they're an admin
-        if (auth()->check() && auth()->user()->hasRole('admin')) {
+        if (auth()->check() && auth()->user()->hasRole('admin') || auth()->check() && auth()->user()->hasRole('Inventory Admin')) {
             session()->flash('notification', [
                 'type' => 'success',
                 'message' => $message,
@@ -41,10 +52,114 @@ class NotificationService
 
     }
 
-     public function getUnreadCountForUser($userId = null): int
+    public function createStockRequestNotification(Driver $driver, $stockRequest): void
+    {
+        $title = "New Stock Request";
+        $message = "Driver {$driver->name} has requested for stock.";
+
+        $adminUsers = User::role('admin')->get();
+        $inventoryAdminUsers = User::role('Inventory Admin')->get();
+        $adminUsers = $adminUsers->merge($inventoryAdminUsers);
+
+        foreach ($adminUsers as $user) {
+            Notification::create([
+                'title' => $title,
+                'message' => $message,
+                'type' => 'success',
+                'trip_id' => $stockRequest->trip_id,
+                'inventory_count_id' => null,
+                'inventory_request_id' => $stockRequest->id,
+                'driver_id' => $driver->id,
+                'user_id' => $user->id,
+                'is_read' => false
+            ]);
+
+            if ($user->fcm_token) {
+                $this->oneSignalService->sendToUser(
+                    $user->id,
+                    $title,
+                    $message,
+                    [
+                        'type' => 'stock_request',
+                        'stock_request_id' => $stockRequest->id,
+                        'driver_id' => $driver->id,
+                        'driver_name' => $driver->name,
+                        'trip_id' => $stockRequest->trip_id,
+                        'action' => 'view_stock_request',
+                    ]
+                );
+            }
+
+        }
+
+        // Flash a success message for the current user if they're an admin
+        if (auth()->check() && auth()->user()->hasRole('admin') || auth()->check() && auth()->user()->hasRole('Inventory Admin')) {
+            session()->flash('notification', [
+                'type' => 'success',
+                'message' => $message,
+            ]);
+        }
+
+    }
+
+    public function createStockCountNotification(Driver $driver, $stockCount): void
+    {
+        $title = "New Stock Count Request";
+        $message = "Driver {$driver->name} has requested for stock count.";
+
+        $adminUsers = User::role('admin')->get();
+        $inventoryAdminUsers = User::role('Inventory Admin')->get(); 
+        $adminUsers = $adminUsers->merge($inventoryAdminUsers);
+
+        foreach ($adminUsers as $user) {
+            Notification::create([
+                'title' => $title,
+                'message' => $message,
+                'type' => 'success',
+                'trip_id' => $stockCount->trip_id,
+                'inventory_count_id' => $stockCount->id,
+                'inventory_request_id' => null,
+                'driver_id' => $driver->id,
+                'user_id' => $user->id,
+                'is_read' => false
+            ]);
+
+            if ($user->fcm_token) {
+                $this->oneSignalService->sendToUser(
+                    $user->id,
+                    $title,
+                    $message,
+                    [
+                        'type' => 'stock_count',
+                        'stock_count_id' => $stockCount->id,
+                        'driver_id' => $driver->id,
+                        'driver_name' => $driver->name,
+                        'trip_id' => $stockCount->trip_id,
+                        'action' => 'view_stock_count',
+                    ]
+                );
+            }
+
+        }
+
+        // Flash a success message for the current user if they're an admin
+        if (auth()->check() && auth()->user()->hasRole('admin') || auth()->check() && auth()->user()->hasRole('Inventory Admin')) {
+            session()->flash('notification', [
+                'type' => 'success',
+                'message' => $message,
+            ]);
+        }
+
+    }
+
+    public function getUnreadCountForUser($userId = null): int
     {
         $userId = $userId ?? auth()->id();
-        return Notification::where('user_id', $userId)->unread()->count();
+        $threeDaysAgo = Carbon::now()->subDays(3);
+        return Notification::where('user_id', $userId)
+            ->where('created_at', '>=', $threeDaysAgo)
+            ->unread()
+            ->count();
     }
 
     /**
@@ -53,12 +168,10 @@ class NotificationService
     public function getLatestNotificationsForUser($userId = null)
     {
         $userId = $userId ?? auth()->id();
-        $today = Carbon::today();
-        $yesterday = Carbon::yesterday();
-
+        $threeDaysAgo = Carbon::now()->subDays(3);
         return Notification::with(['trip', 'driver'])
             ->where('user_id', $userId)
-            ->where('is_read', false)
+            ->where('created_at', '>=', $threeDaysAgo)
             ->latest()
             ->get();
     }

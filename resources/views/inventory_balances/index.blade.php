@@ -13,8 +13,6 @@
                         <div class="card-header">
                             <i class="fa fa-align-justify"></i>
                             {{ __('inventory_balances.inventory_balances') }}
-                            <!-- <button class="border-0 bg-transparent pull-right text-danger" data-toggle="modal" data-target="#stockout"><i class="fa fa-cart-arrow-down fa-lg"></i></button>
-                            <button class="border-0 bg-transparent pull-right text-success pr-2" data-toggle="modal" data-target="#stockin"><i class="fa fa-cart-plus fa-lg"></i></button> -->
                         </div>
                         <div class="card-body">
                             @include('inventory_balances.table')
@@ -22,6 +20,46 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Details Modal -->
+    <div class="modal fade" id="productDetailsModal" tabindex="-1" role="dialog" aria-labelledby="productDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productDetailsModalLabel">Product Details - <span id="modalDriverName"></span></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="productDetailsTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Product Code</th>
+                                    <th>Product Name</th>
+                                    <th class="text-center">Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productDetailsBody">
+                                <!-- Product details will be loaded here -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="3" class="text-right">Total:</th>
+                                    <th class="text-center" id="modalTotalQuantity">0</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -215,6 +253,16 @@
             border: 1px solid rgba(0,0,0,.125);
             margin-bottom: -1px;
         }
+        
+        /* Modal table styling */
+        #productDetailsTable th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        #productDetailsTable tbody tr:hover {
+            background-color: rgba(0,0,0,.075);
+        }
     </style>
 
     <script>
@@ -296,6 +344,63 @@
                         $(this).text('Select Product');
                     }
                 }
+            });
+
+            // Handle view button click
+            $(document).on('click', '.view-products', function() {
+                var driverId = $(this).data('driver-id');
+                var driverName = $(this).data('driver-name');
+                
+                // Show loading in modal
+                $('#modalDriverName').text(driverName);
+                $('#productDetailsBody').html('<tr><td colspan="4" class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading product details...</td></tr>');
+                $('#modalTotalQuantity').text('0');
+                
+                // Load product details via AJAX
+                $.ajax({
+                    url: '{{ route("inventoryBalances.getProductsByDriver") }}',
+                    type: 'GET',
+                    data: {
+                        driver_id: driverId
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            var html = '';
+                            var totalQuantity = 0;
+                            var index = 1;
+                            
+                            // Sort products alphabetically by name
+                            response.products.sort(function(a, b) {
+                                return a.product_name.localeCompare(b.product_name);
+                            });
+                            
+                            response.products.forEach(function(product) {
+                                if (product.quantity > 0) {
+                                    html += '<tr>';
+                                    html += '<td class="text-center">' + index + '</td>';
+                                    html += '<td>' + (product.product_code || '-') + '</td>';
+                                    html += '<td>' + product.product_name + '</td>';
+                                    html += '<td class="text-center"><span class="badge badge-primary">' + product.quantity + '</span></td>';
+                                    html += '</tr>';
+                                    totalQuantity += product.quantity;
+                                    index++;
+                                }
+                            });
+                            
+                            if (html === '') {
+                                html = '<tr><td colspan="4" class="text-center text-muted">No products found</td></tr>';
+                            }
+                            
+                            $('#productDetailsBody').html(html);
+                            $('#modalTotalQuantity').text(totalQuantity);
+                        } else {
+                            $('#productDetailsBody').html('<tr><td colspan="4" class="text-center text-danger">' + response.message + '</td></tr>');
+                        }
+                    },
+                    error: function(xhr) {
+                        $('#productDetailsBody').html('<tr><td colspan="4" class="text-center text-danger">Error loading product details</td></tr>');
+                    }
+                });
             });
         });
 

@@ -23,6 +23,7 @@ class SpecialPrice extends Model
     public $fillable = [
         'product_id',
         'customer_id',
+        'uom',
         'price',
         'status'
     ];

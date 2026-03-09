@@ -138,7 +138,7 @@ class ProductDataTable extends DataTable
                         'render' => 'function(data, type, row, meta){return row.category_name || "N/A";}'
                     ],
                     [
-                        'targets' => 5, // Status column
+                        'targets' => 6, // Status column
                         'render' => 'function(data, type, row, meta){return row.status_text || (data == 1 ? "Active" : "Inactive");}'
                     ],
                 ],
@@ -213,6 +213,13 @@ class ProductDataTable extends DataTable
                 'title' => trans('Category'),
                 'data' => 'category_name',
                 'name' => 'category.name',
+                'orderable' => true,
+                'searchable' => true
+            ]),
+            'uom' => new \Yajra\DataTables\Html\Column([  // Added
+                'title' => trans('UOM'),
+                'data' => 'uom',
+                'name' => 'uom',
                 'orderable' => true,
                 'searchable' => true
             ]),

@@ -162,6 +162,7 @@ class ProductController extends AppBaseController
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'category_id' => 'required|exists:product_categories,id',
+            'uom' => 'required|string|max:50',
             'status' => 'required|integer|in:0,1',
         ];
 

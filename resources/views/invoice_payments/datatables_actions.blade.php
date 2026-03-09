@@ -10,9 +10,22 @@
     <a href="{{ route('invoicePayments.show', encrypt($id)) }}" class='btn btn-ghost-primary'>
        <i class="fa fa-eye"></i>
     </a>
+    @php
+        $invoice = \Illuminate\Support\Facades\DB::table('invoices')
+        ->where('id', $invoice_id)
+        ->first();
+
+        $tripId = \Illuminate\Support\Facades\DB::table('drivers')
+        ->where('trip_id', $invoice->trip_id)
+        ->exists();
+    @endphp
+    
+    @if($tripId)
     <a href="{{ route('invoicePayments.edit', encrypt($id)) }}" class='btn btn-ghost-info'>
        <i class="fa fa-edit"></i>
     </a>
+    @endif
+
     @if($attachment)
         @php
             $fileUrl = asset('/' . $attachment);
@@ -28,10 +41,12 @@
             <i class="fa fa-print"></i>
         </button>
     @endif
+    @if($tripId)
     {!! Form::button('<i class="fa fa-trash"></i>', [
         'type' => 'submit',
         'class' => 'btn btn-ghost-danger',
         'onclick' => "return confirm('".trans('invoice_payments.are_you_sure_to_delete_the_payment')."')"   
     ]) !!}
+    @endif
 </div>
 {!! Form::close() !!}

@@ -45,6 +45,11 @@
             text-align: center;
             margin: 5px 0;
         }
+        .invoice-remark {
+            font-size: 13px;
+            text-align: start;
+            margin: 5px 0;
+        }
         .section-separator {
             border-top: 1px dashed #000;
             margin: 5px 0;
@@ -162,7 +167,7 @@
         </table>
     </div>
 
-    <div class="section-separator"></div>
+<div class="section-separator"></div>
 
     <table>
         <tr>
@@ -172,6 +177,8 @@
     </table>
 
     <div class="footer-line"></div>
+    
+    <div class="invoice-remark">@if($invoices->remark)REMARK : {{$invoices->remark}}@endif</div>
 
 </body>
 </html>

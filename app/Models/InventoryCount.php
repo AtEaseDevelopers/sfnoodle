@@ -9,7 +9,7 @@ class InventoryCount extends Model
 {
     use HasFactory;
 
-    public $table = 'inventory_counts'; 
+    public $table = 'inventory_counts';
 
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
@@ -64,8 +64,13 @@ class InventoryCount extends Model
     ];
 
     /**
-     * Get status options
+     * Get the driver that owns the inventory count.
      */
+    public function driver()
+    {
+        return $this->belongsTo(\App\Models\Driver::class, 'driver_id', 'id');
+    }
+
     public static function getStatusOptions()
     {
         return [
@@ -75,11 +80,53 @@ class InventoryCount extends Model
         ];
     }
     
-    public function driver()
+    /**
+     * Get the products through items relationship.
+     * This is a many-to-many relationship using the items JSON field.
+     */
+    public function products()
     {
-        return $this->belongsTo(\App\Models\Driver::class, 'driver_id', 'id');
+        return $this->belongsToMany(
+            Product::class,
+            null, // No pivot table since we use JSON
+            'inventory_count_id',
+            'product_id'
+        )->using(InventoryCountProduct::class)
+         ->withPivot('quantity', 'name') // These are from your items array
+         ->withTimestamps();
     }
 
+    /**
+     * Get related products using eager loading with custom logic
+     * This method loads products based on the product_ids in the items array
+     */
+    public function getProductsAttribute()
+    {
+        $productIds = collect($this->items)->pluck('product_id')->toArray();
+        return Product::whereIn('id', $productIds)->get();
+    }
+
+    /**
+     * Get items with product information
+     */
+    public function getItemsWithProductsAttribute()
+    {
+        $items = $this->items ?? [];
+        $productIds = collect($items)->pluck('product_id')->toArray();
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+        
+        return collect($items)->map(function ($item) use ($products) {
+            $product = $products[$item['product_id']] ?? null;
+            return [
+                'product_id' => $item['product_id'],
+                'name' => $product ? $product->name : ($item['name'] ?? 'Unknown'),
+                'current_quantity' => $item['current_quantity'] ?? 0,
+                'counted_quantity' => $item['counted_quantity'] ?? 0,
+                'code' => $product ? $product->code : null,
+                // Add any other product fields you need
+            ];
+        });
+    }
 
     public function approver()
     {
@@ -168,5 +215,10 @@ class InventoryCount extends Model
     public function canBeRejected()
     {
         return $this->status === self::STATUS_PENDING;
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
     }
 }

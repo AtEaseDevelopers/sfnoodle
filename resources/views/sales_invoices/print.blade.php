@@ -71,7 +71,11 @@
             margin-right: auto;
         }
        
-        
+        .invoice-remark {
+            font-size: 13px;
+            text-align: start;
+            margin: 5px 0;
+        }
         .col-sku {
             width: 40%;
         }
@@ -176,6 +180,7 @@
     </table>
 
     <div class="footer-line"></div>
+    <div class="invoice-remark">@if($salesInvoice->remark)REMARK : {{$salesInvoice->remark}}@endif</div>
 
 </body>
 </html>

@@ -11,6 +11,7 @@ use Flash;
 use App\Http\Controllers\AppBaseController;
 use Response;
 use App\Models\InventoryBalance;
+use App\Models\Driver;
 use App\Models\InventoryTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -127,4 +128,41 @@ class InventoryBalanceController extends AppBaseController
 
         return redirect(route('inventoryBalances.index'));
     }
+
+    public function getProductsByDriver(Request $request)
+    {
+        $driverId = $request->get('driver_id');
+        
+        $driver = Driver::with(['inventoryBalances' => function($query) {
+            $query->where('quantity', '<>', 0)
+                ->with('product:id,name,code');
+        }])->find($driverId);
+        
+        if (!$driver) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Driver not found'
+            ], 404);
+        }
+        
+        $products = [];
+        foreach ($driver->inventoryBalances as $balance) {
+            if ($balance->quantity != 0 && $balance->product) {
+                $products[] = [
+                    'product_id' => $balance->product_id,
+                    'product_code' => $balance->product->code,
+                    'product_name' => $balance->product->name,
+                    'quantity' => $balance->quantity
+                ];
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'driver' => $driver->name,
+            'products' => $products,
+            'total_products' => count($products)
+        ]);
+    }
+
 }

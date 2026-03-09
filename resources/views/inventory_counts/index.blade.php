@@ -376,6 +376,91 @@
             </div>
         </div>
     </div>
+
+@push('scripts')
+<script>
+    // Auto-open script for inventory counts
+    $(document).ready(function() {
+        console.log('Inventory Counts page loaded');
+        
+        // Check URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewCountId = urlParams.get('view_count');
+        
+        if (viewCountId) {
+            console.log('Found view_count parameter:', viewCountId);
+            localStorage.setItem('pendingInventoryCountModal', viewCountId);
+            
+            // Clean up URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+        
+        // Hook into DataTable initialization
+        if (typeof $.fn.DataTable !== 'undefined') {
+            $(document).on('init.dt', function(e, settings) {
+                console.log('Inventory Counts DataTable initialized');
+                
+                // Get the DataTable instance
+                const table = $(settings.nTable).DataTable();
+                
+                // Hook into draw event
+                table.on('draw', function() {
+                    console.log('Inventory Counts DataTable draw event');
+                    
+                    // Check for pending modal
+                    const pendingId = localStorage.getItem('pendingInventoryCountModal');
+                    if (pendingId) {
+                        console.log('Attempting to open modal for count ID:', pendingId);
+                        
+                        // Try to find and click the button
+                        setTimeout(function() {
+                            const button = $('.view-request-btn[data-id="' + pendingId + '"]');
+                            if (button.length) {
+                                console.log('Found view button, clicking...');
+                                button.click();
+                                localStorage.removeItem('pendingInventoryCountModal');
+                            } else {
+                                console.log('View button not found yet, will retry...');
+                            }
+                        }, 1000);
+                    }
+                });
+            });
+        }
+        
+        // Also check after page load
+        setTimeout(function() {
+            const pendingId = localStorage.getItem('pendingInventoryCountModal');
+            if (pendingId) {
+                console.log('Page load check - Pending count ID:', pendingId);
+                
+                // Try multiple times
+                let attempts = 0;
+                const maxAttempts = 5;
+                
+                function tryOpenModal() {
+                    attempts++;
+                    console.log(`Attempt ${attempts} to find button for ID: ${pendingId}`);
+                    
+                    const button = $('.view-request-btn[data-id="' + pendingId + '"]');
+                    if (button.length) {
+                        console.log('Found button on attempt', attempts);
+                        button.click();
+                        localStorage.removeItem('pendingInventoryCountModal');
+                    } else if (attempts < maxAttempts) {
+                        setTimeout(tryOpenModal, 1000);
+                    } else {
+                        console.log('Could not find button after', maxAttempts, 'attempts');
+                    }
+                }
+                
+                tryOpenModal();
+            }
+        }, 2000);
+    });
+</script>
+@endpush
 @endsection
 
 @push('scripts')
@@ -1346,6 +1431,7 @@
                         } else {
                             location.reload();
                         }
+                        updateNotificationBadges();
                     } else {
                         showNotification('error', response.message || 'Failed to approve request');
                     }
@@ -1369,6 +1455,30 @@
                     }
                     
                     showNotification('error', errorMessage);
+                }
+            });
+        }
+
+        function updateNotificationBadges() {
+            $.ajax({
+                url: '{{ route("notification.counts") }}',
+                type: 'GET',
+                success: function(data) {
+                    // Update Stock Requests badge
+                    var stockRequestBadge = $('#stockRequestBadge');
+                    if (data.pendingStockRequests > 0) {
+                        stockRequestBadge.text(data.pendingStockRequests).show();
+                    } else {
+                        stockRequestBadge.hide();
+                    }
+                    
+                    // Update Stock Counts badge (in case you want to update both)
+                    var stockCountBadge = $('#stockCountBadge');
+                    if (data.pendingStockCounts > 0) {
+                        stockCountBadge.text(data.pendingStockCounts).show();
+                    } else {
+                        stockCountBadge.hide();
+                    }
                 }
             });
         }

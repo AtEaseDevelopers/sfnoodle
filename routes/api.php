@@ -74,6 +74,14 @@ Route::group(['prefix' => 'v1'], function () {
     //dashboard
     Route::post('/driver/dashboard', [App\Http\Controllers\Api\V1\DriverController::class, 'dashboard']);
 
+    //notification
+    Route::get('/driver/notifications', [App\Http\Controllers\Api\V1\DriverController::class, 'getNotifications']);
+    Route::post('/driver/notifications/read', [App\Http\Controllers\Api\V1\DriverController::class, 'markAsRead']);
+    Route::post('/driver/notifications/read-all', [App\Http\Controllers\Api\V1\DriverController::class, 'markAllAsRead']);
+
+    Route::post('/driver/register-fcm-token', [App\Http\Controllers\Api\V1\DriverController::class, 'registerFCMToken']);
+    Route::post('/driver/remove-fcm-token', [App\Http\Controllers\Api\V1\DriverController::class, 'removeFCMToken']);
+
     //sales Order
     Route::get('/driver/get-sales-order-fields', [App\Http\Controllers\Api\V1\DriverController::class, 'getsalesorderFields']);
     Route::post('/driver/create-sales-order', [App\Http\Controllers\Api\V1\DriverController::class, 'createSalesOrder']);
@@ -91,7 +99,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/check-in-out', [App\Http\Controllers\Api\V1\DriverController::class, 'checkInOut']);
 
     //stock
-    Route::get('/driver/get-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getAllProduct']);
+    Route::get('/driver/get-product/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getAllProduct']);
     Route::post('/driver/stock-request', [App\Http\Controllers\Api\V1\DriverController::class, 'StockRequest']);
     Route::post('/driver/stock-count', [App\Http\Controllers\Api\V1\DriverController::class, 'StockCount']);
     Route::get('/driver/stock-count-status', [App\Http\Controllers\Api\V1\DriverController::class, 'StockCountStatus']);

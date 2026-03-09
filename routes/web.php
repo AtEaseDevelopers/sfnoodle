@@ -455,10 +455,9 @@ Route::group(['middleware' => ['auth']], function() {
 
     });
     //notifications
-    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'getNotifications'])->name('notifications.index');
-    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount']);
-    Route::put('/notifications/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
-    Route::put('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
+    Route::post('/notifications/{notification}/mark-as-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
 
     //trip summarize 
     Route::get('/tripsummaries/{trip_id}', [App\Http\Controllers\TripController::class, 'generateTripReportPDF'])->name('tripsummaries'); 
@@ -481,6 +480,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/inventoryBalances/stockin', [App\Http\Controllers\InventoryBalanceController::class, 'stockin'])->name('inventoryBalances.stockin');
         Route::get('/inventoryBalances/getstock/{lorry_id}/{product_id}', [App\Http\Controllers\InventoryBalanceController::class, 'getstock'])->name('inventoryBalances.getstock');
         Route::post('/inventoryBalances/stockout', [App\Http\Controllers\InventoryBalanceController::class, 'stockout'])->name('inventoryBalances.stockout');
+        Route::get('inventoryBalances/get-products-by-driver', [App\Http\Controllers\InventoryBalanceController::class, 'getProductsByDriver'])->name('inventoryBalances.getProductsByDriver');
     });
 
     Route::group(['middleware' => ['permission:stockrequest']], function() {
@@ -499,6 +499,10 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/inventoryRequests/approve/{id}', [App\Http\Controllers\InventoryRequestController::class, 'approve'])->name('inventoryRequests.approve');
         // Reject
         Route::post('/inventoryRequests/reject/{id}', [App\Http\Controllers\InventoryRequestController::class, 'reject'])->name('inventoryRequests.reject');
+
+        Route::get('/notification-counts', [App\Http\Controllers\InventoryRequestController::class, 'getNotificationCounts'])->name('notification.counts');
+
+
     });
 
     Route::group(['middleware' => ['permission:stockreturn']], function() {

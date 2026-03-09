@@ -9,8 +9,6 @@ use Yajra\DataTables\DataTables;
 
 class InventoryBalanceDataTable extends DataTable
 {
-    protected $productOrder = [];
-    
     /**
      * Build DataTable class.
      *
@@ -20,37 +18,6 @@ class InventoryBalanceDataTable extends DataTable
     public function dataTable($query)
     {
         return DataTables::of($query)
-            ->addColumn('product_details', function($driver) {
-                // Get all products with their quantities
-                $productQuantities = [];
-                
-                foreach ($driver->inventoryBalances as $balance) {
-                    if ($balance->quantity != 0 && $balance->product) {
-                        $productQuantities[$balance->product->name] = $balance->quantity;
-                    }
-                }
-                
-                // Ensure all products are in the same order
-                $orderedItems = [];
-                foreach ($this->getProductOrder() as $productName) {
-                    if (isset($productQuantities[$productName])) {
-                        $orderedItems[] = '<strong>' . e($productName) . '</strong>: ' . $productQuantities[$productName];
-                    }
-                }
-                
-                // Add any remaining products (in case new products were added)
-                foreach ($productQuantities as $product => $quantity) {
-                    if (!in_array($product, $this->getProductOrder())) {
-                        $orderedItems[] = '<strong>' . e($product) . '</strong>: ' . $quantity;
-                    }
-                }
-                
-                if (empty($orderedItems)) {
-                    return '<span class="text-muted">No items</span>';
-                }
-                
-                return implode(' | ', $orderedItems);
-            })
             ->addColumn('total_quantity', function($driver) {
                 $total = $driver->inventoryBalances->sum('quantity');
                 return '<span class="font-weight-bold text-primary">' . $total . '</span>';
@@ -62,7 +29,18 @@ class InventoryBalanceDataTable extends DataTable
                     ->count();
                 return '<span class="badge badge-secondary">' . $count . '</span>';
             })
-            ->rawColumns(['product_details', 'total_quantity', 'product_count'])
+            ->addColumn('action', function($driver) {
+                $viewBtn = '<button type="button" 
+                               class="btn btn-sm btn-outline-primary view-products" 
+                               data-driver-id="' . $driver->id . '"
+                               data-driver-name="' . e($driver->name) . '"
+                               data-toggle="modal" 
+                               data-target="#productDetailsModal">
+                                <i class="fa fa-eye"></i> View Details
+                            </button>';
+                return $viewBtn;
+            })
+            ->rawColumns(['total_quantity', 'product_count', 'action'])
             ->addIndexColumn();
     }
 
@@ -77,26 +55,13 @@ class InventoryBalanceDataTable extends DataTable
         return $model->newQuery()
             ->with(['inventoryBalances' => function($query) {
                 $query->where('quantity', '<>', 0)
-                      ->with('product:id,name');
+                      ->with('product:id,name,code');
             }])
             ->whereHas('inventoryBalances', function($query) {
                 $query->where('quantity', '<>', 0);
             })
             ->select('drivers.*')
             ->orderBy('name');
-    }
-
-    /**
-     * Get the product order from database
-     */
-    protected function getProductOrder()
-    {
-        if (empty($this->productOrder)) {
-            // Get all product names sorted alphabetically
-            $this->productOrder = Product::orderBy('name')->pluck('name')->toArray();
-        }
-        
-        return $this->productOrder;
     }
 
     /**
@@ -173,21 +138,14 @@ class InventoryBalanceDataTable extends DataTable
             [
                 'data' => 'name',
                 'title' => 'Agent',
-                'width' => '15%'
-            ],
-            [
-                'data' => 'product_details',
-                'title' => 'Products & Quantities',
-                'orderable' => false,
-                'searchable' => false,
-                'width' => '60%'
+                'width' => '25%'
             ],
             [
                 'data' => 'product_count',
-                'title' => 'Types',
-                'orderable' => false,
+                'title' => 'Product Types',
+            'orderable' => false,
                 'searchable' => false,
-                'width' => '10%',
+                'width' => '15%',
                 'className' => 'text-center'
             ],
             [
@@ -195,8 +153,16 @@ class InventoryBalanceDataTable extends DataTable
                 'title' => 'Total Items',
                 'orderable' => true,
                 'searchable' => false,
-                'width' => '10%',
+                'width' => '15%',
                 'className' => 'text-center font-weight-bold'
+            ],
+            [
+                'data' => 'action',
+                'title' => 'Action',
+                'orderable' => false,
+                'searchable' => false,
+                'width' => '20%',
+                'className' => 'text-center'
             ]
         ];
     }

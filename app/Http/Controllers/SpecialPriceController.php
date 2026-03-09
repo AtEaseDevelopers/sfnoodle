@@ -12,6 +12,7 @@ use App\Http\Controllers\AppBaseController;
 use Response;
 use Illuminate\Support\Facades\Crypt;
 use App\Models\SpecialPrice;
+use App\Models\Product; // Add this import
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -58,6 +59,12 @@ class SpecialPriceController extends AppBaseController
     public function store(CreateSpecialPriceRequest $request)
     {
         $input = $request->all();
+
+        // Get the product and set the uom from the product
+        $product = Product::find($input['product_id']);
+        if ($product) {
+            $input['uom'] = $product->uom;
+        }
 
         $specialPrice = $this->specialPriceRepository->create($input);
         Flash::success(__('special_prices.special_price_saved_successfully'));
@@ -127,6 +134,12 @@ class SpecialPriceController extends AppBaseController
         }
 
         $input = $request->all();
+
+        // Get the current product's uom and update it
+        $product = Product::find($input['product_id']);
+        if ($product) {
+            $input['uom'] = $product->uom;
+        }
 
         $specialPrice = $this->specialPriceRepository->update($input, $id);
 
