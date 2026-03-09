@@ -37,7 +37,8 @@ class Invoice extends Model
         'created_by',
         'is_driver',
         'trip_id',
-        'driver_id'
+        'driver_id',
+        'autocount',
     ];
     
     protected $casts = [
@@ -91,6 +92,7 @@ class Invoice extends Model
                 $model->is_driver = false; // Admin portal creates as user
             }
         });
+
     }
 
     public static function generateInvoiceNumber($driver_id = null)

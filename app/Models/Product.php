@@ -33,6 +33,7 @@ class Product extends Model
         'code',
         'name',
         'price',
+        'uom',
         'status',
         'category_id'
     ];
@@ -47,6 +48,7 @@ class Product extends Model
         'code' => 'string',
         'name' => 'string',
         'price' => 'float',
+        'uom' => 'string',
         'status' => 'integer',
         'category_id' => 'integer',
     ];
