@@ -31,6 +31,7 @@ class InvoicePayment extends Model
         'customer_id',
         'amount',
         'status',
+        'autocount',
         'attachment',
         'driver_id',
         'user_id',

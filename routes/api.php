@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\V1\AutoCountSyncController;
 
 /*
 |--------------------------------------------------------------------------
@@ -127,6 +128,16 @@ Route::group(['prefix' => 'v1'], function () {
 
     Route::post('/driver/manager-login', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogin']);
     Route::post('/driver/manager-logout', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogout']);
+
+    // AutoCount sync: system provides API only; no web UI. Plugin polls every 5 mins and creates IV/ARPayment in AutoCount.
+    Route::post('/autocount/sync-customers', [AutoCountSyncController::class, 'syncCustomers']);
+    Route::post('/autocount/sync-products', [AutoCountSyncController::class, 'syncProducts']);
+    Route::get('/autocount/pending-invoices', [AutoCountSyncController::class, 'getPendingInvoices']);
+    Route::post('/autocount/mark-synced', [AutoCountSyncController::class, 'markSynced']);
+    Route::get('/autocount/pending-invoice-payments', [AutoCountSyncController::class, 'getPendingInvoicePayments']);
+    Route::post('/autocount/mark-payment-synced', [AutoCountSyncController::class, 'markPaymentSynced']);
+    Route::post('/autocount/pull-invoice-payments', [AutoCountSyncController::class, 'pullInvoicePayments']);
+    Route::post('/autocount/special-prices', [AutoCountSyncController::class, 'syncSpecialPrices']);
 
 });
 
