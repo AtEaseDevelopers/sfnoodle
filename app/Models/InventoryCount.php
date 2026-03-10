@@ -58,7 +58,7 @@ class InventoryCount extends Model
         'driver_id' => 'required|exists:drivers,id',
         'items' => 'required|array|min:1',
         'items.*.product_id' => 'required|exists:products,id',
-        'items.*.quantity' => 'required|integer|min:1',
+        'items.*.quantity' => 'required|integer|min:0',
         'rejection_reason' => 'nullable|string|required_if:status,rejected',
         'remarks' => 'nullable|string|max:500'
     ];

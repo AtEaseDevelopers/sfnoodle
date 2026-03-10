@@ -121,7 +121,7 @@
     <table>
         <tr>
             <td class="left-align">Document #</td>
-            <td class="right-align">{{ date_format(date_create($salesInvoice['created_at']),'d M Y H:i A') ?? '' }}</td>
+            <td class="right-align">{{ date_format(date_create($salesInvoice['date']),'d M Y H:i A') ?? '' }}</td>
         </tr>
         <tr>
             <td class="left-align">Invoice No:</td>
