@@ -265,6 +265,12 @@ class InvoiceDataTable extends DataTable
                 'name' => 'invoices.status'
             ]),
 
+            'autocount' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Autocount',
+                'data' => 'autocount',
+                'name' => 'invoices.autocount'
+            ]),
+
         ];
     }
 
