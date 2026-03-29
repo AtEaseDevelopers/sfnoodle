@@ -5072,6 +5072,7 @@ class DriverController extends Controller
                     'trip_id' => $invoice->trip_id,
                     'items_count' => $invoice->invoiceDetails->count(),
                     'allow_cancel' => $allowCancel,
+                    'payment_remark' => $invoice->invoicePayments->isNotEmpty() ? $invoice->invoicePayments->first()->remark : '',
                     'items' => $invoice->invoiceDetails->map(function($detail) {
                         return [
                             'product_id' => $detail->product_id,
@@ -5178,6 +5179,7 @@ class DriverController extends Controller
                 'created_at' => $invoice->created_at->format('Y-m-d H:i:s'),
                 'items_count' => $invoice->invoiceDetails->count(),
                 'allow_cancel' => $allowCancel,
+                'payment_remark' => $invoice->invoicePayments->isNotEmpty() ? $invoice->invoicePayments->first()->remark : '',
                 'items' => $invoice->invoiceDetails->map(function($detail) {
                     return [
                         'id' => $detail->id,
@@ -5498,7 +5500,7 @@ class DriverController extends Controller
             }
             
             $categories = ProductCategory::with(['products' => function($query) {
-                $query->select('id', 'name', 'category_id', 'price', 'status')
+                $query->select('id', 'name', 'category_id', 'price', 'status','code')
                     ->where('status', 1)
                     ->orderBy('name');
             }])
@@ -5521,6 +5523,7 @@ class DriverController extends Controller
                         return [
                             'id' => $product->id,
                             'name' => $product->name,
+                            'code' => $product->code,
                             'price' => $price,
                             'quantity' => $quantity,
                             'status' => $product->getStatusTextAttribute()
