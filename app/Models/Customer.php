@@ -27,6 +27,7 @@ class Customer extends Model
         'status',
         'sst',
         'tin',
+        'driver_id'
     ];
 
     /**
@@ -57,6 +58,7 @@ class Customer extends Model
         'phone' => 'nullable|string|max:20|nullable|string|max:20',
         'address' => 'nullable|string|max:65535|nullable|string|max:65535',
         'status' => 'required',
+        'driver_id' => 'nullable|exists:drivers,id',
         'sst' => 'nullable|string|max:255',
         'tin' => 'nullable|string|max:255',
         'created_at' => 'nullable|nullable',
@@ -69,6 +71,11 @@ class Customer extends Model
     public function customerGroups()
     {
         return CustomerGroup::whereRaw("JSON_CONTAINS(customer_ids, '" . $this->id . "', '$[*].id')");
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'driver_id');
     }
 
     /**

@@ -162,6 +162,10 @@ class ViewServiceProvider extends ServiceProvider
             $driverItems = Driver::orderBy("name")->pluck('name','id')->toArray();
             $view->with('driverItems', $driverItems);
         });
+        View::composer(['customers.fields'], function ($view) {
+            $driverItems = Driver::orderBy("name")->pluck('name','id')->toArray();
+            $view->with('driverItems', $driverItems);
+        });
         View::composer(['sales_invoices.fields'], function ($view) {
             $customerItems = Customer::orderBy("company")->pluck('company','id')->toArray();
             $view->with('customerItems', $customerItems);

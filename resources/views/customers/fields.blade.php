@@ -10,6 +10,15 @@
     {!! Form::text('company', null, ['class' => 'form-control', 'maxlength' => 255]) !!}
 </div>
 
+<!-- Driver Field -->
+<div class="form-group col-sm-6">
+    {!! Form::label('driver_id', 'Agent') !!}
+    {!! Form::select('driver_id', $driverItems, $salesInvoice->driver_id ?? null, [
+        'class' => 'form-control select2-driver', 
+        'placeholder' => 'Select Agent...'
+    ]) !!}
+</div>
+
 <!-- Paymentterm Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('paymentterm', 'Payment Term') !!}:<span class="asterisk"> *</span>
