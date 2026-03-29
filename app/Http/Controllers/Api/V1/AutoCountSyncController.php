@@ -611,6 +611,7 @@ class AutoCountSyncController extends Controller
 
                 $values = [
                     'price'  => $fixedPrice,
+                    'uom'    => $uom,
                     'status' => 1,
                 ];
 
