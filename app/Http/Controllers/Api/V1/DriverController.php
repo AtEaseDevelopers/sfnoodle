@@ -3897,7 +3897,7 @@ class DriverController extends Controller
                     'customer' => [
                         'id' => $invoice->customer_id,
                         'name' => $invoice->customer->company ?? 'N/A',
-                        'paymentterm' => $invoice->customer->paymentterm ?? '',
+                        'paymentterm' => strtolower($invoice->customer->paymentterm ?? ''),
                         'phone' => $invoice->customer->phone ?? '',
                     ],                    
                     'paymentterm' => $invoice->paymentterm,
@@ -3986,7 +3986,7 @@ class DriverController extends Controller
                 'customer' => [
                     'id' => $salesInvoice->customer_id,
                     'name' => $salesInvoice->customer->company ?? 'N/A',
-                    'paymentterm' => $salesInvoice->customer->paymentterm ?? '',
+                    'paymentterm' => strtolower($salesInvoice->customer->paymentterm ?? ''),
                     'phone' => $salesInvoice->customer->phone ?? '',
                 ],
                 'paymentterm' => $salesInvoice->paymentterm,

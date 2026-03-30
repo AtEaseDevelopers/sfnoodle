@@ -19,9 +19,7 @@ class CustomerDataTable extends DataTable
         $dataTable = new EloquentDataTable($query);
         
         return $dataTable
-            ->addColumn('agent_group', function ($customer) {
-                return optional($customer->driver)->name ?? '-';
-            })
+
             ->addColumn('action', 'customers.datatables_actions')
             ->addColumn('customer_groups', function ($customer) {
                 // Get ALL customer groups and filter in PHP (simpler but less efficient for large datasets)
@@ -249,15 +247,6 @@ class CustomerDataTable extends DataTable
                 'width' => '300px' 
             ]),
 
-            'agent_group' => new \Yajra\DataTables\Html\Column([
-                'title' => 'Agent Group',
-                'data' => 'agent_group',
-                'name' => 'agent_group',
-                'orderable' => true,
-                'searchable' => true,
-                'width' => '150px'
-            ]),
-            
             'paymentterm' => new \Yajra\DataTables\Html\Column([
                 'title' => 'Payment Term',
                 'data' => 'paymentterm',
