@@ -20,6 +20,7 @@ use App\Models\CustomerGroup;
 use Illuminate\Support\Facades\Session;
 use Exception;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Driver;
 
 class CustomerController extends AppBaseController
 {
@@ -72,37 +73,52 @@ class CustomerController extends AppBaseController
         }
 
         $input = $request->all();
-        $customer = $this->customerRepository->create($input);
-
-        if(!empty($input['driver_id'])) {
-            // Check if the driver already has a customer group
-            $existingAssign = Assign::where('driver_id', $input['driver_id'])->first();
+        
+        // Handle driver - store name instead of ID
+        if(!empty($input['driver'])) {
+            // Find driver by name to get ID for assignment logic
+            $driver = Driver::where('name', $input['driver'])->first();
             
-            if ($existingAssign) {
-                // Driver has an existing group, add this customer to that group
-                $customerGroup = CustomerGroup::find($existingAssign->customer_group_id);
+            if ($driver) {
+                // Check if the driver already has a customer group
+                $existingAssign = Assign::where('driver_id', $driver->id)->first();
                 
-                // Add customer to the group
-                $customerGroup->addCustomerWithSequence($customer->id);
-                $customerGroup->save();
-            } else {
-                // Driver doesn't have a group, create new group and assignment
-                $customerGroup = CustomerGroup::create([
-                    'name' => $input['company'], 
-                    'customer_ids' => [
-                        [
-                            'id' => $customer->id,
-                            'sequence' => 1
+                if ($existingAssign) {
+                    // Driver has an existing group, we'll add the customer after creation
+                    $customer = $this->customerRepository->create($input);
+                    
+                    // Add customer to the existing group
+                    $customerGroup = CustomerGroup::find($existingAssign->customer_group_id);
+                    $customerGroup->addCustomerWithSequence($customer->id);
+                    $customerGroup->save();
+                } else {
+                    // Create customer first
+                    $customer = $this->customerRepository->create($input);
+                    
+                    // Driver doesn't have a group, create new group and assignment
+                    $customerGroup = CustomerGroup::create([
+                        'name' => $input['company'], 
+                        'customer_ids' => [
+                            [
+                                'id' => $customer->id,
+                                'sequence' => 1
+                            ]
                         ]
-                    ]
-                ]);
-                
-                // Create assignment
-                Assign::create([
-                    'driver_id' => $input['driver_id'],
-                    'customer_group_id' => $customerGroup->id
-                ]);
+                    ]);
+                    
+                    // Create assignment
+                    Assign::create([
+                        'driver_id' => $driver->id,
+                        'customer_group_id' => $customerGroup->id
+                    ]);
+                }
+            } else {
+                // Driver name doesn't exist in drivers table, just create customer without group
+                $customer = $this->customerRepository->create($input);
             }
+        } else {
+            // No driver provided, just create customer
+            $customer = $this->customerRepository->create($input);
         }
 
         Flash::success('Customer saved successfully.');
@@ -168,7 +184,7 @@ class CustomerController extends AppBaseController
             Flash::error('Customer not found.');
             return redirect(route('customers.index'));
         }
-        
+
         $rules = [
             'code' => 'required|string|max:255|unique:customers,code,'.$id,
             'company' => 'required|string|max:255',
@@ -177,7 +193,8 @@ class CustomerController extends AppBaseController
             'address' => 'nullable|string|max:65535',
             'status' => 'required',
             'created_at' => 'nullable',
-            'updated_at' => 'nullable'
+            'updated_at' => 'nullable',
+            'driver' => 'nullable|string|max:255'
         ];
         
         // Validate using model rules
@@ -190,36 +207,58 @@ class CustomerController extends AppBaseController
         }
 
         $input = $request->all();
-        
-        // Store old driver_id before updating customer
-        $oldDriverId = $customer->driver_id ?? null;
-        
+        // Store old driver name before updating customer
+        $oldDriverName = $customer->driver ?? null;
+
         // Update customer
-        $customer = $this->customerRepository->update($input, $id);
-        
+        $customer->code = $input['code'];
+        $customer->company = $input['company'];
+        $customer->paymentterm = $input['paymentterm'];
+        $customer->phone = $input['phone'] ?? null;
+        $customer->address = $input['address'] ?? null;
+        $customer->status = $input['status'];
+        $customer->driver = $input['driver'] ?? null;
+        $customer->sst = $input['sst'] ?? null;
+        $customer->tin = $input['tin'] ?? null;
+
+        $customer->save();
+
         // Handle driver assignment
-        if(!empty($input['driver_id'])) {
-            $newDriverId = $input['driver_id'];
+        if(!empty($input['driver'])) {
+            $newDriverName = $input['driver'];
+            
+            // Find driver by name to get ID
+            $newDriver = Driver::where('name', $newDriverName)->first();
+            
+            if (!$newDriver) {
+                // If driver doesn't exist in drivers table, just update customer and skip group logic
+                Flash::success('Customer updated successfully.');
+                return redirect(route('customers.index'));
+            }
+            
+            // Find old driver by name to get ID
+            $oldDriver = null;
+            if ($oldDriverName) {
+                $oldDriver = Driver::where('name', $oldDriverName)->first();
+            }
             
             // Check if the driver has changed
-            if ($oldDriverId != $newDriverId) {
+            if ($oldDriverName != $newDriverName) {
                 // Remove customer from old driver's group if they had one
-                if ($oldDriverId) {
-                    $oldAssign = Assign::where('driver_id', $oldDriverId)->first();
+                if ($oldDriver) {
+                    $oldAssign = Assign::where('driver_id', $oldDriver->id)->first();
                     if ($oldAssign) {
                         $oldGroup = CustomerGroup::find($oldAssign->customer_group_id);
                         if ($oldGroup) {
                             // Remove customer from old group
                             $oldGroup->removeCustomer($customer->id);
                             $oldGroup->save();
-                            // Note: We DO NOT delete the old group even if empty
-                            // Keep it for future use when new customers are assigned to this driver
                         }
                     }
                 }
                 
                 // Add customer to new driver's group
-                $newAssign = Assign::where('driver_id', $newDriverId)->first();
+                $newAssign = Assign::where('driver_id', $newDriver->id)->first();
                 
                 if ($newAssign) {
                     // New driver has an existing group, add customer to it
@@ -240,20 +279,20 @@ class CustomerController extends AppBaseController
                     
                     // Create assignment
                     Assign::create([
-                        'driver_id' => $newDriverId,
+                        'driver_id' => $newDriver->id,
                         'customer_group_id' => $newGroup->id
                     ]);
                 }
             } else {
                 // Same driver, just update group name if needed and ensure customer is in the group
-                $assign = Assign::where('driver_id', $newDriverId)->first();
+                $assign = Assign::where('driver_id', $newDriver->id)->first();
                 
                 if ($assign) {
                     $group = CustomerGroup::find($assign->customer_group_id);
                     
                     // Update group name if needed
                     if ($group->name != $input['company']) {
-                        $group->name = $input['company'] ;
+                        $group->name = $input['company'];
                         $group->save();
                     }
                     
@@ -275,16 +314,17 @@ class CustomerController extends AppBaseController
             }
         } else {
             // No driver selected - remove customer from any group they're in
-            if ($oldDriverId) {
-                $oldAssign = Assign::where('driver_id', $oldDriverId)->first();
-                if ($oldAssign) {
-                    $oldGroup = CustomerGroup::find($oldAssign->customer_group_id);
-                    if ($oldGroup) {
-                        // Remove customer from old group
-                        $oldGroup->removeCustomer($customer->id);
-                        $oldGroup->save();
-                        // Note: We DO NOT delete the old group even if empty
-                        // Keep it for future use
+            if ($oldDriverName) {
+                $oldDriver = Driver::where('name', $oldDriverName)->first();
+                if ($oldDriver) {
+                    $oldAssign = Assign::where('driver_id', $oldDriver->id)->first();
+                    if ($oldAssign) {
+                        $oldGroup = CustomerGroup::find($oldAssign->customer_group_id);
+                        if ($oldGroup) {
+                            // Remove customer from old group
+                            $oldGroup->removeCustomer($customer->id);
+                            $oldGroup->save();
+                        }
                     }
                 }
             }
@@ -347,8 +387,6 @@ class CustomerController extends AppBaseController
             // Remove customer from the group
             $group->removeCustomer($id);
             $group->save();
-            // Note: We DO NOT delete the group even if empty
-            // Keep it for future use when new customers are assigned to this driver
         }
 
         // Delete the customer

@@ -19,13 +19,10 @@ class CustomerDataTable extends DataTable
         $dataTable = new EloquentDataTable($query);
         
         return $dataTable
-
             ->addColumn('action', 'customers.datatables_actions')
             ->addColumn('driver_name', function ($customer) {
-                if ($customer->driver) {
-                    return $customer->driver->name;
-                }
-                return '-';
+                // Directly return the driver name since it's stored in the driver field
+                return $customer->driver ?? '-';
             })
             ->addColumn('customer_groups', function ($customer) {
                 // Get ALL customer groups and filter in PHP (simpler but less efficient for large datasets)
@@ -53,6 +50,12 @@ class CustomerDataTable extends DataTable
                 
                 return $customerGroups->implode(', ');
             })
+            ->filterColumn('driver_name', function ($query, $keyword) {
+                if (!empty($keyword)) {
+                    // Filter by driver name stored directly in customers table
+                    $query->where('driver', 'like', "%{$keyword}%");
+                }
+            })
             ->filterColumn('customer_groups', function ($query, $keyword) {
                 if (!empty($keyword)) {
                     // For filtering, we need to use a subquery
@@ -68,6 +71,9 @@ class CustomerDataTable extends DataTable
                             )");
                     });
                 }
+            })
+            ->orderColumn('driver_name', function ($query, $order) {
+                $query->orderBy('driver', $order);
             })
             ->orderColumn('customer_groups', function ($query, $order) {
                 // For ordering, use a subquery with LIKE pattern
@@ -97,9 +103,7 @@ class CustomerDataTable extends DataTable
     public function query(Customer $model)
     {
         return $model->newQuery()
-            ->select('customers.*')
-            ->with('driver');
-            
+            ->select('customers.*');
     }
 
     /**
@@ -185,7 +189,20 @@ class CustomerDataTable extends DataTable
                         'render' => 'function(data, type){return data == 1 ? "Active" : "Inactive";}'
                     ],
                     [
-                        'targets' => 6, // Customer Groups column index
+                        'targets' => 6, // Sales Agent column index
+                        'render' => 'function(data, type, row){
+                            if (type === "display") {
+                                if (!data || data === "-" || data === "") {
+                                    return "-";
+                                }
+                                // Wrap in span with title for full text on hover
+                                return "<span title=\'" + data + "\'>" + data + "</span>";
+                            }
+                            return data;
+                        }'
+                    ],
+                    [
+                        'targets' => 7, // Customer Groups column index
                         'render' => 'function(data, type, row){
                             if (type === "display") {
                                 if (!data || data === "-" || data === "") {

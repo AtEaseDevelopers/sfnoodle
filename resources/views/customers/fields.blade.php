@@ -12,8 +12,8 @@
 
 <!-- Driver Field -->
 <div class="form-group col-sm-6">
-    {!! Form::label('driver_id', 'Agent') !!}
-    {!! Form::select('driver_id', $driverItems, $salesInvoice->driver_id ?? null, [
+    {!! Form::label('driver', 'Agent') !!}
+    {!! Form::select('driver', $driverItems, $customer->driver  ?? null, [
         'class' => 'form-control select2-driver', 
         'placeholder' => 'Select Agent...'
     ]) !!}

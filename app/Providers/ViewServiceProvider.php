@@ -163,7 +163,7 @@ class ViewServiceProvider extends ServiceProvider
             $view->with('driverItems', $driverItems);
         });
         View::composer(['customers.fields'], function ($view) {
-            $driverItems = Driver::orderBy("name")->pluck('name','id')->toArray();
+            $driverItems = Driver::orderBy("name")->pluck('name','name')->toArray();
             $view->with('driverItems', $driverItems);
         });
         View::composer(['sales_invoices.fields'], function ($view) {
