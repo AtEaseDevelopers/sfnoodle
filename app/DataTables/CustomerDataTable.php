@@ -21,6 +21,12 @@ class CustomerDataTable extends DataTable
         return $dataTable
 
             ->addColumn('action', 'customers.datatables_actions')
+            ->addColumn('driver_name', function ($customer) {
+                if ($customer->driver) {
+                    return $customer->driver->name;
+                }
+                return '-';
+            })
             ->addColumn('customer_groups', function ($customer) {
                 // Get ALL customer groups and filter in PHP (simpler but less efficient for large datasets)
                 $allGroups = \App\Models\CustomerGroup::withTrashed() // Include soft deleted if needed
@@ -91,7 +97,9 @@ class CustomerDataTable extends DataTable
     public function query(Customer $model)
     {
         return $model->newQuery()
-            ->select('customers.*');
+            ->select('customers.*')
+            ->with('driver');
+            
     }
 
     /**
@@ -268,6 +276,15 @@ class CustomerDataTable extends DataTable
                 'width' => '80px'
             ]),
 
+            'driver' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Sales Agent',
+                'data' => 'driver_name',
+                'name' => 'driver_name',
+                'orderable' => true,
+                'searchable' => true,
+                'width' => '150px'
+            ]),
+            
             'customer_groups' => new \Yajra\DataTables\Html\Column([
                 'title' => 'Customer Groups',
                 'data' => 'customer_groups',
