@@ -53,6 +53,7 @@ class AutoCountSyncController extends Controller
                 $company = isset($row['CompanyName']) ? trim((string) $row['CompanyName']) : '';
                 $phone   = isset($row['phone']) ? trim((string) $row['phone']) : null;
                 $address = isset($row['Address']) ? trim((string) $row['Address']) : null;
+                $driver  = isset($row['SalesAgent']) ? trim((string) $row['SalesAgent']) : null;
 
                 // Basic validation – must have code and company
                 if ($code === '' || $company === '') {
@@ -72,6 +73,7 @@ class AutoCountSyncController extends Controller
                     'paymentterm' => 'Cash', // default for now
                     'phone'       => $phone,
                     'address'     => $address,
+                    'driver'      => $driver,
                     'status'      => 1,      // active
                     // tin / sst left null unless provided later
                 ];
