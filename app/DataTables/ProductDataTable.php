@@ -20,9 +20,9 @@ class ProductDataTable extends DataTable
         $dataTable = new EloquentDataTable($query);
 
         return $dataTable
-            ->addColumn('category_name', function ($product) {
-                return $product->category->name ?? 'N/A';
-            })
+            // ->addColumn('category_name', function ($product) {
+            //     return $product->category->name ?? 'N/A';
+            // })
             ->addColumn('status_text', function ($product) {
                 return $product->status == 1 ? 'Active' : 'Inactive';
             })
@@ -45,7 +45,6 @@ class ProductDataTable extends DataTable
     public function query(Product $model)
     {
         return $model->newQuery()
-            ->with(['category:id,name'])
             ->select('products.*');
     }
 
@@ -57,8 +56,8 @@ class ProductDataTable extends DataTable
     public function html()
     {
         // Get categories for dropdown filter
-        $categories = ProductCategory::active()->pluck('name', 'id')->toArray();
-        $categoryOptions = json_encode($categories);
+        // $categories = ProductCategory::active()->pluck('name', 'id')->toArray();
+        // $categoryOptions = json_encode($categories);
         
         return $this->builder()
             ->columns($this->getColumns())
@@ -133,10 +132,10 @@ class ProductDataTable extends DataTable
                         'searchable' => false,
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
-                    [
-                        'targets' => 4, // Category column
-                        'render' => 'function(data, type, row, meta){return row.category_name || "N/A";}'
-                    ],
+                    // [
+                    //     'targets' => 4, // Category column
+                    //     'render' => 'function(data, type, row, meta){return row.category_name || "N/A";}'
+                    // ],
                     [
                         'targets' => 6, // Status column
                         'render' => 'function(data, type, row, meta){return row.status_text || (data == 1 ? "Active" : "Inactive");}'
@@ -144,7 +143,6 @@ class ProductDataTable extends DataTable
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
-                    var categories = ' . $categoryOptions . ';
                     
                     this.api()
                     .columns()
@@ -209,13 +207,13 @@ class ProductDataTable extends DataTable
                 'data' => 'price_formatted',
                 'name' => 'price',
             ]),
-            'category_id' => new \Yajra\DataTables\Html\Column([
-                'title' => trans('Category'),
-                'data' => 'category_name',
-                'name' => 'category.name',
-                'orderable' => true,
-                'searchable' => true
-            ]),
+            // 'category_id' => new \Yajra\DataTables\Html\Column([
+            //     'title' => trans('Category'),
+            //     'data' => 'category_name',
+            //     'name' => 'category.name',
+            //     'orderable' => true,
+            //     'searchable' => true
+            // ]),
             'uom' => new \Yajra\DataTables\Html\Column([  // Added
                 'title' => trans('UOM'),
                 'data' => 'uom',

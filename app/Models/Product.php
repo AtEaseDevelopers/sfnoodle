@@ -65,7 +65,7 @@ class Product extends Model
         'code' => 'required|string|max:255|unique:products,code',
         'name' => 'required|string|max:255',
         'price' => 'required|numeric|min:0',
-        'category_id' => 'required|exists:product_categories,id',
+        'category_id' => 'nullable|exists:product_categories,id',
         'status' => 'required|integer|in:0,1',
         'uom' => 'required|string|max:50',  
 
