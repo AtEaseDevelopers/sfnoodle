@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Http\Request;
 use App\Models\Product;
-use App\Models\ProductCategory; // Add this
+use App\Models\ProductCategory; // Keep if still used elsewhere, but not needed for products
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Invoice;
 use App\Models\InvoiceDetail;
 use App\Models\SpecialPrice;
-use App\Models\Foc; // Fixed case (should be Foc not foc)
+use App\Models\Foc;
 use Illuminate\Support\Facades\Session;
 use Exception;
 use Illuminate\Support\Facades\Validator;
@@ -53,12 +53,17 @@ class ProductController extends AppBaseController
      */
     public function create()
     {
-        // Get active categories for dropdown
-        $categories = ProductCategory::active()
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        // Get unique categories from existing products
+        $existingCategories = Product::whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->pluck('category')
+            ->toArray();
         
-        return view('products.create', compact('categories'));
+        // Sort categories alphabetically
+        sort($existingCategories);
+        
+        return view('products.create', compact('existingCategories'));
     }
 
     /**
@@ -105,9 +110,7 @@ class ProductController extends AppBaseController
             return redirect(route('products.index'));
         }
 
-        // Load category relationship
-        $product->load('category');
-
+        // Remove load category relationship
         return view('products.show')->with('product', $product);
     }
 
@@ -126,23 +129,27 @@ class ProductController extends AppBaseController
 
         if (empty($product)) {
             Flash::error(__('products.product_not_found'));
-
             return redirect(route('products.index'));
         }
 
-        // Get active categories for dropdown
-        $categories = ProductCategory::active()
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        return view('products.edit', compact('product', 'categories'));
+        // Get unique categories from existing products
+        $existingCategories = Product::whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->pluck('category')
+            ->toArray();
+        
+        // Sort categories alphabetically
+        sort($existingCategories);
+        
+        return view('products.edit', compact('product', 'existingCategories'));
     }
 
     /**
      * Update the specified Product in storage.
      *
      * @param int $id
-     * @param UpdateProductRequest $request
+     * @param Request $request
      *
      * @return Response
      */
@@ -156,12 +163,12 @@ class ProductController extends AppBaseController
             return redirect(route('products.index'));
         }
 
-        // Define validation rules
+        // Define validation rules - updated to use 'category' instead of 'category_id'
         $rules = [
             'code' => 'required|string|max:255|unique:products,code,' . $id, 
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'category_id' => 'nullable|exists:product_categories,id',
+            'category' => 'required|string|max:255', // Changed validation
             'uom' => 'required|string|max:50',
             'status' => 'required|integer|in:0,1',
         ];
@@ -174,7 +181,7 @@ class ProductController extends AppBaseController
             'price.required' => 'Product price is required',
             'price.numeric' => 'Price must be a number',
             'price.min' => 'Price cannot be negative',
-            'category_id.exists' => 'Selected category does not exist',
+            'category.string' => 'Category must be text', // Updated message
             'status.required' => 'Status is required',
             'status.in' => 'Invalid status value',
         ]);
@@ -201,6 +208,7 @@ class ProductController extends AppBaseController
 
         return redirect(route('products.index'));
     }
+    
     /**
      * Remove the specified Product from storage.
      *
@@ -219,19 +227,13 @@ class ProductController extends AppBaseController
             return redirect(route('products.index'));
         }
 
-        // $Invoice = Invoice::where('product_id',$id)->get()->toArray();
-        // if(count($Invoice)>0){
-        //     Flash::error('Unable to delete '.$product->name.', '.$product->name.' is being used in Invoice');
-        //     return redirect(route('products.index'));
-        // }
-
         $SpecialPrice = SpecialPrice::where('product_id',$id)->get()->toArray();
         if(count($SpecialPrice)>0){
             Flash::error('Unable to delete '.$product->name.', '.$product->name.' is being used in Special Price');
             return redirect(route('products.index'));
         }
 
-        $foc = Foc::where('product_id',$id)->get()->toArray(); // Fixed case
+        $foc = Foc::where('product_id',$id)->get()->toArray();
         if(count($foc)>0){
             Flash::error('Unable to delete '.$product->name.', '.$product->name.' is being used in Foc');
             return redirect(route('products.index'));
@@ -252,7 +254,6 @@ class ProductController extends AppBaseController
         $count = 0;
 
         foreach ($ids as $id) {
-
             $Invoice = InvoiceDetail::where('product_id',$id)->get()->toArray();
             if(count($Invoice)>0){
                 continue;
@@ -263,7 +264,7 @@ class ProductController extends AppBaseController
                 continue;
             }
 
-            $foc = Foc::where('product_id',$id)->get()->toArray(); // Fixed case
+            $foc = Foc::where('product_id',$id)->get()->toArray();
             if(count($foc)>0){
                 continue;
             }

@@ -5,7 +5,6 @@ namespace App\DataTables;
 use App\Models\Product;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
-use App\Models\ProductCategory;
 
 class ProductDataTable extends DataTable
 {
@@ -20,9 +19,9 @@ class ProductDataTable extends DataTable
         $dataTable = new EloquentDataTable($query);
 
         return $dataTable
-            // ->addColumn('category_name', function ($product) {
-            //     return $product->category->name ?? 'N/A';
-            // })
+            ->addColumn('category_name', function ($product) {
+                return $product->category ?: 'N/A'; // Directly return category string
+            })
             ->addColumn('status_text', function ($product) {
                 return $product->status == 1 ? 'Active' : 'Inactive';
             })
@@ -44,6 +43,7 @@ class ProductDataTable extends DataTable
      */
     public function query(Product $model)
     {
+        // Remove the with('category') since we no longer have relationship
         return $model->newQuery()
             ->select('products.*');
     }
@@ -55,10 +55,6 @@ class ProductDataTable extends DataTable
      */
     public function html()
     {
-        // Get categories for dropdown filter
-        // $categories = ProductCategory::active()->pluck('name', 'id')->toArray();
-        // $categoryOptions = json_encode($categories);
-        
         return $this->builder()
             ->columns($this->getColumns())
             ->minifiedAjax()
@@ -132,12 +128,12 @@ class ProductDataTable extends DataTable
                         'searchable' => false,
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
-                    // [
-                    //     'targets' => 4, // Category column
-                    //     'render' => 'function(data, type, row, meta){return row.category_name || "N/A";}'
-                    // ],
                     [
-                        'targets' => 6, // Status column
+                        'targets' => 4, // Category column
+                        'render' => 'function(data, type, row, meta){return row.category || "N/A";}'
+                    ],
+                    [
+                        'targets' => 5, // Status column (adjusted index)
                         'render' => 'function(data, type, row, meta){return row.status_text || (data == 1 ? "Active" : "Inactive");}'
                     ],
                 ],
@@ -151,15 +147,7 @@ class ProductDataTable extends DataTable
                         if(columns[index].searchable){
                             if(columns[index].title == \'Status\'){
                                 var input = \'<select class="border-0" style="width: 100%;"><option value="">All</option><option value="1">Active</option><option value="0">Inactive</option></select>\';
-                            }else if(columns[index].title == \'Category\'){
-                                // Create category dropdown
-                                var select = \'<select class="border-0" style="width: 100%;"><option value="">All Categories</option>\';
-                                for(var id in categories){
-                                    select += \'<option value="\' + categories[id] + \'">\' + categories[id] + \'</option>\';
-                                }
-                                select += \'</select>\';
-                                var input = select;
-                            }else{
+                            } else {
                                 var input = \'<input type="text" placeholder="Search ">\';
                             }
                             $(input).appendTo($(column.footer()).empty()).on(\'change\', function(){
@@ -187,11 +175,6 @@ class ProductDataTable extends DataTable
                 'orderable' => false,
                 'searchable' => false
             ]),
-            // 'id' => new \Yajra\DataTables\Html\Column([
-            //     'title' => 'ID',
-            //     'data' => 'id',
-            //     'name' => 'id'
-            // ]),
             'code' => new \Yajra\DataTables\Html\Column([
                 'title' => trans('products.code'),
                 'data' => 'code',
@@ -207,14 +190,14 @@ class ProductDataTable extends DataTable
                 'data' => 'price_formatted',
                 'name' => 'price',
             ]),
-            // 'category_id' => new \Yajra\DataTables\Html\Column([
-            //     'title' => trans('Category'),
-            //     'data' => 'category_name',
-            //     'name' => 'category.name',
-            //     'orderable' => true,
-            //     'searchable' => true
-            // ]),
-            'uom' => new \Yajra\DataTables\Html\Column([  // Added
+            'category' => new \Yajra\DataTables\Html\Column([ // Changed from category_id
+                'title' => trans('Category'),
+                'data' => 'category', // Changed to category
+                'name' => 'category', // Changed to category
+                'orderable' => true,
+                'searchable' => true
+            ]),
+            'uom' => new \Yajra\DataTables\Html\Column([
                 'title' => trans('UOM'),
                 'data' => 'uom',
                 'name' => 'uom',
@@ -228,11 +211,6 @@ class ProductDataTable extends DataTable
                 'orderable' => true,
                 'searchable' => true
             ]),
-            // 'created_at' => new \Yajra\DataTables\Html\Column([
-            //     'title' => trans('Created At'),
-            //     'data' => 'created_at',
-            //     'name' => 'created_at',
-            // ])
         ];
     }
 
