@@ -325,7 +325,7 @@
         </ul>
     @endcan
 
-    @can('productcategory')
+    <!-- @can('productcategory')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('productCategories*') ? 'active' : '' }}">
                 <a class="nav-link {{ Request::is('productCategories*') ? 'active' : '' }}" href="{{ route('productCategories.index') }}">
@@ -333,7 +333,7 @@
                 </a>
             </li>
         </ul>
-    @endcan
+    @endcan -->
 
     <!-- @can('company')
         <ul class="nav-dropdown-items">

@@ -17,14 +17,14 @@
 </div>
 
 <!-- Category Field -->
-<div class="form-group col-sm-6">
+<!-- <div class="form-group col-sm-6">
     {!! Form::label('category_id', __('Category')) !!}<span class="asterisk"> *</span>
     {{ Form::select('category_id', 
         $categories->pluck('name', 'id')->prepend(__('Select Category'), ''),
         isset($product) ? $product->category_id : null, 
         ['class' => 'form-control', 'required' => 'required']
     ) }}
-</div>
+</div> -->
 
 <!-- UOM Field --> 
 <div class="form-group col-sm-6">

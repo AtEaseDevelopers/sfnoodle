@@ -161,7 +161,7 @@ class ProductController extends AppBaseController
             'code' => 'required|string|max:255|unique:products,code,' . $id, 
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'category_id' => 'required|exists:product_categories,id',
+            'category_id' => 'nullable|exists:product_categories,id',
             'uom' => 'required|string|max:50',
             'status' => 'required|integer|in:0,1',
         ];
@@ -174,7 +174,6 @@ class ProductController extends AppBaseController
             'price.required' => 'Product price is required',
             'price.numeric' => 'Price must be a number',
             'price.min' => 'Price cannot be negative',
-            'category_id.required' => 'Product category is required',
             'category_id.exists' => 'Selected category does not exist',
             'status.required' => 'Status is required',
             'status.in' => 'Invalid status value',
