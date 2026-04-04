@@ -130,7 +130,7 @@ class AutoCountSyncController extends Controller
      *
      * For now we:
      * - Use the first UOM price (if any) as the main product price.
-     * - Set category_id = 1 by default (as requested).
+     * - Do not set category_id here (leave existing value on update; DB default/null on create).
      */
     public function syncProducts(Request $request): JsonResponse
     {
@@ -178,11 +178,10 @@ class AutoCountSyncController extends Controller
                 $existing = Product::where('code', $code)->first();
 
                 $data = [
-                    'name'        => $name,
-                    'price'       => $price,
-                    'uom'         => $uom,
-                    'status'      => 1,   // active
-                    'category_id' => 1,   // default category (as per your note)
+                    'name'   => $name,
+                    'price'  => $price,
+                    'uom'    => $uom,
+                    'status' => 1,   // active
                 ];
 
                 if ($existing) {
