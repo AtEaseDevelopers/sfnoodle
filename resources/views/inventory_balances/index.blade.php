@@ -13,6 +13,8 @@
                         <div class="card-header">
                             <i class="fa fa-align-justify"></i>
                             {{ __('inventory_balances.inventory_balances') }}
+                            <button class="border-0 bg-transparent pull-right text-danger" data-toggle="modal" data-target="#stockout"><i class="fa fa-cart-arrow-down fa-lg"></i></button>
+                            <button class="border-0 bg-transparent pull-right text-success pr-2" data-toggle="modal" data-target="#stockin"><i class="fa fa-cart-plus fa-lg"></i></button>
                         </div>
                         <div class="card-body">
                             @include('inventory_balances.table')
@@ -76,27 +78,25 @@
                 <div class="modal-body text-center">
                     {!! Form::open(['route' => 'inventoryBalances.stockin', 'enctype' => 'multipart/form-data']) !!}
                     
-                    <!-- Lorry Multi-Select Dropdown -->
+                    <!-- Driver Single-Select Dropdown -->
                     <div class="form-group">
-                        <label for="lorry_id" class="col-form-label">{{ __('inventory_balances.lorry') }}:</label>
+                        <label for="driver_id" class="col-form-label">{{ __('Agent') }}:</label>
                         <div class="dropdown">
-                            <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownLorryStockIn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                {{ __('inventory_balances.select_lorry') }}
+                            <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownDriverStockIn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {{ __('Select Agent') }}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="dropdownLorryStockIn" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                <input type="text" class="form-control mb-3" id="lorrySearchStockIn" placeholder="Search Lorries...">
-                                <div id="lorryListStockIn">
-                                    @foreach($lorryItems as $lorryId => $lorryName)
-                                        <div class="form-check ml-3">
-                                            <input class="form-check-input lorry-checkbox" type="checkbox" name="lorry_id[]" value="{{ $lorryId }}" id="lorry_stockin_{{ $lorryId }}">
-                                            <label class="form-check-label" for="lorry_stockin_{{ $lorryId }}">
-                                                {{ $lorryName }}
-                                            </label>
-                                        </div>
+                            <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverStockIn" style="width: 100%; max-height: 300px; overflow-y: auto;">
+                                <input type="text" class="form-control mb-3" id="driverSearchStockIn" placeholder="Search Agents...">
+                                <div id="driverListStockIn">
+                                    @foreach($driverItems as $driverId => $driverName)
+                                        <a href="#" class="list-group-item list-group-item-action driver-item" data-value="{{ $driverId }}">
+                                            {{ $driverName }}
+                                        </a>
                                     @endforeach
                                 </div>
                             </div>
                         </div>
+                        <input type="hidden" name="driver_id" id="selectedDriverStockIn">
                     </div>
 
                     <!-- Product Single-Select Dropdown -->
@@ -148,27 +148,25 @@
                 <div class="modal-body text-center">
                     {!! Form::open(['route' => 'inventoryBalances.stockout', 'enctype' => 'multipart/form-data']) !!}
                     
-                    <!-- Lorry Multi-Select Dropdown -->
+                    <!-- Driver Single-Select Dropdown -->
                     <div class="form-group">
-                        <label for="lorry_id" class="col-form-label">{{ __('inventory_balances.lorry') }}:</label>
+                        <label for="driver_id" class="col-form-label">{{ __('Agent') }}:</label>
                         <div class="dropdown">
-                            <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownLorryStockOut" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                {{ __('inventory_balances.select_lorry') }}
+                            <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownDriverStockOut" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {{ __('Select Agent') }}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="dropdownLorryStockOut" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                <input type="text" class="form-control mb-3" id="lorrySearchStockOut" placeholder="Search Lorries...">
-                                <div id="lorryListStockOut">
-                                    @foreach($lorryItems as $lorryId => $lorryName)
-                                        <div class="form-check ml-3">
-                                            <input class="form-check-input lorry-checkbox" type="checkbox" name="lorry_id[]" value="{{ $lorryId }}" id="lorry_stockout_{{ $lorryId }}">
-                                            <label class="form-check-label" for="lorry_stockout_{{ $lorryId }}">
-                                                {{ $lorryName }}
-                                            </label>
-                                        </div>
+                            <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverStockOut" style="width: 100%; max-height: 300px; overflow-y: auto;">
+                                <input type="text" class="form-control mb-3" id="driverSearchStockOut" placeholder="Search Agents...">
+                                <div id="driverListStockOut">
+                                    @foreach($driverItems as $driverId => $driverName)
+                                        <a href="#" class="list-group-item list-group-item-action driver-item" data-value="{{ $driverId }}">
+                                            {{ $driverName }}
+                                        </a>
                                     @endforeach
                                 </div>
                             </div>
                         </div>
+                        <input type="hidden" name="driver_id" id="selectedDriverStockOut">
                     </div>
 
                     <!-- Product Single-Select Dropdown -->
@@ -243,6 +241,8 @@
             background-color: #007bff;
             color: #fff;
         }
+        .driver-item:hover, 
+        .driver-item.active,
         .product-item:hover, 
         .product-item.active {
             background-color: #007bff;
@@ -266,189 +266,224 @@
     </style>
 
     <script>
-        $(document).ready(function () {
-            // Lorry checkbox functionality for both modals
-            $('.lorry-checkbox').change(function () {
-                var dropdownButton = $(this).closest('.dropdown-menu').prev('.dropdown-toggle');
-                var selected = [];
-                
-                $(this).closest('.dropdown-menu').find('.lorry-checkbox:checked').each(function () {
-                    selected.push($(this).next('label').text());
-                });
+    $(document).ready(function () {
+        // Driver selection for Stock In modal
+        $('#stockin .driver-item, #stockout .driver-item').on('click', function(e) {
+            e.preventDefault();
+            var driverName = $(this).text();
+            var driverId = $(this).data('value');
+            var dropdown = $(this).closest('.dropdown-menu');
+            
+            // Update UI - remove active class from all siblings and add to current
+            $(this).closest('.list-group').find('.driver-item').removeClass('active');
+            $(this).addClass('active');
+            dropdown.prev('.dropdown-toggle').text(driverName);
+            
+            // Set hidden input value based on modal
+            var modalId = $(this).closest('.modal').attr('id');
+            if (modalId === 'stockin') {
+                $('#selectedDriverStockIn').val(driverId);
+            } else if (modalId === 'stockout') {
+                $('#selectedDriverStockOut').val(driverId);
+                // Trigger stock calculation for stockout if product is selected
+                if ($('#selectedProductStockOut').val()) {
+                    getstock();
+                }
+            }
+        });
 
-                if (selected.length > 0) {
-                    dropdownButton.text(selected.join(', '));
+        // Driver search functionality for both modals
+        $('#driverSearchStockIn, #driverSearchStockOut').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            // Find the driver list within the same dropdown menu
+            var driverList = $(this).closest('.dropdown-menu').find('.driver-item');
+            
+            driverList.each(function() {
+                var driverText = $(this).text().toLowerCase();
+                if (driverText.includes(searchTerm)) {
+                    $(this).show();
                 } else {
-                    dropdownButton.text('Select Lorries');
+                    $(this).hide();
                 }
             });
+        });
 
-            // Lorry search functionality for both modals
-            $('#lorrySearchStockIn, #lorrySearchStockOut').on('keyup', function () {
-                var searchTerm = $(this).val().toLowerCase();
-                var targetList = $(this).closest('.dropdown-menu').find('.form-check');
-                
-                targetList.each(function () {
-                    var lorryName = $(this).find('label').text().toLowerCase();
-                    if (lorryName.includes(searchTerm)) {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
-                    }
-                });
-            });
+        // Product selection for both modals
+        $('#stockin .product-item, #stockout .product-item').on('click', function(e) {
+            e.preventDefault();
+            var productName = $(this).text();
+            var productId = $(this).data('value');
+            var dropdown = $(this).closest('.dropdown-menu');
+            
+            // Update UI - remove active class from all siblings and add to current
+            $(this).closest('.list-group').find('.product-item').removeClass('active');
+            $(this).addClass('active');
+            dropdown.prev('.dropdown-toggle').text(productName);
+            
+            // Set hidden input value
+            var modalId = $(this).closest('.modal').attr('id');
+            if (modalId === 'stockin') {
+                $('#selectedProductStockIn').val(productId);
+            } else {
+                $('#selectedProductStockOut').val(productId);
+                // Trigger stock calculation for stockout if driver is selected
+                if ($('#selectedDriverStockOut').val()) {
+                    getstock();
+                }
+            }
+        });
 
-            // Product selection for both modals
-            $('.product-item').on('click', function(e) {
-                e.preventDefault();
-                var productName = $(this).text();
-                var productId = $(this).data('value');
-                var dropdown = $(this).closest('.dropdown-menu');
-                
-                // Update UI
-                $(this).siblings().removeClass('active');
-                $(this).addClass('active');
-                dropdown.prev('.dropdown-toggle').text(productName);
-                
-                // Set hidden input value
-                var modalId = $(this).closest('.modal').attr('id');
-                if (modalId === 'stockin') {
-                    $('#selectedProductStockIn').val(productId);
+        // Product search functionality for both modals
+        $('#productSearchStockIn, #productSearchStockOut').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            // Find the product list within the same dropdown menu
+            var productList = $(this).closest('.dropdown-menu').find('.product-item');
+            
+            productList.each(function() {
+                var productText = $(this).text().toLowerCase();
+                if (productText.includes(searchTerm)) {
+                    $(this).show();
                 } else {
-                    $('#selectedProductStockOut').val(productId);
-                    getstock(); // Trigger stock calculation for stockout
+                    $(this).hide();
                 }
             });
+        });
 
-            // Product search functionality for both modals
-            $('#productSearchStockIn, #productSearchStockOut').on('keyup', function() {
-                var searchTerm = $(this).val().toLowerCase();
-                var productList = $(this).siblings('.list-group');
-                
-                productList.find('.product-item').each(function() {
-                    var productText = $(this).text().toLowerCase();
-                    if (productText.includes(searchTerm)) {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
-                    }
-                });
-            });
-
-            // Initialize dropdown buttons with default text
-            $('.dropdown-toggle').each(function() {
-                if (!$(this).text().trim()) {
-                    if ($(this).closest('.dropdown-menu').find('.form-check').length) {
-                        $(this).text('Select Lorries');
-                    } else {
-                        $(this).text('Select Product');
-                    }
+        // Initialize dropdown buttons with default text
+        $('.dropdown-toggle').each(function() {
+            if (!$(this).text().trim()) {
+                if ($(this).closest('.dropdown-menu').find('.driver-item').length) {
+                    $(this).text('Select Driver');
+                } else if ($(this).closest('.dropdown-menu').find('.product-item').length) {
+                    $(this).text('Select Product');
                 }
-            });
+            }
+        });
 
-            // Handle view button click
-            $(document).on('click', '.view-products', function() {
-                var driverId = $(this).data('driver-id');
-                var driverName = $(this).data('driver-name');
-                
-                // Show loading in modal
-                $('#modalDriverName').text(driverName);
-                $('#productDetailsBody').html('<tr><td colspan="4" class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading product details...</td></tr>');
-                $('#modalTotalQuantity').text('0');
-                
-                // Load product details via AJAX
-                $.ajax({
-                    url: '{{ route("inventoryBalances.getProductsByDriver") }}',
-                    type: 'GET',
-                    data: {
-                        driver_id: driverId
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            var html = '';
-                            var totalQuantity = 0;
-                            var index = 1;
-                            
-                            // Sort products alphabetically by name
-                            response.products.sort(function(a, b) {
-                                return a.product_name.localeCompare(b.product_name);
-                            });
-                            
-                            response.products.forEach(function(product) {
-                                if (product.quantity > 0) {
-                                    html += '<tr>';
-                                    html += '<td class="text-center">' + index + '</td>';
-                                    html += '<td>' + (product.product_code || '-') + '</td>';
-                                    html += '<td>' + product.product_name + '</td>';
-                                    html += '<td class="text-center"><span class="badge badge-primary">' + product.quantity + '</span></td>';
-                                    html += '</tr>';
-                                    totalQuantity += product.quantity;
-                                    index++;
-                                }
-                            });
-                            
-                            if (html === '') {
-                                html = '<tr><td colspan="4" class="text-center text-muted">No products found</td></tr>';
+        // Handle view button click
+        $(document).on('click', '.view-products', function() {
+            var driverId = $(this).data('driver-id');
+            var driverName = $(this).data('driver-name');
+            
+            // Show loading in modal
+            $('#modalDriverName').text(driverName);
+            $('#productDetailsBody').html('<tr><td colspan="4" class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading product details...</td></tr>');
+            $('#modalTotalQuantity').text('0');
+            
+            // Load product details via AJAX
+            $.ajax({
+                url: '{{ route("inventoryBalances.getProductsByDriver") }}',
+                type: 'GET',
+                data: {
+                    driver_id: driverId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        var html = '';
+                        var totalQuantity = 0;
+                        var index = 1;
+                        
+                        // Sort products alphabetically by name
+                        response.products.sort(function(a, b) {
+                            return a.product_name.localeCompare(b.product_name);
+                        });
+                        
+                        response.products.forEach(function(product) {
+                            if (product.quantity > 0) {
+                                html += '<tr>';
+                                html += '<td class="text-center">' + index + '</td>';
+                                html += '<td>' + (product.product_code || '-') + '</td>';
+                                html += '<td>' + product.product_name + '</td>';
+                                html += '<td class="text-center"><span class="badge badge-primary">' + product.quantity + '</span></td>';
+                                html += '</tr>';
+                                totalQuantity += product.quantity;
+                                index++;
                             }
-                            
-                            $('#productDetailsBody').html(html);
-                            $('#modalTotalQuantity').text(totalQuantity);
-                        } else {
-                            $('#productDetailsBody').html('<tr><td colspan="4" class="text-center text-danger">' + response.message + '</td></tr>');
+                        });
+                        
+                        if (html === '') {
+                            html = '<tr><td colspan="4" class="text-center text-muted">No products found</td></tr>';
                         }
-                    },
-                    error: function(xhr) {
-                        $('#productDetailsBody').html('<tr><td colspan="4" class="text-center text-danger">Error loading product details</td></tr>');
+                        
+                        $('#productDetailsBody').html(html);
+                        $('#modalTotalQuantity').text(totalQuantity);
+                    } else {
+                        $('#productDetailsBody').html('<tr><td colspan="4" class="text-center text-danger">' + response.message + '</td></tr>');
                     }
-                });
+                },
+                error: function(xhr) {
+                    $('#productDetailsBody').html('<tr><td colspan="4" class="text-center text-danger">Error loading product details</td></tr>');
+                }
             });
         });
-
-        $(document).keyup(function(e) {
-            if(e.altKey && e.keyCode == 78){
-                $('.card .card-header a')[0].click();
-            }
-        });
-
-        // Stock out specific functionality
-        $('#stockout').on('change', '.lorry-checkbox', function(){
-            if ($('#selectedProductStockOut').val()) {
-                getstock();
-            }
-        });
-
-        function getstock() {
-            // Get selected lorry IDs from checkboxes
-            var lorryIds = [];
-            $('#stockout').find('.lorry-checkbox:checked').each(function() {
-                lorryIds.push($(this).val());
+        
+        // Reset dropdowns when modal is closed
+        $('#stockin, #stockout').on('hidden.bs.modal', function() {
+            // Reset driver selection
+            $(this).find('.driver-item').removeClass('active');
+            $(this).find('.dropdown-toggle').each(function() {
+                if ($(this).closest('.dropdown-menu').find('.driver-item').length) {
+                    $(this).text('Select Driver');
+                } else if ($(this).closest('.dropdown-menu').find('.product-item').length) {
+                    $(this).text('Select Product');
+                }
             });
             
-            // Get selected product ID
-            var productId = $('#selectedProductStockOut').val();
+            // Reset search inputs
+            $(this).find('input[type="text"]').val('');
+            
+            // Reset hidden inputs
+            if ($(this).attr('id') === 'stockin') {
+                $('#selectedDriverStockIn').val('');
+                $('#selectedProductStockIn').val('');
+            } else {
+                $('#selectedDriverStockOut').val('');
+                $('#selectedProductStockOut').val('');
+                $('#quantity').val('').prop('disabled', false);
+            }
+        });
+    });
 
-            if (lorryIds.length > 0 && productId) {
-                ShowLoad();
-                $.ajax({
-                    url: '{{ ENV("APP_URL") }}' + '/inventoryBalances/getstock/' + lorryIds.join(',') + '/' + productId,
-                    type: 'GET',
-                    success: function(data) {
-                        if (data.status) {
-                            $('#stockout').find('#quantity').prop('disabled', false);
-                            $('#stockout').find('#quantity').val(data.quantity);
-                        } else {
-                            $('#stockout').find('#quantity').prop('disabled', true);
-                            $('#stockout').find('#quantity').val(data.quantity);
+    $(document).keyup(function(e) {
+        if(e.altKey && e.keyCode == 78){
+            $('.card .card-header a')[0].click();
+        }
+    });
+
+    // Stock out specific functionality
+    function getstock() {
+        // Get selected driver ID
+        var driverId = $('#selectedDriverStockOut').val();
+        
+        // Get selected product ID
+        var productId = $('#selectedProductStockOut').val();
+
+        if (driverId && productId) {
+            ShowLoad();
+            $.ajax({
+                url: '{{ ENV("APP_URL") }}' + '/inventoryBalances/getstock/' + driverId + '/' + productId,
+                type: 'GET',
+                success: function(data) {
+                    if (data.status) {
+                        $('#stockout').find('#quantity').prop('disabled', false);
+                        $('#stockout').find('#quantity').val(data.quantity);
+                    } else {
+                        $('#stockout').find('#quantity').prop('disabled', true);
+                        $('#stockout').find('#quantity').val(data.quantity);
+                        if (typeof noti === 'function') {
                             noti('e', 'Warning', data.message);
                         }
-                        HideLoad();
-                    },
-                    error: function(error) {
-                        noti('e', 'Please contact your administrator', error.responseJSON.message);
-                        HideLoad();
                     }
-                });
-            }
+                    HideLoad();
+                },
+                error: function(error) {
+                    if (typeof noti === 'function') {
+                        noti('e', 'Please contact your administrator', error.responseJSON.message);
+                    }
+                    HideLoad();
+                }
+            });
         }
-    </script>
+    }
+</script>
 @endpush
