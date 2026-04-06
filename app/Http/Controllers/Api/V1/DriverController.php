@@ -5500,69 +5500,73 @@ class DriverController extends Controller
             }
             
             if($driverInventory){
-                // HAS INVENTORY - Get categories with products through relationship
-                $categories = ProductCategory::with(['products' => function($query) {
-                    $query->select('id', 'name', 'category_id', 'price', 'status','code')
-                        ->where('status', 1)
-                        ->orderBy('name');
-                }])
-                ->where('status', 1)
-                ->orderBy('name')
-                ->get();
-
-                // Format the response with driver's inventory quantity
-                $output = $categories->map(function($category) use ($driverInventory, $specialPrices) {
-                    return [
-                        'category_id' => $category->id,
-                        'category_name' => $category->name,
-                        'products' => $category->products->map(function($product) use ($driverInventory, $specialPrices) {
-                            // Get quantity from driver's inventory, default to 0 if not found
-                            $quantity = $driverInventory[$product->id] ?? 0;
-                            
-                            // Get price: use special price if available, otherwise default price
-                            $price = $specialPrices[$product->id] ?? $product->price;
-                            
-                            return [
-                                'id' => $product->id,
-                                'name' => $product->name,
-                                'code' => $product->code,
-                                'price' => $price,
-                                'quantity' => $quantity,
-                                'status' => $product->getStatusTextAttribute()
-                            ];
-                        })
-                    ];
-                });
-            } else {
-                // NO INVENTORY - Get all products from Product model directly
+                // HAS INVENTORY - Get all products with their categories as string
                 $products = Product::where('status', 1)
-                    ->select('id', 'name', 'category_id', 'code', 'price', 'status')
+                    ->select('id', 'name', 'category', 'price', 'status', 'code')
                     ->orderBy('name')
                     ->get();
                 
-                // Get all categories for reference
-                $categories = ProductCategory::where('status', 1)
-                    ->orderBy('name')
-                    ->get()
-                    ->keyBy('id'); // Key by category id for easy lookup
-                
-                // Group products by category
+                // Group products by category string
                 $groupedProducts = [];
                 
                 foreach ($products as $product) {
-                    $categoryId = $product->category_id;
+                    $categoryName = $product->category ?: 'Uncategorized'; // Default category if empty
                     
-                    // If product has no category, use null/default category
-                    if (!$categoryId || !isset($categories[$categoryId])) {
-                        $categoryId = null;
-                        $categoryName = '-';
-                    } else {
-                        $categoryName = $categories[$categoryId]->name;
+                    if (!isset($groupedProducts[$categoryName])) {
+                        $groupedProducts[$categoryName] = [
+                            'category_id' => null, // Keep for backward compatibility
+                            'category_name' => $categoryName,
+                            'products' => []
+                        ];
                     }
                     
-                    if (!isset($groupedProducts[$categoryId])) {
-                        $groupedProducts[$categoryId] = [
-                            'category_id' => $categoryId,
+                    // Get quantity from driver's inventory, default to 0 if not found
+                    $quantity = $driverInventory[$product->id] ?? 0;
+                    
+                    // Get price: use special price if available, otherwise default price
+                    $price = $specialPrices[$product->id] ?? $product->price;
+                    
+                    $groupedProducts[$categoryName]['products'][] = [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'code' => $product->code,
+                        'price' => $price,
+                        'quantity' => $quantity,
+                        'status' => $product->getStatusTextAttribute()
+                    ];
+                }
+                
+                // Convert to array and sort categories alphabetically
+                $output = array_values($groupedProducts);
+                
+                // Sort products within each category by name
+                foreach ($output as &$category) {
+                    usort($category['products'], function($a, $b) {
+                        return strcmp($a['name'], $b['name']);
+                    });
+                }
+                
+                // Sort categories by name
+                usort($output, function($a, $b) {
+                    return strcmp($a['category_name'], $b['category_name']);
+                });
+                
+            } else {
+                // NO INVENTORY - Get all products directly
+                $products = Product::where('status', 1)
+                    ->select('id', 'name', 'category', 'code', 'price', 'status')
+                    ->orderBy('name')
+                    ->get();
+                
+                // Group products by category string
+                $groupedProducts = [];
+                
+                foreach ($products as $product) {
+                    $categoryName = $product->category ?: 'Uncategorized'; // Default category if empty
+                    
+                    if (!isset($groupedProducts[$categoryName])) {
+                        $groupedProducts[$categoryName] = [
+                            'category_id' => null, // Keep for backward compatibility
                             'category_name' => $categoryName,
                             'products' => []
                         ];
@@ -5571,7 +5575,7 @@ class DriverController extends Controller
                     // Get price: use special price if available, otherwise default price
                     $price = $specialPrices[$product->id] ?? $product->price;
                     
-                    $groupedProducts[$categoryId]['products'][] = [
+                    $groupedProducts[$categoryName]['products'][] = [
                         'id' => $product->id,
                         'name' => $product->name,
                         'code' => $product->code,
@@ -5590,6 +5594,11 @@ class DriverController extends Controller
                         return strcmp($a['name'], $b['name']);
                     });
                 }
+                
+                // Sort categories by name
+                usort($output, function($a, $b) {
+                    return strcmp($a['category_name'], $b['category_name']);
+                });
             }
 
             return response()->json([
@@ -7700,9 +7709,9 @@ class DriverController extends Controller
 
         try {
             // Get all drivers
-            $drivers = Driver::where('status', 1) // Assuming you have a status field
+            $drivers = Driver::where('status', 1)
                 ->orderBy('name')
-                ->get(['id', 'name']); // Select necessary fields
+                ->get(['id', 'name']);
             
             if ($drivers->isEmpty()) {
                 return response()->json([
@@ -7721,39 +7730,70 @@ class DriverController extends Controller
                 })
                 ->toArray();
 
-            // Get all products with categories
-            $categories = ProductCategory::with(['products' => function($query) {
-                $query->select('id', 'name', 'category_id', 'price', 'status')
-                    ->where('status', 1)
-                    ->orderBy('name');
-            }])
-            ->where('status', 1)
-            ->orderBy('name')
-            ->get();
+            // Get all active products with category string
+            $products = Product::where('status', 1)
+                ->select('id', 'name', 'category', 'code', 'price', 'status')
+                ->orderBy('name')
+                ->get();
+            
+            // Group products by category string
+            $productsByCategory = [];
+            foreach ($products as $product) {
+                $categoryName = $product->category ?: 'Uncategorized';
+                
+                if (!isset($productsByCategory[$categoryName])) {
+                    $productsByCategory[$categoryName] = [
+                        'category_id' => null,
+                        'category_name' => $categoryName,
+                        'products' => []
+                    ];
+                }
+                
+                $productsByCategory[$categoryName]['products'][] = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code,
+                    'price' => $product->price,
+                    'status' => $product->getStatusTextAttribute()
+                ];
+            }
+            
+            // Sort products within each category by name
+            foreach ($productsByCategory as &$category) {
+                usort($category['products'], function($a, $b) {
+                    return strcmp($a['name'], $b['name']);
+                });
+            }
+            
+            // Sort categories by name
+            ksort($productsByCategory);
+            $finalCategories = array_values($productsByCategory);
 
             // Format the response for all drivers
-            $output = $drivers->map(function($driver) use ($categories, $allDriverInventory) {
+            $output = $drivers->map(function($driver) use ($finalCategories, $allDriverInventory) {
                 $driverInventory = $allDriverInventory[$driver->id] ?? [];
                 
-                $driverProducts = $categories->map(function($category) use ($driverInventory) {
+                // Create a deep copy of categories structure
+                $driverProducts = array_map(function($category) use ($driverInventory) {
+                    // Add quantity to each product based on driver's inventory
+                    $productsWithQuantity = array_map(function($product) use ($driverInventory) {
+                        return [
+                            'id' => $product['id'],
+                            'name' => $product['name'],
+                            'code' => $product['code'],
+                            'price' => $product['price'],
+                            'quantity' => $driverInventory[$product['id']] ?? 0,
+                            'status' => $product['status']
+                        ];
+                    }, $category['products']);
+                    
                     return [
-                        'category_id' => $category->id,
-                        'category_name' => $category->name,
-                        'products' => $category->products->map(function($product) use ($driverInventory) {
-                            // Get quantity from driver's inventory, default to 0 if not found
-                            $quantity = $driverInventory[$product->id] ?? 0;
-                            
-                            return [
-                                'id' => $product->id,
-                                'name' => $product->name,
-                                'price' => $product->price,
-                                'quantity' => $quantity,
-                                'status' => $product->getStatusTextAttribute()
-                            ];
-                        })
+                        'category_id' => $category['category_id'],
+                        'category_name' => $category['category_name'],
+                        'products' => $productsWithQuantity
                     ];
-                });
-
+                }, $finalCategories);
+                
                 return [
                     'driver_id' => $driver->id,
                     'driver_name' => $driver->name,
