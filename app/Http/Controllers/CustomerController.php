@@ -97,7 +97,7 @@ class CustomerController extends AppBaseController
                     
                     // Driver doesn't have a group, create new group and assignment
                     $customerGroup = CustomerGroup::create([
-                        'name' => $input['company'], 
+                        'name' => $driver->name, // Changed from $input['company'] to $driver->name
                         'customer_ids' => [
                             [
                                 'id' => $customer->id,
@@ -268,7 +268,7 @@ class CustomerController extends AppBaseController
                 } else {
                     // New driver doesn't have a group, create new group and assignment
                     $newGroup = CustomerGroup::create([
-                        'name' => $input['company'],
+                        'name' => $newDriver->name, 
                         'customer_ids' => [
                             [
                                 'id' => $customer->id,
