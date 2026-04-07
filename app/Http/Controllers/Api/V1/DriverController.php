@@ -5498,6 +5498,9 @@ class DriverController extends Controller
                     ->pluck('price', 'product_id')
                     ->toArray();
             }
+            $hasStock = !empty(array_filter($driverInventory, function ($qty) {
+                return $qty > 0;
+            }));
             if (!$hasStock) {
                 return response()->json([
                     'result' => false,
@@ -5506,9 +5509,6 @@ class DriverController extends Controller
                 ], 200);
             }
 
-            $hasStock = !empty(array_filter($driverInventory, function ($qty) {
-                return $qty > 0;
-            }));
             if ($hasStock) {                
                 $productIdsWithStock = array_keys(array_filter($driverInventory, function ($qty) {
                     return $qty > 0;
