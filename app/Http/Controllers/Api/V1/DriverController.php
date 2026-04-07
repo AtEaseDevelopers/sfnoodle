@@ -6344,10 +6344,10 @@ class DriverController extends Controller
         }
         
         try {
-           $inventoryTransactions = InventoryTransaction::with(['product:id,name'])
+           $inventoryTransactions = InventoryTransaction::with(['product:id,code'])
                 ->where('driver_id', $driver->id)
                 ->orderBy('created_at', 'desc')
-            ->get()
+                ->get()
                 ->toArray();
 
             // Load invoice numbers for transactions that have invoice_id
