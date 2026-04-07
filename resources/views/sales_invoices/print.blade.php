@@ -105,7 +105,7 @@
 </head>
 <body>
     <div class="header-section">
-        <div class="invoice-title">================== SALES ORDER ==================</div>
+    <div class="invoice-title">==================== SALES ORDER ==================</div>
             <div class="section-separator"></div>
 
         <div class="company-name">{{ config('invoice.name', $salesInvoice['customer']['groupcompany']->name ?? 'SF NOODLES SON BHD') }}</div>
@@ -121,7 +121,7 @@
     <table>
         <tr>
             <td class="left-align">Document #</td>
-            <td class="right-align">{{ date_format(date_create($salesInvoice['date']),'d M Y H:i A') ?? '' }}</td>
+            <td class="right-align">{{ date_format(date_create($salesInvoice['date']),'d M Y') ?? '' }}</td>
         </tr>
         <tr>
             <td class="left-align">Invoice No:</td>
@@ -161,7 +161,7 @@
                     $totalamount = ($totalamount ?? 0) + $salesInvoiceDetail['totalprice'];
                 @endphp
                 <tr>
-                    <td class="col-sku left-align">{{ $salesInvoiceDetail['product']['sku'] ?? $salesInvoiceDetail['product']['name'] }}</td>
+                    <td class="col-sku left-align">{{ $salesInvoiceDetail['product']['code'] }}</td>
                     <td class="col-qty">{{ $salesInvoiceDetail['quantity'] }}</td>
                     <td class="col-price">{{ number_format($salesInvoiceDetail['price'], 2) }}</td>
                     <td class="col-total">{{ number_format($salesInvoiceDetail['totalprice'], 2) }}</td>

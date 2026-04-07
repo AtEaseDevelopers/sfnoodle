@@ -445,7 +445,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::get('/invoicePayments/customer-invoices/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'getcustomerinvoice']);
         Route::post('invoicePayments/updatepayment/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'updatepayment']);
         Route::get('invoicePayments/getpayment/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'getpayment']);
-        Route::get('invoicePayments/getinvoice/{id}', [App\Http\Controllers\InvoicePaymentController::class, 'getinvoice']);
+        Route::get('invoicePayments/getinvoices', [App\Http\Controllers\InvoicePaymentController::class, 'getinvoice']);
         Route::resource('invoicePayments', App\Http\Controllers\InvoicePaymentController::class);
         Route::post('/invoicePayments/massupdatestatus', [App\Http\Controllers\InvoicePaymentController::class, 'massupdatestatus']);
         //Print Invoice

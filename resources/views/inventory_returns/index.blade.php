@@ -26,84 +26,91 @@
     </div>
 
     <!-- Create Return Modal -->
-    <div id="createRequest" class="modal fade">
+    <div id="createRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6">{{ __('Create Stock Return') }}</h4>
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                    <h4 class="modal-title h5 font-weight-bold mb-0">
+                        <i class="fa fa-arrow-circle-up mr-2"></i>{{ __('Create Stock Return') }}
+                    </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     {!! Form::open(['route' => 'inventoryReturns.store', 'enctype' => 'multipart/form-data', 'id' => 'createReturnForm']) !!}
                     
                     <div class="row">
                         <!-- Driver Selection -->
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="driver_id" class="col-form-label">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownDriverCreate" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        {{ __('Select Driver') }}
+                            <div class="form-group mb-4">
+                                <label for="driver_id" class="col-form-label font-weight-bold mb-2">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn btn-outline-primary btn-block dropdown-toggle text-left py-2 px-3" type="button" id="dropdownDriverCreate" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 8px; font-size: 1rem;">
+                                        <i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}
                                     </button>
-                                    <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverCreate" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                        <input type="text" class="form-control mb-3" id="driverSearchCreate" placeholder="Search Drivers...">
+                                    <div class="dropdown-menu p-3 shadow-sm border-0" aria-labelledby="dropdownDriverCreate" style="width: 400px; max-height: 400px; overflow-y: auto; border-radius: 12px;">
+                                        <div class="input-group mb-3">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                            </div>
+                                            <input type="text" class="form-control" id="driverSearchCreate" placeholder="Search Drivers...">
+                                        </div>
                                         <div id="driverListCreate" class="list-group">
                                             @foreach($drivers as $driver)
-                                                <a href="#" class="list-group-item list-group-item-action driver-item" data-value="{{ $driver->id }}">
-                                                    {{ $driver->name }}
+                                                <a href="#" class="list-group-item list-group-item-action driver-item border-0 py-2 px-3 rounded mb-1" data-value="{{ $driver->id }}">
+                                                    <i class="fa fa-user-circle-o mr-2 text-primary"></i>{{ $driver->name }}
                                                 </a>
                                             @endforeach
                                         </div>
                                     </div>
                                 </div>
                                 <input type="hidden" name="driver_id" id="selectedDriverCreate" required>
-                                <div class="text-danger" id="driverError"></div>
+                                <div class="text-danger small mt-1" id="driverError"></div>
                             </div>
                         </div>
                         
                         <!-- Remarks -->
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="remarks" class="col-form-label">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
-                                <textarea class="form-control" name="remarks" id="remarks" rows="2" placeholder="Any additional notes..."></textarea>
+                            <div class="form-group mb-4">
+                                <label for="remarks" class="col-form-label font-weight-bold mb-2">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
+                                <textarea class="form-control py-2" name="remarks" id="remarks" rows="2" placeholder="Any additional notes..." style="border-radius: 8px; resize: vertical;"></textarea>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Items Table -->
-                    <div class="form-group">
-                        <label class="col-form-label">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="itemsTable">
-                                <thead>
+                    <div class="form-group mt-2">
+                        <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
+                        <div class="table-responsive border rounded-lg" style="border-radius: 2px !important;">
+                            <table class="table table-bordered mb-0" id="itemsTable">
+                                <thead class="bg-light">
                                     <tr>
-                                        <th width="5%">#</th>
-                                        <th width="45%">Product <span class="text-danger">*</span></th>
-                                        <th width="20%">Quantity <span class="text-danger">*</span></th>
-                                        <th width="15%">Available</th>
-                                        <th width="15%">Actions</th>
+                                        <th width="5%" class="text-center align-middle">#</th>
+                                        <th width="45%" class="align-middle">Product <span class="text-danger">*</span></th>
+                                        <th width="20%" class="align-middle">Quantity <span class="text-danger">*</span></th>
+                                        <th width="15%" class="text-center align-middle">Available</th>
+                                        <th width="15%" class="text-center align-middle">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsBody">
                                     <!-- Items will be added here dynamically -->
                                 </tbody>
-                                <tfoot>
+                                <tfoot class="bg-light">
                                     <tr>
-                                        <td colspan="5" class="text-right">
-                                            <button type="button" class="btn btn-success btn-sm" id="addItemBtn">
-                                                <i class="fa fa-plus"></i> Add Item
+                                        <td colspan="5" class="text-right p-2">
+                                            <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addItemBtn">
+                                                <i class="fa fa-plus mr-1"></i> Add Item
                                             </button>
                                         </td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
-                        <div class="text-danger" id="itemsError"></div>
+                        <div class="text-danger small mt-1" id="itemsError"></div>
                     </div>
 
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary rounded-0" data-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary rounded-0">{{ __('Submit Return') }}</button>
+                    <div class="modal-footer border-0 px-0 pb-0 pt-4">
+                        <button type="button" class="btn btn-secondary px-4 py-2 rounded-pill" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm">{{ __('Submit Return') }}</button>
                     </div>
                     {!! Form::close() !!}
                 </div>
@@ -112,83 +119,90 @@
     </div>
 
     <!-- Edit Return Modal -->
-    <div id="editRequest" class="modal fade">
+    <div id="editRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6">{{ __('Edit Stock Return') }}</h4>
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-warning text-dark py-3">
+                    <h4 class="modal-title h5 font-weight-bold mb-0">
+                        <i class="fa fa-pencil-square-o mr-2"></i>{{ __('Edit Stock Return') }}
+                    </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     {!! Form::open(['route' => ['inventoryReturns.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editReturnForm']) !!}
                     
                     <div class="row">
                         <!-- Driver Selection -->
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="driver_id" class="col-form-label">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownDriverEdit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        {{ __('Select Driver') }}
+                            <div class="form-group mb-4">
+                                <label for="driver_id" class="col-form-label font-weight-bold mb-2">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn btn-outline-primary btn-block dropdown-toggle text-left py-2 px-3" type="button" id="dropdownDriverEdit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 8px; font-size: 1rem;">
+                                        <i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}
                                     </button>
-                                    <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverEdit" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                        <input type="text" class="form-control mb-3" id="driverSearchEdit" placeholder="Search Drivers...">
+                                    <div class="dropdown-menu p-3 shadow-sm border-0" aria-labelledby="dropdownDriverEdit" style="width: 400px; max-height: 400px; overflow-y: auto; border-radius: 12px;">
+                                        <div class="input-group mb-3">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                            </div>
+                                            <input type="text" class="form-control" id="driverSearchEdit" placeholder="Search Drivers...">
+                                        </div>
                                         <div id="driverListEdit" class="list-group">
                                             @foreach($drivers as $driver)
-                                                <a href="#" class="list-group-item list-group-item-action driver-item" data-value="{{ $driver->id }}">
-                                                    {{ $driver->name }}
+                                                <a href="#" class="list-group-item list-group-item-action driver-item border-0 py-2 px-3 rounded mb-1" data-value="{{ $driver->id }}">
+                                                    <i class="fa fa-user-circle-o mr-2 text-primary"></i>{{ $driver->name }}
                                                 </a>
                                             @endforeach
                                         </div>
                                     </div>
                                 </div>
                                 <input type="hidden" name="driver_id" id="selectedDriverEdit" required>
-                                <div class="text-danger" id="driverEditError"></div>
+                                <div class="text-danger small mt-1" id="driverEditError"></div>
                             </div>
                         </div>
                         
                         <!-- Remarks -->
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="remarks" class="col-form-label">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
-                                <textarea class="form-control" name="remarks" id="remarksEdit" rows="2" placeholder="Any additional notes..."></textarea>
+                            <div class="form-group mb-4">
+                                <label for="remarks" class="col-form-label font-weight-bold mb-2">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
+                                <textarea class="form-control py-2" name="remarks" id="remarksEdit" rows="2" placeholder="Any additional notes..." style="border-radius: 8px; resize: vertical;"></textarea>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Items Table for Edit -->
-                    <div class="form-group">
-                        <label class="col-form-label">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="editItemsTable">
-                                <thead>
+                    <div class="form-group mt-2">
+                        <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
+                        <div class="table-responsive border rounded-lg" style="border-radius: 12px !important;">
+                            <table class="table table-bordered mb-0" id="editItemsTable">
+                                <thead class="bg-light">
                                     <tr>
-                                        <th width="5%">#</th>
-                                        <th width="45%">Product <span class="text-danger">*</span></th>
-                                        <th width="20%">Quantity <span class="text-danger">*</span></th>
-                                        <th width="15%">Actions</th>
+                                        <th width="5%" class="text-center align-middle">#</th>
+                                        <th width="50%" class="align-middle">Product <span class="text-danger">*</span></th>
+                                        <th width="25%" class="align-middle">Quantity <span class="text-danger">*</span></th>
+                                        <th width="20%" class="text-center align-middle">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="editItemsBody">
                                     <!-- Items will be populated here -->
                                 </tbody>
-                                <tfoot>
+                                <tfoot class="bg-light">
                                     <tr>
-                                        <td colspan="4" class="text-right">
-                                            <button type="button" class="btn btn-success btn-sm" id="addEditItemBtn">
-                                                <i class="fa fa-plus"></i> Add Item
+                                        <td colspan="4" class="text-right p-2">
+                                            <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addEditItemBtn">
+                                                <i class="fa fa-plus mr-1"></i> Add Item
                                             </button>
                                         </td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
-                        <div class="text-danger" id="editItemsError"></div>
+                        <div class="text-danger small mt-1" id="editItemsError"></div>
                     </div>
 
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary rounded-0" data-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary rounded-0">{{ __('Update Return') }}</button>
+                    <div class="modal-footer border-0 px-0 pb-0 pt-4">
+                        <button type="button" class="btn btn-secondary px-4 py-2 rounded-pill" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm">{{ __('Update Return') }}</button>
                     </div>
                     {!! Form::close() !!}
                 </div>
@@ -199,61 +213,73 @@
     <!-- View Return Modal -->
     <div id="viewRequest" class="modal fade">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6">Stock Return Details <span id="viewRequestId"></span></h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-info text-white py-3">
+                    <h4 class="modal-title h5 font-weight-bold mb-0">
+                        <i class="fa fa-info-circle mr-2"></i>Stock Return Details <span id="viewRequestId" class="font-weight-light"></span>
+                    </h4>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div class="row">
                         <div class="col-md-12">
-                            <table class="table table-bordered">
-                                <tbody>
-                                    <tr>
-                                        <th width="30%">Return ID:</th>
-                                        <td id="viewRequestIdText"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Driver:</th>
-                                        <td id="viewDriverName"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Status:</th>
-                                        <td><span id="viewStatusBadge"></span></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Remarks:</th>
-                                        <td id="viewRemarks"></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Returned At:</th>
-                                        <td id="viewCreatedAt"></td>
-                                    </tr>
-                                    <tr id="viewApprovedSection" style="display: none;">
-                                        <th>Approved By:</th>
-                                        <td id="viewApprovedBy"></td>
-                                    </tr>
-                                    <tr id="viewApprovedAtSection" style="display: none;">
-                                        <th>Approved At:</th>
-                                        <td id="viewApprovedAt"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div class="card bg-light border-0 shadow-none">
+                                <div class="card-body p-3">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-5 font-weight-bold">Return ID:</dt>
+                                                <dd class="col-sm-7" id="viewRequestIdText">—</dd>
+                                                
+                                                <dt class="col-sm-5 font-weight-bold">Driver:</dt>
+                                                <dd class="col-sm-7" id="viewDriverName">—</dd>
+                                                
+                                                <dt class="col-sm-5 font-weight-bold">Status:</dt>
+                                                <dd class="col-sm-7"><span id="viewStatusBadge"></span></dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-5 font-weight-bold">Returned At:</dt>
+                                                <dd class="col-sm-7" id="viewCreatedAt">—</dd>
+                                                
+                                                <dt class="col-sm-5 font-weight-bold">Remarks:</dt>
+                                                <dd class="col-sm-7" id="viewRemarks">—</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                    <hr class="my-2">
+                                    <div class="row">
+                                        <div class="col-md-6" id="viewApprovedSection" style="display: none;">
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-5 font-weight-bold">Approved By:</dt>
+                                                <dd class="col-sm-7" id="viewApprovedBy">—</dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6" id="viewApprovedAtSection" style="display: none;">
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-5 font-weight-bold">Approved At:</dt>
+                                                <dd class="col-sm-7" id="viewApprovedAt">—</dd>
+                                            </dl>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Items Table Section -->
                     <div class="mt-4">
-                        <h5>Returned Items</h5>
+                        <h5 class="font-weight-bold mb-3"><i class="fa fa-list mr-2"></i>Returned Items</h5>
                         <div id="viewItemsTable"></div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer border-0 pt-0">
                     <div class="d-flex justify-content-between w-100">
                         <div id="viewActionButtons">
                             <!-- Action buttons will be shown here for pending returns only -->
                         </div>
-                        <button type="button" class="btn btn-secondary rounded-0" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary px-4 py-2 rounded-pill" data-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -263,154 +289,297 @@
 
 @push('scripts')
     <style>
-        
-        /* Same styles as inventory requests */
-        .dropdown-menu {
-            border-radius: 0.25rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        /* Enhanced styles - matching Stock Return */
+        .modal-dialog {
+            margin: 1.75rem auto;
         }
+        
+        .modal-xl {
+            max-width: 1400px;
+        }
+        
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: visible !important;
+        }
+        
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            flex-shrink: 0;
+        }
+    
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        /* Critical fix for dropdown - make it appear above everything */
+        .dropdown {
+            position: relative;
+        }
+        
+        .dropdown-menu {
+            position: absolute !important;
+            z-index: 9999 !important;
+            max-height: 350px;
+            width: 400px;
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e0e0e0;
+            background: white;
+            will-change: transform;
+        }
+        
+        /* Ensure dropdown appears below the button by default */
+        .item-row .dropdown-menu,
+        .edit-item-row .dropdown-menu {
+            position: absolute !important;
+            top: 100% !important;
+            left: 0 !important;
+            right: auto !important;
+            margin-top: 5px !important;
+            margin-bottom: 0 !important;
+            bottom: auto !important;
+        }
+        
+        /* Fix for table responsive - prevent cutoff */
+        .table-responsive {
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+        }
+        
+        .table-responsive .table {
+            overflow: visible !important;
+            margin-bottom: 0;
+        }
+        
+        .table-responsive .table tbody {
+            overflow: visible !important;
+        }
+        
+        .table-responsive .table tr {
+            overflow: visible !important;
+        }
+        
+        .table-responsive .table td {
+            overflow: visible !important;
+        }
+        
+        /* Make each row position relative for better dropdown positioning */
+        .item-row, .edit-item-row {
+            position: relative;
+        }
+        
+        /* Remove overflow restrictions on containers */
+        #itemsTable, #editItemsTable {
+            overflow: visible !important;
+        }
+        
+        .card-body {
+            overflow: visible !important;
+        }
+        
+        /* Ensure modal doesn't clip dropdowns */
+        .modal {
+            overflow: visible !important;
+        }
+        
+        .modal-dialog {
+            overflow: visible !important;
+        }
+        
         .dropdown-toggle::after {
             margin-left: 10px;
+            float: right;
+            margin-top: 8px;
         }
+        
         .dropdown-menu::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
+        
         .dropdown-menu::-webkit-scrollbar-track {
             background: #f1f1f1;
-        }
-        .dropdown-menu::-webkit-scrollbar-thumb {
-            background: #888;
             border-radius: 4px;
         }
-        .dropdown-menu::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        
+        .dropdown-menu::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
         }
+        
+        .dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
         .btn-outline-primary {
             border-color: #007bff;
             color: #007bff;
         }
+        
         .btn-outline-primary:hover {
             background-color: #007bff;
             color: #fff;
         }
+        
         .btn-outline-secondary {
             border-color: #6c757d;
             color: #6c757d;
         }
+        
         .btn-outline-secondary:hover {
             background-color: #6c757d;
             color: #fff;
         }
-        .product-item:hover, 
-        .product-item.active,
+        
         .driver-item:hover,
         .driver-item.active,
         .product-select-item:hover,
-        .product-select-item.active {
+        .product-select-item.active,
+        .edit-product-select-item:hover,
+        .edit-product-select-item.active {
             background-color: #007bff;
             color: white;
             cursor: pointer;
         }
+        
         .list-group-item {
             border: 1px solid rgba(0,0,0,.125);
             margin-bottom: -1px;
+            padding: 10px 15px;
         }
+        
+        .list-group-item:first-child {
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .list-group-item:last-child {
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        
         .badge {
             font-size: 85%;
+            padding: 5px 10px;
+            border-radius: 4px;
         }
+        
         .badge-pending {
             background-color: #ffc107;
             color: #212529;
         }
+        
         .badge-approved {
             background-color: #28a745;
             color: white;
         }
+        
         .badge-rejected {
             background-color: #dc3545;
             color: white;
         }
+        
         .badge-cancelled {
             background-color: #6c757d;
             color: white;
         }
+        
         .small {
             font-size: 80%;
         }
-        .item-row td {
-            vertical-align: middle !important;
+        
+        .item-row td, .edit-item-row td {
+            overflow: visible !important;
+            position: static !important;
         }
-        .product-summary-container {
-            max-height: 100px;
-            overflow-y: auto;
-            padding: 5px;
-            border: 1px solid #eee;
-            border-radius: 4px;
-            background: #f9f9f9;
-            font-size: 0.9em;
+        
+        .item-row .dropdown, .edit-item-row .dropdown {
+            position: static !important;
         }
-        /* Fix modal and dropdown issues */
-        .modal {
+
+        /* Make dropdown menu appear above everything with proper positioning */
+        .item-row .dropdown-menu,
+        .edit-item-row .dropdown-menu {
+            position: fixed !important;
+            top: auto !important;
+            left: auto !important;
+            z-index: 9999 !important;
+            min-width: 600px;
+            max-width: 600px;
+            margin-top: 0 !important;
+        }
+
+        /* Ensure table container doesn't clip dropdowns */
+        .table-responsive {
             overflow: visible !important;
         }
 
-        .modal-dialog {
-            margin: 1.75rem auto;
-            pointer-events: auto;
+        .table-responsive .table {
             overflow: visible !important;
         }
 
-        .modal-content {
+        .table-responsive .table tbody {
             overflow: visible !important;
         }
 
+        .table-responsive .table tr {
+            overflow: visible !important;
+        }
+
+        /* Ensure modal body doesn't restrict dropdowns */
         .modal-body {
             overflow: visible !important;
-            position: static;
         }
-
-        /* Fix dropdown positioning */
-        .dropdown {
+        /* Button styling */
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        /* Error styling */
+        .is-invalid {
+            border-color: #dc3545 !important;
+        }
+        
+        .text-danger {
+            font-size: 0.75rem;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .modal-xl {
+                max-width: 95%;
+                margin: 1rem auto;
+            }
+            
+            .table-responsive {
+                overflow-x: auto;
+            }
+        }
+        
+        /* View modal table styling */
+        #viewItemsTable .table {
+            margin-bottom: 0;
+        }
+        
+        #viewItemsTable .table th {
+            background-color: #f8f9fa;
+        }
+        
+        /* Ensure dropdowns from table rows are visible above modal content */
+        .item-row .dropdown.show,
+        .edit-item-row .dropdown.show {
             position: relative;
+            z-index: 10000;
         }
-
-        .dropdown-menu {
-            position: absolute !important;
-            z-index: 9999 !important;
-            max-height: 300px;
-            overflow-y: auto;
-            top: 100% !important;
-            left: 0 !important;
-            right: auto !important;
-            transform: none !important;
-        }
-
-        /* Ensure dropdown appears above modal */
-        .modal-open .dropdown-menu {
-            z-index: 9999 !important;
-        }
-
-        /* For table cells with dropdown */
-        .item-row td {
-            position: relative;
-        }
-
-        /* Make dropdown menu display properly */
-        .product-dropdown + .dropdown-menu,
-        .edit-product-dropdown + .dropdown-menu {
-            position: absolute !important;
-            top: 100% !important;
-            left: 0 !important;
-            right: auto !important;
-            z-index: 9999 !important;
-            min-width: 100%;
-        }
-
-        /* Fix for when dropdown is near bottom of modal */
-        .dropdown-menu.show {
-            transform: translateY(0) !important;
-            top: 100% !important;
-            bottom: auto !important;
+        
+        /* Fix for any hidden overflow on parent elements */
+        .container-fluid, .animated, .fadeIn, .row, .col-lg-12, .card, .card-body {
+            overflow: visible !important;
         }
     </style>
 
@@ -444,7 +613,48 @@
         
         // Store driver inventory data
         var driverInventory = [];
-        var driverInventoryMap = {}; // Add this for quick lookup
+        var driverInventoryMap = {};
+        
+        // ============================================
+        // DRIVER SEARCH FUNCTIONALITY
+        // ============================================
+        
+        // Driver search functionality for create modal
+        $('#driverSearchCreate').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $('#driverListCreate .driver-item').each(function() {
+                var driverName = $(this).text().toLowerCase();
+                if (driverName.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Driver search functionality for edit modal
+        $('#driverSearchEdit').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $('#driverListEdit .driver-item').each(function() {
+                var driverName = $(this).text().toLowerCase();
+                if (driverName.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Clear search when modal closes
+        $('#createRequest').on('hidden.bs.modal', function () {
+            $('#driverSearchCreate').val('');
+            $('#driverListCreate .driver-item').show();
+        });
+
+        $('#editRequest').on('hidden.bs.modal', function () {
+            $('#driverSearchEdit').val('');
+            $('#driverListEdit .driver-item').show();
+        });
         
         // ============================================
         // CREATE MODAL FUNCTIONS
@@ -457,22 +667,88 @@
             addItemRow();
         }
         
+        // Function to position dropdown relative to button (using fixed positioning)
+        function positionProductDropdown(button, menu) {
+            if (!button || !menu) return;
+            
+            var buttonRect = button.getBoundingClientRect();
+            var menuHeight = 350;
+            var viewportHeight = window.innerHeight;
+            var spaceBelow = viewportHeight - buttonRect.bottom;
+            var spaceAbove = buttonRect.top;
+            
+            // Reset styles
+            menu.style.position = 'fixed';
+            menu.style.minWidth = '320px';
+            menu.style.maxWidth = '400px';
+            
+            // Determine vertical position
+            if (spaceBelow < menuHeight && spaceAbove > menuHeight) {
+                // Show above the button
+                menu.style.top = (buttonRect.top - menuHeight) + 'px';
+                menu.style.bottom = 'auto';
+            } else {
+                // Show below the button
+                menu.style.top = (buttonRect.bottom + 5) + 'px';
+                menu.style.bottom = 'auto';
+            }
+            
+            // Horizontal positioning
+            var menuWidth = 320;
+            var viewportWidth = window.innerWidth;
+            if (buttonRect.left + menuWidth > viewportWidth) {
+                menu.style.left = (viewportWidth - menuWidth - 10) + 'px';
+                menu.style.right = 'auto';
+            } else {
+                menu.style.left = buttonRect.left + 'px';
+                menu.style.right = 'auto';
+            }
+        }
+
+        // Handle dropdown show event for product dropdowns
+        $(document).on('show.bs.dropdown', '.item-row .dropdown, .edit-item-row .dropdown', function(e) {
+            var button = $(this).find('.dropdown-toggle')[0];
+            var menu = $(this).find('.dropdown-menu')[0];
+            
+            if (button && menu) {
+                setTimeout(function() {
+                    positionProductDropdown(button, menu);
+                }, 10);
+            }
+        });
+
+        // Reposition on window scroll/resize
+        $(window).on('scroll resize', function() {
+            $('.dropdown-menu.show').each(function() {
+                var parentDropdown = $(this).closest('.dropdown');
+                var button = parentDropdown.find('.dropdown-toggle')[0];
+                if (button && $(this).is(':visible')) {
+                    positionProductDropdown(button, this);
+                }
+            });
+        });
+        
         // Add item row to create modal
         function addItemRow() {
             var row = `
                 <tr class="item-row" data-index="${itemCounter}">
-                    <td class="align-middle text-center">${itemCounter + 1}</td>
-                    <td>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left product-dropdown" type="button" id="productDropdown${itemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: hidden; text-overflow: ellipsis;">
-                                {{ __('Select Product') }}
+                    <td class="align-middle text-center font-weight-bold">${itemCounter + 1}</td>
+                    <td style="min-width: 280px;">
+                        <div class="dropdown w-100">
+                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left product-dropdown py-2" type="button" id="productDropdown${itemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 8px; white-space: normal; word-wrap: break-word;">
+                                <i class="fa fa-cube mr-2"></i>{{ __('Select Product') }}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="productDropdown${itemCounter}" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                <input type="text" class="form-control mb-3 product-search" placeholder="Search Products..." data-index="${itemCounter}">
-                                <div class="product-list" data-index="${itemCounter}">
+                            <div class="dropdown-menu p-3 shadow" aria-labelledby="productDropdown${itemCounter}" style="width: 100%; min-width: 400px; max-height: 400px; overflow-y: auto;">
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                    </div>
+                                    <input type="text" class="form-control product-search" placeholder="Search Products..." data-index="${itemCounter}">
+                                </div>
+                                <div class="product-list" data-index="${itemCounter}" style="max-height: 220px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action product-select-item" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
-                                            {{ $product->name }} ({{ $product->code }})
+                                        <a href="#" class="list-group-item list-group-item-action product-select-item border-0 py-2 rounded mb-1" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
+                                            <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                             <span class="product-available-qty text-muted float-right"></span>
                                         </a>
                                     @endforeach
@@ -480,49 +756,24 @@
                             </div>
                         </div>
                         <input type="hidden" class="product-id-input" name="items[${itemCounter}][product_id]" value="">
-                        <div class="text-danger product-error small"></div>
+                        <div class="text-danger product-error small mt-1"></div>
                     </td>
-                    <td>
-                        <input type="number" min="1" class="form-control quantity-input" name="items[${itemCounter}][quantity]" placeholder="Enter quantity">
-                        <div class="text-danger quantity-error small"></div>
-                    </td>
-                    <td class="align-middle text-center">
-                        <span class="available-quantity" id="availableQuantity${itemCounter}">-</span>
+                    <td style="min-width: 140px;">
+                        <input type="number" min="1" class="form-control quantity-input" name="items[${itemCounter}][quantity]" placeholder="Enter quantity" style="border-radius: 8px;">
+                        <div class="text-danger quantity-error small mt-1"></div>
                     </td>
                     <td class="align-middle text-center">
-                        <button type="button" class="btn btn-danger btn-sm remove-item-btn" ${itemCounter === 0 ? 'disabled' : ''}>
-                            <i class="fa fa-trash"></i>
+                        <span class="available-quantity" id="availableQuantity${itemCounter}">—</span>
+                    </td>
+                    <td class="align-middle text-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill remove-item-btn" ${itemCounter === 0 ? 'disabled' : ''}>
+                            <i class="fa fa-trash-o mr-1"></i> Remove
                         </button>
                     </td>
                 </tr>
             `;
             
             $('#itemsBody').append(row);
-
-            $(`#productDropdown${itemCounter}`).on('shown.bs.dropdown', function() {
-                var $menu = $(this).next('.dropdown-menu');
-                var $button = $(this);
-                var buttonOffset = $button.offset();
-                var modalBody = $button.closest('.modal-body');
-                var modalBodyOffset = modalBody.offset();
-                var relativeTop = buttonOffset.top - modalBodyOffset.top + $button.outerHeight();
-                var spaceBelow = modalBody.height() - relativeTop;
-                
-                // If not enough space below, show dropdown above
-                if (spaceBelow < 300) {
-                    $menu.css({
-                        'top': 'auto',
-                        'bottom': '100%',
-                        'transform': 'translateY(-10px)'
-                    });
-                } else {
-                    $menu.css({
-                        'top': '100%',
-                        'bottom': 'auto',
-                        'transform': 'none'
-                    });
-                }
-            });
             itemCounter++;
             
             // Enable remove buttons if more than one row
@@ -540,19 +791,15 @@
                 var productName = $(this).data('name');
                 var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
                 
-                // Update the display text with quantity
-                $(this).html(`${productName} (${productCode}) - Available: ${quantity}`);
-                
-                // Store quantity in data attribute
+                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode}) <span class="badge badge-info float-right mt-1">Available: ${quantity}</span>`);
                 $(this).data('quantity', quantity);
                 
-                // Add color coding based on availability
                 if (quantity === 0) {
                     $(this).hide();
                 } else if (quantity < 10) {
-                    $(this).addClass('text-warning');
+                    $(this).removeClass('text-muted').addClass('text-warning');
                 } else {
-                    $(this).removeClass('text-danger text-warning');
+                    $(this).removeClass('text-muted text-warning');
                 }
             });
             
@@ -563,19 +810,15 @@
                 var productName = $(this).data('name');
                 var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
                 
-                // Update the display text with quantity
-                $(this).html(`${productName} (${productCode}) - Available: ${quantity}`);
-                
-                // Store quantity in data attribute
+                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode}) <span class="badge badge-info float-right mt-1">Available: ${quantity}</span>`);
                 $(this).data('quantity', quantity);
                 
-                // Add color coding based on availability
                 if (quantity === 0) {
-                    $(this).addClass('text-danger');
+                    $(this).addClass('text-muted');
                 } else if (quantity < 10) {
                     $(this).addClass('text-warning');
                 } else {
-                    $(this).removeClass('text-danger text-warning');
+                    $(this).removeClass('text-muted text-warning');
                 }
             });
         }
@@ -583,57 +826,51 @@
         // Driver selection for create modal - fetch inventory when driver selected
         $(document).on('click', '#driverListCreate .driver-item', function(e) {
             e.preventDefault();
-            var driverName = $(this).text();
+            var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
             $(this).siblings().removeClass('active');
-            $(this).addClass('active');
-            $('#dropdownDriverCreate').text(driverName);
+            $(this).addClass('active bg-primary text-white');
+            $('#dropdownDriverCreate').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverCreate').val(driverId);
             $('#driverError').text('');
             
-            // Fetch driver inventory
             fetchDriverInventory(driverId);
         });
         
         // Fetch driver inventory
         function fetchDriverInventory(driverId) {
-            ShowLoad();
+            if (typeof ShowLoad === 'function') ShowLoad();
             $.ajax({
                 url: '{{ route("inventory.getDriverInventory") }}',
                 type: 'GET',
                 data: { driver_id: driverId },
                 dataType: 'json',
                 success: function(response) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     if (response.success) {
                         driverInventory = response.inventory;
                         
-                        // Create inventory map for quick lookup
                         driverInventoryMap = {};
                         driverInventory.forEach(function(item) {
                             driverInventoryMap[item.product_id] = item.quantity;
                         });
                         
-                        // Update available quantities for existing items
                         $('#itemsBody tr').each(function() {
                             var productId = $(this).find('.product-id-input').val();
                             if (productId) {
                                 var available = getAvailableQuantity(productId);
                                 var index = $(this).data('index');
-                                $('#availableQuantity' + index).text(available);
-                                
-                                // Update max attribute for quantity input
+                                $('#availableQuantity' + index).html(available);
                                 $(this).find('.quantity-input').attr('max', available);
                             }
                         });
                         
-                        // Update product dropdowns with quantities
                         updateProductQuantitiesInDropdown(driverInventoryMap);
                     }
                 },
                 error: function() {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     driverInventory = [];
                     driverInventoryMap = {};
                 }
@@ -645,7 +882,7 @@
             return driverInventoryMap[productId] || 0;
         }
         
-        // Product selection in create modal - show available quantity
+        // Product selection in create modal
         $(document).on('click', '.product-select-item', function(e) {
             e.preventDefault();
             var index = $(this).data('index');
@@ -664,26 +901,14 @@
                 return;
             }
             
-            // Update the dropdown button
-            $('#productDropdown' + index).text(productName).attr('title', productName);
-            
-            // Set the hidden input value
+            $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
             $(this).closest('tr').find('.product-id-input').val(productId);
-            
-            // Clear error
             $(this).closest('tr').find('.product-error').text('');
-            
-            // Highlight selected item
             $(this).siblings().removeClass('active');
-            $(this).addClass('active');
-            
-            // Show available quantity
-            $('#availableQuantity' + index).text(availableQuantity);
-            
-            // Set max attribute on quantity input
+            $(this).addClass('active bg-light');
+            $('#availableQuantity' + index).html(availableQuantity);
             $(this).closest('tr').find('.quantity-input').attr('max', availableQuantity);
             
-            // Validate current quantity if it exceeds available
             var currentQuantity = $(this).closest('tr').find('.quantity-input').val();
             if (currentQuantity && parseInt(currentQuantity) > availableQuantity) {
                 $(this).closest('tr').find('.quantity-input').val(availableQuantity);
@@ -701,10 +926,10 @@
             
             if (productId && quantity) {
                 if (quantity > available) {
-                    quantityError.text('Quantity exceeds available stock. Maximum: ' + available);
+                    quantityError.text('⚠️ Quantity exceeds available stock. Maximum: ' + available);
                     $(this).addClass('is-invalid');
                 } else if (quantity < 1) {
-                    quantityError.text('Quantity must be at least 1');
+                    quantityError.text('⚠️ Quantity must be at least 1');
                     $(this).addClass('is-invalid');
                 } else {
                     quantityError.text('');
@@ -717,7 +942,9 @@
         $(document).on('keyup', '.product-search', function() {
             var searchTerm = $(this).val().toLowerCase();
             var index = $(this).data('index');
-            var productList = $(this).siblings('.product-list[data-index="' + index + '"]');
+           // Find the product list within the same dropdown menu
+            var dropdownMenu = $(this).closest('.dropdown-menu');
+            var productList = dropdownMenu.find('.product-list');
             
             productList.find('.product-select-item').each(function() {
                 var productText = $(this).text().toLowerCase();
@@ -740,22 +967,17 @@
                 var row = $(this).closest('tr');
                 row.remove();
                 
-                // Renumber rows and update indices
                 $('#itemsBody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                     $(this).attr('data-index', index);
                     
-                    // Update dropdown IDs and attributes
                     var dropdownBtn = $(this).find('.product-dropdown');
                     var dropdownId = 'productDropdown' + index;
-                    dropdownBtn.attr('id', dropdownId)
-                               .attr('aria-labelledby', dropdownId);
+                    dropdownBtn.attr('id', dropdownId).attr('aria-labelledby', dropdownId);
                     
-                    // Update search and list indices
                     $(this).find('.product-search, .product-list').attr('data-index', index);
                     $(this).find('.product-select-item').attr('data-index', index);
                     
-                    // Update input names
                     $(this).find('.product-id-input, .quantity-input').each(function() {
                         var name = $(this).attr('name');
                         if (name && name.includes('items[')) {
@@ -764,14 +986,11 @@
                         }
                     });
                     
-                    // Update available quantity ID
                     $(this).find('.available-quantity').attr('id', 'availableQuantity' + index);
                 });
                 
-                // Update counter
                 itemCounter = $('#itemsBody tr').length;
                 
-                // Disable remove button on first row if only one row left
                 if ($('#itemsBody tr').length === 1) {
                     $('#itemsBody tr:first .remove-item-btn').prop('disabled', true);
                 }
@@ -783,7 +1002,7 @@
             initializeItemsTable();
             $('#createReturnForm')[0].reset();
             $('#selectedDriverCreate').val('');
-            $('#dropdownDriverCreate').text('{{ __('Select Driver') }}');
+            $('#dropdownDriverCreate').html('<i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}');
             $('#driverListCreate .driver-item').removeClass('active');
             $('#driverError, #itemsError').text('');
             $('#remarks').val('');
@@ -792,7 +1011,7 @@
         });
         
         // ============================================
-        // EDIT MODAL FUNCTIONS (Keep your existing edit functions)
+        // EDIT MODAL FUNCTIONS
         // ============================================
         
         // Initialize edit modal items table
@@ -807,18 +1026,23 @@
             var displayName = productName || '{{ __('Select Product') }}';
             var row = `
                 <tr class="edit-item-row" data-index="${editItemCounter}">
-                    <td class="align-middle text-center">${editItemCounter + 1}</td>
-                    <td>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left edit-product-dropdown" type="button" id="editProductDropdown${editItemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: hidden; text-overflow: ellipsis;">
-                                ${displayName}
+                    <td class="align-middle text-center font-weight-bold">${editItemCounter + 1}</td>
+                    <td style="min-width: 300px;">
+                        <div class="dropdown w-100">
+                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left edit-product-dropdown py-2" type="button" id="editProductDropdown${editItemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 8px; white-space: normal; word-wrap: break-word;">
+                                <i class="fa fa-cube mr-2"></i>${displayName}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="editProductDropdown${editItemCounter}" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                <input type="text" class="form-control mb-3 edit-product-search" placeholder="Search Products..." data-index="${editItemCounter}">
-                                <div class="edit-product-list" data-index="${editItemCounter}">
+                            <div class="dropdown-menu p-3 shadow" aria-labelledby="editProductDropdown${editItemCounter}" style="width: 100%; min-width: 400px; max-height: 400px; overflow-y: auto;">
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                    </div>
+                                    <input type="text" class="form-control edit-product-search" placeholder="Search Products..." data-index="${editItemCounter}">
+                                </div>
+                                <div class="edit-product-list" data-index="${editItemCounter}" style="max-height: 220px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
-                                            {{ $product->name }} ({{ $product->code }})
+                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item border-0 py-2 rounded mb-1" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
+                                            <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                             <span class="product-available-qty text-muted float-right"></span>
                                         </a>
                                     @endforeach
@@ -826,52 +1050,27 @@
                             </div>
                         </div>
                         <input type="hidden" class="edit-product-id-input" name="items[${editItemCounter}][product_id]" value="${productId}">
-                        <div class="text-danger edit-product-error small"></div>
+                        <div class="text-danger edit-product-error small mt-1"></div>
                     </td>
-                    <td>
-                        <input type="number" min="1" class="form-control edit-quantity-input" name="items[${editItemCounter}][quantity]" placeholder="Enter quantity" value="${quantity}">
-                        <div class="text-danger edit-quantity-error small"></div>
+                    <td style="min-width: 150px;">
+                        <input type="number" min="1" class="form-control edit-quantity-input" name="items[${editItemCounter}][quantity]" placeholder="Enter quantity" value="${quantity}" style="border-radius: 8px;">
+                        <div class="text-danger edit-quantity-error small mt-1"></div>
                     </td>
                     <td class="align-middle text-center">
-                        <button type="button" class="btn btn-danger btn-sm remove-edit-item-btn" ${editItemCounter === 0 ? 'disabled' : ''}>
-                            <i class="fa fa-trash"></i>
+                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill remove-edit-item-btn" ${editItemCounter === 0 ? 'disabled' : ''}>
+                            <i class="fa fa-trash-o mr-1"></i> Remove
                         </button>
                     </td>
                 </tr>
             `;
             
             $('#editItemsBody').append(row);
-            $(`#editProductDropdown${editItemCounter}`).on('shown.bs.dropdown', function() {
-                var $menu = $(this).next('.dropdown-menu');
-                var $button = $(this);
-                var buttonOffset = $button.offset();
-                var modalBody = $button.closest('.modal-body');
-                var modalBodyOffset = modalBody.offset();
-                var relativeTop = buttonOffset.top - modalBodyOffset.top + $button.outerHeight();
-                var spaceBelow = modalBody.height() - relativeTop;
-                
-                if (spaceBelow < 300) {
-                    $menu.css({
-                        'top': 'auto',
-                        'bottom': '100%',
-                        'transform': 'translateY(-10px)'
-                    });
-                } else {
-                    $menu.css({
-                        'top': '100%',
-                        'bottom': 'auto',
-                        'transform': 'none'
-                    });
-                }
-            });
             editItemCounter++;
             
-            // Enable remove buttons if more than one row
             if ($('#editItemsBody tr').length > 1) {
                 $('#editItemsBody tr:first .remove-edit-item-btn').prop('disabled', false);
             }
         }
-        
         
         // Handle edit modal opening
         $(document).on('click', '.edit-return-btn', function(e) {
@@ -879,29 +1078,23 @@
             var requestId = $(this).data('id');
             var requestData = $(this).data('request');
             
-            // Parse JSON string if needed
             if (typeof requestData === 'string') {
                 requestData = JSON.parse(requestData);
             }
             
-            // Store current request ID
             currentRequestId = requestId;
             
-            // Update form action
             var formAction = '{{ route("inventoryReturns.update", ":id") }}';
             formAction = formAction.replace(':id', requestId);
             $('#editReturnForm').attr('action', formAction);
             
-            // Fill basic info
             $('#selectedDriverEdit').val(requestData.driver_id);
-            $('#dropdownDriverEdit').text(requestData.driver_name || 'Select Driver');
+            $('#dropdownDriverEdit').html(`<i class="fa fa-user mr-2"></i>${requestData.driver_name || 'Select Driver'}`);
             $('#remarksEdit').val(requestData.remarks || '');
             
-            // Highlight selected driver
             $('#driverListEdit .driver-item').removeClass('active');
-            $('#driverListEdit .driver-item[data-value="' + requestData.driver_id + '"]').addClass('active');
+            $('#driverListEdit .driver-item[data-value="' + requestData.driver_id + '"]').addClass('active bg-primary text-white');
             
-            // Clear and populate items table
             initializeEditItemsTable();
             
             if (requestData.items && Array.isArray(requestData.items) && requestData.items.length > 0) {
@@ -913,7 +1106,6 @@
                     addEditItemRow(item.product_id, productName, item.quantity);
                 });
             } else {
-                // For backward compatibility with old single-item returns
                 if (requestData.product_id && requestData.quantity) {
                     $('#editItemsBody').empty();
                     editItemCounter = 0;
@@ -922,19 +1114,18 @@
                 }
             }
             
-            // Show modal
             $('#editRequest').modal('show');
         });
         
         // Driver selection for edit modal
         $(document).on('click', '#driverListEdit .driver-item', function(e) {
             e.preventDefault();
-            var driverName = $(this).text();
+            var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
             $(this).siblings().removeClass('active');
-            $(this).addClass('active');
-            $('#dropdownDriverEdit').text(driverName);
+            $(this).addClass('active bg-primary text-white');
+            $('#dropdownDriverEdit').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverEdit').val(driverId);
             $('#driverEditError').text('');
         });
@@ -943,7 +1134,7 @@
         $(document).on('keyup', '.edit-product-search', function() {
             var searchTerm = $(this).val().toLowerCase();
             var index = $(this).data('index');
-            var productList = $(this).siblings('.edit-product-list[data-index="' + index + '"]');
+            var productList = $(this).siblings('.edit-product-list');
             
             productList.find('.edit-product-select-item').each(function() {
                 var productText = $(this).text().toLowerCase();
@@ -962,18 +1153,11 @@
             var productId = $(this).data('value');
             var productName = $(this).data('name');
             
-            // Update the dropdown button
-            $('#editProductDropdown' + index).text(productName).attr('title', productName);
-            
-            // Set the hidden input value
+            $('#editProductDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
             $(this).closest('tr').find('.edit-product-id-input').val(productId);
-            
-            // Clear error
             $(this).closest('tr').find('.edit-product-error').text('');
-            
-            // Highlight selected item
             $(this).siblings().removeClass('active');
-            $(this).addClass('active');
+            $(this).addClass('active bg-light');
         });
         
         // Add item button for edit modal
@@ -985,26 +1169,19 @@
         $(document).on('click', '.remove-edit-item-btn', function() {
             if ($('#editItemsBody tr').length > 1) {
                 var row = $(this).closest('tr');
-                var rowIndex = parseInt(row.data('index'));
-                
                 row.remove();
                 
-                // Renumber rows and update indices
                 $('#editItemsBody tr').each(function(index) {
                     $(this).find('td:first').text(index + 1);
                     $(this).attr('data-index', index);
                     
-                    // Update dropdown IDs and attributes
                     var dropdownBtn = $(this).find('.edit-product-dropdown');
                     var dropdownId = 'editProductDropdown' + index;
-                    dropdownBtn.attr('id', dropdownId)
-                               .attr('aria-labelledby', dropdownId);
+                    dropdownBtn.attr('id', dropdownId).attr('aria-labelledby', dropdownId);
                     
-                    // Update search and list indices
                     $(this).find('.edit-product-search, .edit-product-list').attr('data-index', index);
                     $(this).find('.edit-product-select-item').attr('data-index', index);
                     
-                    // Update input names
                     $(this).find('.edit-product-id-input, .edit-quantity-input').each(function() {
                         var name = $(this).attr('name');
                         if (name && name.includes('items[')) {
@@ -1014,10 +1191,8 @@
                     });
                 });
                 
-                // Update counter
                 editItemCounter = $('#editItemsBody tr').length;
                 
-                // Disable remove button on first row if only one row left
                 if ($('#editItemsBody tr').length === 1) {
                     $('#editItemsBody tr:first .remove-edit-item-btn').prop('disabled', true);
                 }
@@ -1040,34 +1215,28 @@
             var requestId = $(this).data('id');
             var requestData = $(this).data('request');
             
-            // Parse JSON string if needed
             if (typeof requestData === 'string') {
                 requestData = JSON.parse(requestData);
             }
             
-            // Store current request info
             currentRequestId = requestId;
             currentRequestStatus = requestData.status;
             
-            // Update modal title with request ID
             $('#viewRequestId').text('(#' + requestId + ')');
             $('#viewRequestIdText').text(requestId);
             
-            // Fill view modal with data
             $('#viewDriverName').text(requestData.driver_name || 'N/A');
             $('#viewRemarks').text(requestData.remarks || 'No remarks');
             $('#viewCreatedAt').text(requestData.created_at || 'N/A');
             
-            // Set status with badge
             var status = requestData.status;
             var badgeClass = getStatusBadgeClass(status);
-            
             $('#viewStatusBadge').html('<span class="badge ' + badgeClass + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>');
             
             // Show items table
             if (requestData.items && Array.isArray(requestData.items) && requestData.items.length > 0) {
                 var itemsHtml = '<div class="table-responsive"><table class="table table-sm table-bordered">';
-                itemsHtml += '<thead><tr><th>#</th><th>Product</th><th>Returned Quantity</th></tr></thead><tbody>';
+                itemsHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product</th><th width="20%" class="text-center">Returned Quantity</th></tr></thead><tbody>';
                 
                 var totalQuantity = 0;
                 
@@ -1081,33 +1250,32 @@
                     }
                     
                     itemsHtml += '<tr>';
-                    itemsHtml += '<td>' + (index + 1) + '</td>';
+                    itemsHtml += '<td class="text-center">' + (index + 1) + '</td>';
                     itemsHtml += '<td>' + productName + '</td>'; 
-                    itemsHtml += '<td class="text-center">' + quantity + '</td>';
+                    itemsHtml += '<td class="text-center"><span class="badge badge-primary px-3 py-2 rounded-pill">' + quantity + '</span></td>';
                     itemsHtml += '</tr>';
                     
                     totalQuantity += parseInt(quantity);
                 });
                 
                 itemsHtml += '</tbody>';
-                itemsHtml += '<tfoot><tr>';
-                itemsHtml += '<td colspan="2" class="text-right"><strong>Total:</strong></td>';
+                itemsHtml += '<tfoot><tr class="bg-light">';
+                itemsHtml += '<td colspan="2" class="text-right"><strong>Total Items:</strong></td>';
                 itemsHtml += '<td class="text-center"><strong>' + totalQuantity + '</strong></td>';
                 itemsHtml += '</tr></tfoot>';
                 itemsHtml += '</table></div>';
                 
                 $('#viewItemsTable').html(itemsHtml);
             } else {
-                // For backward compatibility with old single-item returns
                 var singleItemHtml = '<div class="table-responsive"><table class="table table-sm table-bordered">';
-                singleItemHtml += '<thead><tr><th>#</th><th>Product</th><th>Returned Quantity</th></tr></thead><tbody>';
+                singleItemHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product</th><th width="20%" class="text-center">Returned Quantity</th></tr></thead><tbody>';
                 
                 if (requestData.product_id && requestData.quantity) {
                     var productName = getProductName(requestData.product_id);
                     singleItemHtml += '<tr>';
-                    singleItemHtml += '<td>1</td>';
+                    singleItemHtml += '<td class="text-center">1</td>';
                     singleItemHtml += '<td>' + (requestData.product_name || productName) + '</td>'; 
-                    singleItemHtml += '<td class="text-center">' + requestData.quantity + '</td>';
+                    singleItemHtml += '<td class="text-center"><span class="badge badge-primary px-3 py-2 rounded-pill">' + requestData.quantity + '</span></td>';
                     singleItemHtml += '</tr>';
                 }
                 
@@ -1115,7 +1283,6 @@
                 $('#viewItemsTable').html(singleItemHtml);
             }
             
-            // Show/hide approval section - Show for approved returns
             if (status === 'approved') {
                 $('#viewApprovedSection').show();
                 $('#viewApprovedAtSection').show();
@@ -1126,21 +1293,19 @@
                 $('#viewApprovedAtSection').hide();
             }
             
-            // Show/hide action buttons based on status (only for pending returns)
             var actionButtonsHtml = '';
             if (status === 'pending') {
                 actionButtonsHtml = `
-                    <button type="button" class="btn btn-success mr-2" id="approveFromViewBtn">
-                        <i class="fa fa-check"></i> Approve
+                    <button type="button" class="btn btn-success mr-2 rounded-pill px-4" id="approveFromViewBtn">
+                        <i class="fa fa-check mr-1"></i> Approve
                     </button>
-                    <button type="button" class="btn btn-danger" id="rejectFromViewBtn">
-                        <i class="fa fa-times"></i> Reject
+                    <button type="button" class="btn btn-outline-danger rounded-pill px-4" id="rejectFromViewBtn">
+                        <i class="fa fa-times mr-1"></i> Reject
                     </button>
                 `;
             }
             $('#viewActionButtons').html(actionButtonsHtml);
             
-            // Show modal
             $('#viewRequest').modal('show');
         });
         
@@ -1152,21 +1317,18 @@
         $('#createReturnForm').submit(function(e) {
             e.preventDefault();
             
-            // Reset errors
             $('#driverError, #itemsError').text('');
             $('.product-error, .quantity-error').text('');
             
-            // Validate driver
             var driverId = $('#selectedDriverCreate').val();
             if (!driverId) {
-                $('#driverError').text('Please select a driver');
+                $('#driverError').text('⚠️ Please select a driver');
                 return false;
             }
             
-            // Validate items
             var hasErrors = false;
             var items = [];
-            var productIds = new Set(); // To check for duplicate products
+            var productIds = new Set();
             
             $('#itemsBody tr').each(function(index) {
                 var productId = $(this).find('.product-id-input').val();
@@ -1175,31 +1337,27 @@
                 var quantityError = $(this).find('.quantity-error');
                 var available = getAvailableQuantity(productId);
                 
-                // Reset errors
                 productError.text('');
                 quantityError.text('');
                 
-                // Validate product
                 if (!productId) {
-                    productError.text('Please select a product');
+                    productError.text('⚠️ Please select a product');
                     hasErrors = true;
                 } else if (productIds.has(productId)) {
-                    productError.text('Duplicate product selected');
+                    productError.text('⚠️ Duplicate product selected');
                     hasErrors = true;
                 } else {
                     productIds.add(productId);
                 }
                 
-                // Validate quantity
                 if (!quantity || quantity < 1) {
-                    quantityError.text('Please enter a valid quantity (minimum 1)');
+                    quantityError.text('⚠️ Please enter a valid quantity (minimum 1)');
                     hasErrors = true;
                 } else if (available < quantity) {
-                    quantityError.text('Insufficient stock. Available: ' + available);
+                    quantityError.text('⚠️ Insufficient stock. Available: ' + available);
                     hasErrors = true;
                 }
                 
-                // Add to items array only if valid
                 if (productId && quantity && quantity >= 1 && available >= quantity) {
                     items.push({
                         product_id: parseInt(productId),
@@ -1209,12 +1367,11 @@
             });
             
             if (items.length === 0) {
-                $('#itemsError').text('Please add at least one valid item with product selected and quantity entered');
+                $('#itemsError').text('⚠️ Please add at least one valid item with product selected and quantity entered');
                 hasErrors = true;
             }
             
             if (hasErrors) {
-                // Highlight problematic rows
                 $('#itemsBody tr').each(function(index) {
                     var productId = $(this).find('.product-id-input').val();
                     var quantity = $(this).find('.quantity-input').val();
@@ -1235,7 +1392,6 @@
                 return false;
             }
             
-            // Prepare all form data including items
             var formData = {
                 driver_id: driverId,
                 items: items,
@@ -1243,20 +1399,18 @@
                 _token: '{{ csrf_token() }}'
             };
             
-            // Submit via AJAX
-            ShowLoad();
+            if (typeof ShowLoad === 'function') ShowLoad();
             $.ajax({
                 url: $(this).attr('action'),
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function(response) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     if (response.success) {
                         $('#createRequest').modal('hide');
                         showNotification('success', response.message);
                         
-                        // Refresh DataTable
                         if (table && typeof table.ajax !== 'undefined') {
                             table.ajax.reload(null, false);
                         } else if (table && typeof table.draw !== 'undefined') {
@@ -1274,7 +1428,7 @@
                     }
                 },
                 error: function(xhr) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     var errorMessage = 'An error occurred';
                     
                     if (xhr.responseJSON) {
@@ -1300,21 +1454,18 @@
         $('#editReturnForm').submit(function(e) {
             e.preventDefault();
             
-            // Reset errors
             $('#driverEditError, #editItemsError').text('');
             $('.edit-product-error, .edit-quantity-error').text('');
             
-            // Validate driver
             var driverId = $('#selectedDriverEdit').val();
             if (!driverId) {
-                $('#driverEditError').text('Please select a driver');
+                $('#driverEditError').text('⚠️ Please select a driver');
                 return false;
             }
             
-            // Validate items
             var hasErrors = false;
             var items = [];
-            var productIds = new Set(); // To check for duplicate products
+            var productIds = new Set();
             
             $('#editItemsBody tr').each(function(index) {
                 var productId = $(this).find('.edit-product-id-input').val();
@@ -1322,28 +1473,24 @@
                 var productError = $(this).find('.edit-product-error');
                 var quantityError = $(this).find('.edit-quantity-error');
                 
-                // Reset errors
                 productError.text('');
                 quantityError.text('');
                 
-                // Validate product
                 if (!productId) {
-                    productError.text('Please select a product');
+                    productError.text('⚠️ Please select a product');
                     hasErrors = true;
                 } else if (productIds.has(productId)) {
-                    productError.text('Duplicate product selected');
+                    productError.text('⚠️ Duplicate product selected');
                     hasErrors = true;
                 } else {
                     productIds.add(productId);
                 }
                 
-                // Validate quantity
                 if (!quantity || quantity < 1) {
-                    quantityError.text('Please enter a valid quantity (minimum 1)');
+                    quantityError.text('⚠️ Please enter a valid quantity (minimum 1)');
                     hasErrors = true;
                 }
                 
-                // Add to items array only if valid
                 if (productId && quantity && quantity >= 1) {
                     items.push({
                         product_id: parseInt(productId),
@@ -1353,12 +1500,11 @@
             });
             
             if (items.length === 0) {
-                $('#editItemsError').text('Please add at least one valid item with product selected and quantity entered');
+                $('#editItemsError').text('⚠️ Please add at least one valid item with product selected and quantity entered');
                 hasErrors = true;
             }
             
             if (hasErrors) {
-                // Highlight problematic rows
                 $('#editItemsBody tr').each(function(index) {
                     var productId = $(this).find('.edit-product-id-input').val();
                     var quantity = $(this).find('.edit-quantity-input').val();
@@ -1378,7 +1524,6 @@
                 return false;
             }
             
-            // Prepare all form data including items
             var formData = {
                 driver_id: driverId,
                 items: items,
@@ -1387,20 +1532,18 @@
                 _method: 'PUT'
             };
             
-            // Submit via AJAX
-            ShowLoad();
+            if (typeof ShowLoad === 'function') ShowLoad();
             $.ajax({
                 url: $(this).attr('action'),
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function(response) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     if (response.success) {
                         $('#editRequest').modal('hide');
                         showNotification('success', response.message);
                         
-                        // Refresh DataTable
                         if (table && typeof table.ajax !== 'undefined') {
                             table.ajax.reload(null, false);
                         } else if (table && typeof table.draw !== 'undefined') {
@@ -1418,7 +1561,7 @@
                     }
                 },
                 error: function(xhr) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     var errorMessage = 'An error occurred';
                     
                     if (xhr.responseJSON) {
@@ -1441,16 +1584,101 @@
         });
         
         // ============================================
+        // APPROVE/REJECT FUNCTIONS
+        // ============================================
+        
+        $(document).on('click', '#approveFromViewBtn', function() {
+            if (confirm('Are you sure you want to approve this inventory return?')) {
+                approveRequest(currentRequestId);
+            }
+        });
+
+        $(document).on('click', '#rejectFromViewBtn', function() {
+            if (confirm('Are you sure you want to reject this inventory return?')) {
+                rejectRequest(currentRequestId);
+            }
+        });
+        
+        function approveRequest(requestId) {
+            if (typeof ShowLoad === 'function') ShowLoad();
+            
+            var url = '{{ route("inventoryReturns.approve", ":id") }}';
+            url = url.replace(':id', requestId);
+            
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (typeof HideLoad === 'function') HideLoad();
+                    if (response.success) {
+                        showNotification('success', response.message);
+                        $('#viewRequest').modal('hide');
+                        
+                        if (table && typeof table.ajax !== 'undefined') {
+                            table.ajax.reload(null, false);
+                        } else if (table && typeof table.draw !== 'undefined') {
+                            table.draw(false);
+                        }
+                    } else {
+                        showNotification('error', response.message || 'Failed to approve return');
+                    }
+                },
+                error: function(xhr) {
+                    if (typeof HideLoad === 'function') HideLoad();
+                    showNotification('error', 'An error occurred while approving');
+                }
+            });
+        }
+        
+        function rejectRequest(requestId) {
+            if (typeof ShowLoad === 'function') ShowLoad();
+            
+            var url = '{{ route("inventoryReturns.reject", ":id") }}';
+            url = url.replace(':id', requestId);
+            
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (typeof HideLoad === 'function') HideLoad();
+                    if (response.success) {
+                        showNotification('success', response.message);
+                        $('#viewRequest').modal('hide');
+                        
+                        if (table && typeof table.ajax !== 'undefined') {
+                            table.ajax.reload(null, false);
+                        } else if (table && typeof table.draw !== 'undefined') {
+                            table.draw(false);
+                        }
+                    } else {
+                        showNotification('error', response.message || 'Failed to reject return');
+                    }
+                },
+                error: function(xhr) {
+                    if (typeof HideLoad === 'function') HideLoad();
+                    showNotification('error', 'An error occurred while rejecting');
+                }
+            });
+        }
+        
+        // ============================================
         // DELETE FUNCTIONALITY
         // ============================================
         
-        // Handle delete action via AJAX
         $(document).on('submit', 'form[action*="destroy"]', function(e) {
             e.preventDefault();
             var form = $(this);
             
             if (confirm('Are you sure you want to delete this inventory return?')) {
-                ShowLoad();
+                if (typeof ShowLoad === 'function') ShowLoad();
                 $.ajax({
                     url: form.attr('action'),
                     type: 'POST',
@@ -1459,11 +1687,10 @@
                         'X-HTTP-Method-Override': 'DELETE'
                     },
                     success: function(response) {
-                        HideLoad();
+                        if (typeof HideLoad === 'function') HideLoad();
                         if (response.success) {
                             showNotification('success', response.message);
                             
-                            // Refresh the DataTable
                             if (table && typeof table.ajax !== 'undefined') {
                                 table.ajax.reload(null, false);
                             } else if (table && typeof table.draw !== 'undefined') {
@@ -1476,7 +1703,7 @@
                         }
                     },
                     error: function(xhr) {
-                        HideLoad();
+                        if (typeof HideLoad === 'function') HideLoad();
                         showNotification('error', xhr.responseJSON?.message || 'An error occurred');
                     }
                 });
@@ -1487,7 +1714,6 @@
         // HELPER FUNCTIONS
         // ============================================
         
-        // Helper function for status badge class
         function getStatusBadgeClass(status) {
             switch (status) {
                 case 'pending': return 'badge-pending';
@@ -1498,14 +1724,10 @@
             }
         }
 
-        // Helper function for notifications
         function showNotification(type, message) {
-            // Check if toastr is available
             if (typeof toastr !== 'undefined') {
                 toastr[type](message);
-            } 
-            // Check if Swal (SweetAlert) is available
-            else if (typeof Swal !== 'undefined') {
+            } else if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: type,
                     text: message,
@@ -1514,16 +1736,13 @@
                     showConfirmButton: false,
                     timer: 3000
                 });
-            }
-            // Fallback to regular alert
-            else {
+            } else {
                 alert(message);
             }
         }
         
-        // Optional: Add better error handling for AJAX requests
         $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
-            if (jqxhr.status === 419) { // CSRF token mismatch
+            if (jqxhr.status === 419) {
                 showNotification('error', 'Your session has expired. Please refresh the page.');
             } else if (jqxhr.status === 500) {
                 showNotification('error', 'Server error occurred. Please try again.');
@@ -1534,20 +1753,17 @@
         // CLEAR MODALS ON CLOSE
         // ============================================
         
-        // Clear edit modal when closed
         $('#editRequest').on('hidden.bs.modal', function () {
             $('#editReturnForm')[0].reset();
             $('#selectedDriverEdit').val('');
-            $('#dropdownDriverEdit').text('Select Driver');
+            $('#dropdownDriverEdit').html('<i class="fa fa-user mr-2"></i>Select Driver');
             $('#driverListEdit .driver-item').removeClass('active');
             $('#editItemsBody').empty();
             editItemCounter = 0;
             $('#editItemsError, #driverEditError').text('');
         });
 
-        // Clear view modal when closed
         $('#viewRequest').on('hidden.bs.modal', function () {
-            // Reset view modal fields
             $('#viewRequestId').text('');
             $('#viewRequestIdText, #viewDriverName, #viewRemarks, #viewCreatedAt, #viewApprovedBy, #viewApprovedAt').text('');
             $('#viewStatusBadge').html('');
@@ -1558,7 +1774,6 @@
         });
     });
 
-    // Keyboard shortcut for creating new return
     $(document).keyup(function(e) {
         if(e.altKey && e.keyCode == 78 && ($('#createRequest').length > 0)) {
             $('#createRequest').modal('show');

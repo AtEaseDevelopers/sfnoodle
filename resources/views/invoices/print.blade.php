@@ -118,7 +118,7 @@
     <table>
         <tr>
             <td class="left-align">Document #</td>
-            <td class="right-align">{{ date_format(date_create($invoices['date']),'d M Y H:i A') ?? '' }}</td>
+            <td class="right-align">{{ date_format(date_create($invoices['date']),'d M Y') ?? '' }}</td>
         </tr>
         <tr>
             <td class="left-align">Invoice No:</td>
@@ -158,7 +158,7 @@
                     $totalamount = ($totalamount ?? 0) + $invoiceDetail['totalprice'];
                 @endphp
                 <tr>
-                    <td class="col-sku left-align">{{ $invoiceDetail['product']['sku'] ?? $invoiceDetail['product']['name'] }}</td>
+                    <td class="col-sku left-align">{{ $invoiceDetail['product']['code'] }}</td>
                     <td class="col-qty">{{ $invoiceDetail['quantity'] }}</td>
                     <td class="col-price">{{ number_format($invoiceDetail['price'], 2) }}</td>
                     <td class="col-total">{{ number_format($invoiceDetail['totalprice'], 2) }}</td>

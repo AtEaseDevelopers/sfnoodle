@@ -61,7 +61,9 @@ class InvoiceDataTable extends DataTable
             ->selectRaw('invoices.*, 
                 (SELECT SUM(totalprice) FROM invoice_details 
                  WHERE invoice_details.invoice_id = invoices.id) as calculated_total')
-            ->select('invoices.*');
+            ->select('invoices.*')
+            ->orderBy('invoices.created_at', 'desc'); // Add this line
+
     }
 
     /**

@@ -4,38 +4,53 @@
     {!! Form::select('customer_id', $customerItems, null, ['class' => 'form-control select2-customer', 'placeholder' => 'Pick a Customer...']) !!}
 </div>
 
-<!-- Invoice No Field (Read Only) -->
+<!-- Invoice Id Field - MULTIPLE SELECTION -->
 <div class="form-group col-sm-6">
-    {!! Form::label('invoice_no', __('invoice_payments.invoice_no')) !!}
-    {!! Form::text('invoice_no', $invoicePayment->invoice_no ?? ($invoicePayment->invoice->invoiceno ?? 'N/A'), ['class' => 'form-control', 'readonly']) !!}
-    <!-- Hidden field for invoice_id -->
-    {!! Form::hidden('invoice_id', $invoicePayment->invoice_id ?? null) !!}
+    {!! Form::label('invoice_id', __('invoice_payments.invoice_no')) !!}<span class="asterisk"> *</span>
+    <select name="invoice_id[]" id="invoice_id" class="form-control select2-invoice" multiple data-live-search="true">
+        <option disabled>Pick Invoices...</option>
+        @if(isset($invoices) && !isset($invoicePayment))
+            @foreach($invoices as $invoice)
+                <option value="{{ $invoice->id }}" {{ isset($selectedInvoices) && in_array($invoice->id, $selectedInvoices) ? 'selected' : '' }}>
+                    {{ $invoice->invoiceno }} - RM {{ number_format($invoice->total_amount, 2) }} - {{ $invoice->date }}
+                </option>
+            @endforeach
+        @endif
+    </select>
+    
+    @if(isset($invoicePayment) && isset($selectedInvoices))
+        @foreach($selectedInvoices as $selectedInvoice)
+            <input type="hidden" name="invoice_id[]" value="{{ $selectedInvoice }}">
+        @endforeach
+    @endif
 </div>
 
 <!-- Type Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('type', __('invoice_payments.type')) !!}<span class="asterisk"> *</span>
-    {{ Form::select('type', array(1 => 'Cash'), null, ['class' => 'form-control']) }}
+    {{ Form::select('type', array(1 => 'Cash', 3 => 'Online BankIn', 4 => 'E-wallet', 5 => 'Cheque'), null, ['class' => 'form-control']) }}
 </div>
 
 <!-- ChequeNo Field -->
-<!-- <div class="form-group col-sm-6" id='cheque-container' style='display:none;'>
+<div class="form-group col-sm-6" id='cheque-container' style='display:none;'>
     {!! Form::label('chequeno', __('invoice_payments.cheque_no')) !!}
     {!! Form::text('chequeno', null, ['class' => 'form-control', 'maxlength' => 20]) !!}
-</div> -->
+</div>
 
 <!-- Amount Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('amount', __('invoice_payments.amount')) !!}<span class="asterisk"> *</span>
-    {!! Form::text('amount', null, ['class' => 'form-control', 'min' => 0, 'step' => 0.01]) !!}
+    {!! Form::text('amount', null, ['class' => 'form-control', 'min' => 0, 'step' => 0.01, 'readonly' => true]) !!}
 </div>
 
 @can('paymentapprove')
+@if(isset($invoicePayment))
 <!-- Status Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('status', __('invoice_payments.status')) !!}
-    {{ Form::select('status', array(0 => 'New', 1 => 'Completed', 2 => 'Canceled'), null, ['class' => 'form-control']) }}
+    {{ Form::select('status', array(0 => 'New', 1 => 'Completed', 2 => 'Cancelled'), null, ['class' => 'form-control']) }}
 </div>
+@endif
 @endcan
 
 <div class="form-group col-sm-12">
@@ -44,7 +59,6 @@
         <div class="col-sm-6">
             {!! Form::label('attachment', __('invoice_payments.attachment')) !!}
             
-            <!-- Display existing attachment if it exists -->
             @if(isset($invoicePayment) && $invoicePayment->attachment)
                 <div class="mb-2">
                     <p class="mb-1"><strong>Current Attachment:</strong></p>
@@ -128,6 +142,27 @@
                 width: '100%'
             });
             
+            // Initialize select2 for invoice with multiple selection
+            $('.select2-invoice').select2({
+                allowClear: true,
+                width: '100%'
+            });
+            
+            var isEditMode = @json(isset($invoicePayment));
+            
+            if (isEditMode) {
+                // In edit mode, disable the customer and invoice fields
+                $('#customer_id').prop('disabled', true);
+                $('#invoice_id').prop('disabled', true);
+                $('.select2-customer').prop('disabled', true);
+                $('.select2-invoice').prop('disabled', true);
+                
+                // Show cheque container if cheque type is selected
+                if ($('#type').val() == "5") {
+                    $('#cheque-container').show();
+                }
+            }
+            
             HideLoad();
         });
         
@@ -147,101 +182,98 @@
         $("#attachment").on("change", function(e) {
             var file = e.target.files[0];
             
-            // Hide preview initially
             $('#new-image-preview-container').hide();
             
             if (file) {
-                // Check if it's an image
                 if (file.type.match('image.*')) {
                     var reader = new FileReader();
                     
                     reader.onload = function(e) {
-                        // Show the new image preview
                         $('#new-image-preview').attr('src', e.target.result);
                         $('#new-image-preview-container').show();
                     }
                     
                     reader.readAsDataURL(file);
                 } else {
-                    // For PDF files, show a PDF icon
                     $('#new-image-preview').attr('src', '');
                     $('#new-image-preview-container').hide();
                 }
             }
         });
         
+        // Only run these functions in create mode
+        @if(!isset($invoicePayment))
+        $("#invoice_id").on("change", function(){
+            getInvoicesTotal();
+        });
+
         $("#customer_id").change(function(){
             ShowLoad();
             let customerId = $('#customer_id').val();
 
-            // Clear the invoice dropdown first
-            $('#invoice_id').empty().append('<option value="">Pick an Invoice...</option>');
-            
             if (customerId === '') {
-                // Disable invoice dropdown if no customer selected
-                $('#invoice_id').prop('disabled', true).trigger('change');
-                $('#invoice_id').select2('destroy').prop('disabled', true).select2({
+                var o = '<option disabled>Pick Invoices...</option>';
+                $('select[name="invoice_id[]"]').html(o);
+                $('.select2-invoice').select2('destroy').empty().select2({
                     placeholder: "First select a customer...",
-                    allowClear: true,
-                    width: '100%',
-                    disabled: true
-                });
-                HideLoad();
-            } else {
-                // Enable invoice dropdown when customer is selected
-                $('#invoice_id').prop('disabled', false);
-                $('#invoice_id').select2('destroy').select2({
-                    placeholder: "Search for an invoice...",
                     allowClear: true,
                     width: '100%'
                 });
-
+                $('#amount').val('');
+                HideLoad();
+            } else {
                 var url = '{{ config("app.url") }}/invoicePayments/customer-invoices/' + customerId;
-
                 $.get(url, function(data, status){
                     if (status === 'success') {
                         if (data.status) {
-                            var options = '<option value="">Pick an Invoice...</option>';
+                            var o = '<option disabled>Pick Invoices...</option>';
                             if (data.data.length > 0) {
                                 $.each(data.data, function(key, invoice) {
-                                    options += `<option value="${invoice.id}">
-                                        ${invoice.invoiceno} - RM ${invoice.total_amount.toFixed(2)} - ${invoice.date}
-                                    </option>`;
+                                    o += `<option value="${invoice.id}">
+                                            ${invoice.invoiceno} - RM ${parseFloat(invoice.total_amount).toFixed(2)} - ${invoice.date}
+                                        </option>`;
                                 });
                             } else {
-                                options += '<option value="" disabled>No invoices found for this customer</option>';
+                                o += '<option value="" disabled>No invoices found for this customer</option>';
                             }
-                            $('#invoice_id').empty().append(options);
+                            
+                            $('select[name="invoice_id[]"]').html(o);
+                            $('.select2-invoice').select2('destroy').select2({
+                                allowClear: true,
+                                width: '100%'
+                            });
                         } else {
                             noti('e', 'Please contact your administrator', data.message);
-                            $('#invoice_id').empty().append('<option value="">No invoices available</option>');
                         }
                     } else {
                         noti('e', 'Please contact your administrator', '');
-                        $('#invoice_id').empty().append('<option value="">Error loading invoices</option>');
                     }
                     HideLoad();
                 });
             }
         });
-        
-        $("#invoice_id").on("change", function(){
-            getinvoice();
-        });
-        
-        function getinvoice(){
-            var invoice_id = $('#invoice_id').val();
-            if(invoice_id != ''){
+
+        function getInvoicesTotal(){
+            var invoice_ids = $('#invoice_id').val();
+            if(invoice_ids && invoice_ids.length > 0){
                 ShowLoad();
-                var url = '{{ config("app.url") }}/invoicePayments/getinvoice/'+invoice_id;
-                $.get(url, function(data, status){
+                var url = '{{ config("app.url") }}/invoicePayments/getinvoice';
+                var params = $.param({invoice_ids: invoice_ids});
+                $.get(url + '?' + params, function(data, status){
                     if(status == 'success'){
                         if(data.status){
-                            var amount = 0;
-                            data.data.invoicedetail.forEach((element, index, array) => {
-                                amount = amount + element.totalprice;
+                            var totalAmount = 0;
+                            data.data.forEach((invoice) => {
+                                // Sum up the total amount from invoice details
+                                if(invoice.invoice_details  && invoice.invoice_details .length > 0) {
+                                    invoice.invoice_details .forEach((detail) => {
+                                        totalAmount += parseFloat(detail.totalprice);
+                                    });
+                                } else if(invoice.total_amount) {
+                                    totalAmount += parseFloat(invoice.total_amount);
+                                }
                             });
-                            $('#amount').val(amount);
+                            $('#amount').val(totalAmount.toFixed(2));
                         }else{
                             noti('e','Please contact your administrator',data.message);
                         }
@@ -250,9 +282,12 @@
                         noti('e','Please contact your administrator','')
                         HideLoad();
                     }
-                }); 
+                });
+            } else {
+                $('#amount').val('');
             }
         }
+        @endif
         
         $('#type').change(function(){
             if($(this).val() == "5") {
@@ -261,14 +296,8 @@
                 $('#cheque-container').hide();
             }
         });
-        
-        // Initialize type field to show/hide cheque container
-        @if(isset($invoicePayment) && $invoicePayment->type == 5)
-            $('#cheque-container').show();
-        @endif
     </script>
     <style>
-        /* Your existing CSS styles remain the same */
         .select2-container--default .select2-search--dropdown .select2-search__field {
             padding: 6px 10px;
             border: 1px solid #ced4da;
@@ -298,9 +327,39 @@
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             height: 36px;
         }
+        
+        /* Multiple select styling */
+        .select2-container--default .select2-selection--multiple {
+            min-height: 38px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+            padding: 0 6px;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            margin-top: 4px;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: white;
+            margin-right: 6px;
+        }
+        
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #ffc107;
+        }
 
         .select2-container--default.select2-container--focus .select2-selection--single,
-        .select2-container--default.select2-container--open .select2-selection--single {
+        .select2-container--default.select2-container--open .select2-selection--single,
+        .select2-container--default.select2-container--focus .select2-selection--multiple,
+        .select2-container--default.select2-container--open .select2-selection--multiple {
             border-color: #80bdff;
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
         }
@@ -309,14 +368,12 @@
             width: 100% !important;
         }
         
-        /* Style for readonly fields */
         input[readonly], select[readonly] {
             background-color: #e9ecef;
             opacity: 1;
             cursor: not-allowed;
         }
         
-        /* Ensure the form-group takes full width */
         .form-group.col-sm-12 {
             width: 100%;
         }

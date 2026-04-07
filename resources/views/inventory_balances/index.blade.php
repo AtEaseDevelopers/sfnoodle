@@ -13,7 +13,6 @@
                         <div class="card-header">
                             <i class="fa fa-align-justify"></i>
                             {{ __('inventory_balances.inventory_balances') }}
-                            <button class="border-0 bg-transparent pull-right text-danger" data-toggle="modal" data-target="#stockout"><i class="fa fa-cart-arrow-down fa-lg"></i></button>
                             <button class="border-0 bg-transparent pull-right text-success pr-2" data-toggle="modal" data-target="#stockin"><i class="fa fa-cart-plus fa-lg"></i></button>
                         </div>
                         <div class="card-body">
@@ -76,32 +75,38 @@
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
                 </div>
                 <div class="modal-body text-center">
-                    {!! Form::open(['route' => 'inventoryBalances.stockin', 'enctype' => 'multipart/form-data']) !!}
+                    {!! Form::open(['route' => 'inventoryBalances.stockin', 'enctype' => 'multipart/form-data', 'id' => 'stockinForm']) !!}
                     
-                    <!-- Driver Single-Select Dropdown -->
+                    <!-- Driver Multi-Select Dropdown -->
                     <div class="form-group">
-                        <label for="driver_id" class="col-form-label">{{ __('Agent') }}:</label>
+                        <label for="driver_ids" class="col-form-label">{{ __('Agent') }} <span class="text-danger">*</span>:</label>
                         <div class="dropdown">
                             <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownDriverStockIn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                {{ __('Select Agent') }}
+                                {{ __('Select Agents') }}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverStockIn" style="width: 100%; max-height: 300px; overflow-y: auto;">
+                            <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverStockIn" style="width: 100%; max-height: 400px; overflow-y: auto;">
                                 <input type="text" class="form-control mb-3" id="driverSearchStockIn" placeholder="Search Agents...">
-                                <div id="driverListStockIn">
+                                <div id="driverListStockIn" class="list-group">
                                     @foreach($driverItems as $driverId => $driverName)
-                                        <a href="#" class="list-group-item list-group-item-action driver-item" data-value="{{ $driverId }}">
+                                        <label class="list-group-item driver-item">
+                                            <input type="checkbox" class="driver-checkbox" value="{{ $driverId }}" data-name="{{ $driverName }}">
                                             {{ $driverName }}
-                                        </a>
+                                        </label>
                                     @endforeach
                                 </div>
                             </div>
                         </div>
-                        <input type="hidden" name="driver_id" id="selectedDriverStockIn">
+                        <div id="selectedDriversContainer" class="mt-2" style="display: none;">
+                            <small class="text-muted">Selected agents:</small>
+                            <div id="selectedDriversList" class="mt-1"></div>
+                        </div>
+                        <input type="hidden" name="driver_ids" id="selectedDriverStockIn">
+                        <small class="form-text text-muted">You can select multiple agents</small>
                     </div>
 
                     <!-- Product Single-Select Dropdown -->
                     <div class="form-group">
-                        <label for="product_id" class="col-form-label">{{ __('inventory_balances.product') }}:</label>
+                        <label for="product_id" class="col-form-label">{{ __('inventory_balances.product') }} <span class="text-danger">*</span>:</label>
                         <div class="dropdown">
                             <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownProductStockIn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 {{ __('Select Product') }}
@@ -121,16 +126,17 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="quantity" class="col-form-label">{{ __('inventory_balances.transfer_quantity') }}:</label>
+                        <label for="quantity" class="col-form-label">{{ __('inventory_balances.transfer_quantity') }} <span class="text-danger">*</span>:</label>
                         <div class="input-group mb-3">
                             <div class="input-group-prepend">
                                 <span class="input-group-text" id="basic-addon1">+</span>
                             </div>
-                            <input type="number" min="0" class="form-control" placeholder="Transfer Quantity" name="quantity">
+                            <input type="number" min="0.01" step="0.01" class="form-control" placeholder="Transfer Quantity" name="quantity" id="stockin_quantity" required>
                         </div>
                     </div>
+                    
                     <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{ __('inventory_balances.cancel') }}</button>
-                    <button type="submit" name="button" class="btn btn-primary rounded-0 mt-2">{{ __('inventory_balances.update') }}</button>
+                    <button type="submit" name="button" class="btn btn-primary rounded-0 mt-2" id="stockinSubmitBtn">{{ __('inventory_balances.update') }}</button>
                     {!! Form::close() !!}
                 </div>
             </div>
@@ -263,42 +269,138 @@
         #productDetailsTable tbody tr:hover {
             background-color: rgba(0,0,0,.075);
         }
+        
+        /* Multi-select driver styling */
+        .driver-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .driver-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .driver-item .driver-checkbox {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .driver-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        #selectedDriversContainer {
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+        }
+
+        #selectedDriversList .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #selectedDriversList .badge .close {
+            font-size: 14px;
+            line-height: 1;
+            opacity: 0.8;
+        }
+
+        #selectedDriversList .badge .close:hover {
+            opacity: 1;
+        }
     </style>
 
     <script>
-    $(document).ready(function () {
-        // Driver selection for Stock In modal
-        $('#stockin .driver-item, #stockout .driver-item').on('click', function(e) {
-            e.preventDefault();
-            var driverName = $(this).text();
-            var driverId = $(this).data('value');
-            var dropdown = $(this).closest('.dropdown-menu');
+    // Stock In Modal - Driver multi-selection
+    var selectedDrivers = [];
+
+    function updateSelectedDriversList() {
+        var container = $('#selectedDriversContainer');
+        var listContainer = $('#selectedDriversList');
+        
+        if (selectedDrivers.length > 0) {
+            container.show();
+            listContainer.empty();
             
-            // Update UI - remove active class from all siblings and add to current
-            $(this).closest('.list-group').find('.driver-item').removeClass('active');
-            $(this).addClass('active');
-            dropdown.prev('.dropdown-toggle').text(driverName);
+            selectedDrivers.forEach(function(driver, index) {
+                var badge = $('<span class="badge badge-primary mr-2 mb-1" style="padding: 5px 10px; font-size: 12px;">')
+                    .text(driver.name)
+                    .append('<button type="button" class="close ml-2" style="font-size: 12px; color: white;" data-driver-id="' + driver.id + '" aria-label="Remove">&times;</button>');
+                
+                badge.find('button').on('click', function(e) {
+                    e.stopPropagation();
+                    removeDriver(driver.id);
+                });
+                
+                listContainer.append(badge);
+            });
             
-            // Set hidden input value based on modal
-            var modalId = $(this).closest('.modal').attr('id');
-            if (modalId === 'stockin') {
-                $('#selectedDriverStockIn').val(driverId);
-            } else if (modalId === 'stockout') {
-                $('#selectedDriverStockOut').val(driverId);
-                // Trigger stock calculation for stockout if product is selected
-                if ($('#selectedProductStockOut').val()) {
-                    getstock();
-                }
+            // Update hidden input value (store as comma-separated string)
+            var driverIds = selectedDrivers.map(function(d) { return d.id; });
+            $('#selectedDriverStockIn').val(driverIds.join(','));
+            
+            // Update dropdown button text
+            if (selectedDrivers.length === 1) {
+                $('#dropdownDriverStockIn').text(selectedDrivers[0].name);
+            } else {
+                $('#dropdownDriverStockIn').text(selectedDrivers.length + ' agents selected');
+            }
+        } else {
+            container.hide();
+            $('#selectedDriverStockIn').val('');
+            $('#dropdownDriverStockIn').text('Select Agents');
+        }
+    }
+
+    function removeDriver(driverId) {
+        selectedDrivers = selectedDrivers.filter(function(d) { return d.id != driverId; });
+        
+        // Uncheck the corresponding checkbox
+        $('#driverListStockIn .driver-checkbox').each(function() {
+            if ($(this).val() == driverId) {
+                $(this).prop('checked', false);
             }
         });
+        
+        updateSelectedDriversList();
+    }
 
-        // Driver search functionality for both modals
-        $('#driverSearchStockIn, #driverSearchStockOut').on('keyup', function() {
-            var searchTerm = $(this).val().toLowerCase();
-            // Find the driver list within the same dropdown menu
-            var driverList = $(this).closest('.dropdown-menu').find('.driver-item');
+    $(document).ready(function () {
+        // ========== STOCK IN MODAL HANDLERS ==========
+        // Driver checkbox change handler for Stock In
+        $('#stockin .driver-checkbox').on('change', function() {
+            var driverId = $(this).val();
+            var driverName = $(this).data('name');
             
-            driverList.each(function() {
+            if ($(this).is(':checked')) {
+                // Add driver if not already selected
+                if (!selectedDrivers.some(function(d) { return d.id == driverId; })) {
+                    selectedDrivers.push({
+                        id: driverId,
+                        name: driverName
+                    });
+                }
+            } else {
+                // Remove driver
+                selectedDrivers = selectedDrivers.filter(function(d) { return d.id != driverId; });
+            }
+            
+            updateSelectedDriversList();
+        });
+
+        // Driver search functionality for Stock In modal
+        $('#driverSearchStockIn').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            var driverLabels = $('#driverListStockIn .driver-item');
+            
+            driverLabels.each(function() {
                 var driverText = $(this).text().toLowerCase();
                 if (driverText.includes(searchTerm)) {
                     $(this).show();
@@ -308,8 +410,8 @@
             });
         });
 
-        // Product selection for both modals
-        $('#stockin .product-item, #stockout .product-item').on('click', function(e) {
+        // Product selection for Stock In modal
+        $('#stockin .product-item').on('click', function(e) {
             e.preventDefault();
             var productName = $(this).text();
             var productId = $(this).data('value');
@@ -321,23 +423,13 @@
             dropdown.prev('.dropdown-toggle').text(productName);
             
             // Set hidden input value
-            var modalId = $(this).closest('.modal').attr('id');
-            if (modalId === 'stockin') {
-                $('#selectedProductStockIn').val(productId);
-            } else {
-                $('#selectedProductStockOut').val(productId);
-                // Trigger stock calculation for stockout if driver is selected
-                if ($('#selectedDriverStockOut').val()) {
-                    getstock();
-                }
-            }
+            $('#selectedProductStockIn').val(productId);
         });
 
-        // Product search functionality for both modals
-        $('#productSearchStockIn, #productSearchStockOut').on('keyup', function() {
+        // Product search functionality for Stock In modal
+        $('#productSearchStockIn').on('keyup', function() {
             var searchTerm = $(this).val().toLowerCase();
-            // Find the product list within the same dropdown menu
-            var productList = $(this).closest('.dropdown-menu').find('.product-item');
+            var productList = $('#productListStockIn .product-item');
             
             productList.each(function() {
                 var productText = $(this).text().toLowerCase();
@@ -349,11 +441,177 @@
             });
         });
 
+        // Reset stock in modal when closed
+        $('#stockin').on('hidden.bs.modal', function() {
+            // Reset driver selections
+            selectedDrivers = [];
+            $('#driverListStockIn .driver-checkbox').prop('checked', false);
+            updateSelectedDriversList();
+            
+            // Reset product selection
+            $('#productListStockIn .product-item').removeClass('active');
+            $('#dropdownProductStockIn').text('Select Product');
+            $('#selectedProductStockIn').val('');
+            
+            // Reset quantity
+            $('#stockin_quantity').val('');
+            
+            // Reset search inputs
+            $('#driverSearchStockIn').val('');
+            $('#productSearchStockIn').val('');
+            
+            // Show all driver items again
+            $('#driverListStockIn .driver-item').show();
+            $('#productListStockIn .product-item').show();
+            
+            // Reset submit button
+            $('#stockinSubmitBtn').prop('disabled', false).html('{{ __("inventory_balances.update") }}');
+        });
+
+        // Validate form before submission for Stock In
+        $('#stockinForm').on('submit', function(e) {
+            var hasDrivers = selectedDrivers.length > 0;
+            var hasProduct = $('#selectedProductStockIn').val();
+            var quantity = $('#stockin_quantity').val();
+            
+            if (!hasDrivers) {
+                e.preventDefault();
+                if (typeof noti === 'function') {
+                    noti('e', 'Validation Error', 'Please select at least one agent');
+                } else {
+                    alert('Please select at least one agent');
+                }
+                return false;
+            }
+            
+            if (!hasProduct) {
+                e.preventDefault();
+                if (typeof noti === 'function') {
+                    noti('e', 'Validation Error', 'Please select a product');
+                } else {
+                    alert('Please select a product');
+                }
+                return false;
+            }
+            
+            if (!quantity || quantity <= 0) {
+                e.preventDefault();
+                if (typeof noti === 'function') {
+                    noti('e', 'Validation Error', 'Please enter a valid quantity');
+                } else {
+                    alert('Please enter a valid quantity');
+                }
+                return false;
+            }
+            
+            // Show loading state
+            $('#stockinSubmitBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Processing...');
+            
+            return true;
+        });
+
+        // ========== STOCK OUT MODAL HANDLERS ==========
+        // Driver selection for Stock Out modal
+        $('#stockout .driver-item').on('click', function(e) {
+            e.preventDefault();
+            var driverName = $(this).text();
+            var driverId = $(this).data('value');
+            var dropdown = $(this).closest('.dropdown-menu');
+            
+            // Update UI - remove active class from all siblings and add to current
+            $(this).closest('.list-group').find('.driver-item').removeClass('active');
+            $(this).addClass('active');
+            dropdown.prev('.dropdown-toggle').text(driverName);
+            
+            // Set hidden input value
+            $('#selectedDriverStockOut').val(driverId);
+            
+            // Trigger stock calculation if product is selected
+            if ($('#selectedProductStockOut').val()) {
+                getstock();
+            }
+        });
+
+        // Driver search functionality for Stock Out modal
+        $('#driverSearchStockOut').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            var driverList = $('#driverListStockOut .driver-item');
+            
+            driverList.each(function() {
+                var driverText = $(this).text().toLowerCase();
+                if (driverText.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Product selection for Stock Out modal
+        $('#stockout .product-item').on('click', function(e) {
+            e.preventDefault();
+            var productName = $(this).text();
+            var productId = $(this).data('value');
+            var dropdown = $(this).closest('.dropdown-menu');
+            
+            // Update UI - remove active class from all siblings and add to current
+            $(this).closest('.list-group').find('.product-item').removeClass('active');
+            $(this).addClass('active');
+            dropdown.prev('.dropdown-toggle').text(productName);
+            
+            // Set hidden input value
+            $('#selectedProductStockOut').val(productId);
+            
+            // Trigger stock calculation if driver is selected
+            if ($('#selectedDriverStockOut').val()) {
+                getstock();
+            }
+        });
+
+        // Product search functionality for Stock Out modal
+        $('#productSearchStockOut').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            var productList = $('#productListStockOut .product-item');
+            
+            productList.each(function() {
+                var productText = $(this).text().toLowerCase();
+                if (productText.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Reset stock out modal when closed
+        $('#stockout').on('hidden.bs.modal', function() {
+            // Reset driver selection
+            $('#driverListStockOut .driver-item').removeClass('active');
+            $('#dropdownDriverStockOut').text('Select Agent');
+            $('#selectedDriverStockOut').val('');
+            
+            // Reset product selection
+            $('#productListStockOut .product-item').removeClass('active');
+            $('#dropdownProductStockOut').text('Select Product');
+            $('#selectedProductStockOut').val('');
+            
+            // Reset quantity
+            $('#quantity').val('').prop('disabled', false);
+            
+            // Reset search inputs
+            $('#driverSearchStockOut').val('');
+            $('#productSearchStockOut').val('');
+            
+            // Show all items again
+            $('#driverListStockOut .driver-item').show();
+            $('#productListStockOut .product-item').show();
+        });
+
         // Initialize dropdown buttons with default text
         $('.dropdown-toggle').each(function() {
             if (!$(this).text().trim()) {
                 if ($(this).closest('.dropdown-menu').find('.driver-item').length) {
-                    $(this).text('Select Driver');
+                    $(this).text('Select Agent');
                 } else if ($(this).closest('.dropdown-menu').find('.product-item').length) {
                     $(this).text('Select Product');
                 }
@@ -416,32 +674,6 @@
                 }
             });
         });
-        
-        // Reset dropdowns when modal is closed
-        $('#stockin, #stockout').on('hidden.bs.modal', function() {
-            // Reset driver selection
-            $(this).find('.driver-item').removeClass('active');
-            $(this).find('.dropdown-toggle').each(function() {
-                if ($(this).closest('.dropdown-menu').find('.driver-item').length) {
-                    $(this).text('Select Driver');
-                } else if ($(this).closest('.dropdown-menu').find('.product-item').length) {
-                    $(this).text('Select Product');
-                }
-            });
-            
-            // Reset search inputs
-            $(this).find('input[type="text"]').val('');
-            
-            // Reset hidden inputs
-            if ($(this).attr('id') === 'stockin') {
-                $('#selectedDriverStockIn').val('');
-                $('#selectedProductStockIn').val('');
-            } else {
-                $('#selectedDriverStockOut').val('');
-                $('#selectedProductStockOut').val('');
-                $('#quantity').val('').prop('disabled', false);
-            }
-        });
     });
 
     $(document).keyup(function(e) {
@@ -478,12 +710,12 @@
                 },
                 error: function(error) {
                     if (typeof noti === 'function') {
-                        noti('e', 'Please contact your administrator', error.responseJSON.message);
+                        noti('e', 'Please contact your administrator', error.responseJSON?.message || 'Unknown error');
                     }
                     HideLoad();
                 }
             });
         }
     }
-</script>
+    </script>
 @endpush

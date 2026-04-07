@@ -25,62 +25,69 @@
         </div>
     </div>
 
-    <!-- Create Request Modal -->
-    <div id="createRequest" class="modal fade">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6">{{ __('Create Stock Request') }}</h4>
+    <!-- Create Request Modal - Enhanced -->
+    <div id="createRequest" class="modal fade" data-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
+            <div class="modal-content" style="border-radius: 12px;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                    <h4 class="modal-title h5 font-weight-bold">
+                        <i class="fa fa-plus-circle text-primary mr-2"></i>{{ __('Create Stock Request') }}
+                    </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="padding: 2rem;">
                     {!! Form::open(['route' => 'inventoryRequests.store', 'enctype' => 'multipart/form-data', 'id' => 'createRequestForm']) !!}
                     
                     <div class="row">
                         <!-- Driver Selection -->
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="driver_id" class="col-form-label">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
+                                <label for="driver_id" class="col-form-label font-weight-bold">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
                                 <div class="dropdown">
-                                    <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownDriverCreate" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        {{ __('Select Driver') }}
+                                    <button class="btn btn-outline-primary btn-block dropdown-toggle text-left" type="button" id="dropdownDriverCreate" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="padding: 10px 15px;">
+                                        <i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}
                                     </button>
-                                    <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverCreate" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                        <input type="text" class="form-control mb-3" id="driverSearchCreate" placeholder="Search Drivers...">
-                                        <div id="driverListCreate" class="list-group">
+                                    <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverCreate" style="width: 100%; max-height: 350px; overflow-y: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                        <div class="input-group mb-3">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                            </div>
+                                            <input type="text" class="form-control" id="driverSearchCreate" placeholder="Search Drivers...">
+                                        </div>
+                                        <div id="driverListCreate" class="list-group" style="max-height: 250px; overflow-y: auto;">
                                             @foreach($drivers as $driver)
                                                 <a href="#" class="list-group-item list-group-item-action driver-item" data-value="{{ $driver->id }}">
-                                                    {{ $driver->name }}
+                                                    <i class="fa fa-user-circle-o mr-2 text-primary"></i>{{ $driver->name }}
                                                 </a>
                                             @endforeach
                                         </div>
                                     </div>
                                 </div>
                                 <input type="hidden" name="driver_id" id="selectedDriverCreate" required>
-                                <div class="text-danger" id="driverError"></div>
+                                <div class="text-danger small mt-1" id="driverError"></div>
                             </div>
                         </div>
                         
                         <!-- Remarks -->
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="remarks" class="col-form-label">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
-                                <textarea class="form-control" name="remarks" id="remarks" rows="2" placeholder="Any additional notes..."></textarea>
+                                <label for="remarks" class="col-form-label font-weight-bold">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
+                                <textarea class="form-control" name="remarks" id="remarks" rows="3" placeholder="Any additional notes..." style="resize: vertical;"></textarea>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Items Table -->
-                    <div class="form-group">
-                        <label class="col-form-label">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="itemsTable">
-                                <thead>
+                    <div class="form-group mt-3">
+                        <label class="col-form-label font-weight-bold">{{ __('Items') }} <span class="text-danger">*</span>:</label>
+                        <div class="table-responsive border rounded" style="border-radius: 8px;">
+                            <table class="table table-bordered mb-0" id="itemsTable" style="min-width: 700px;">
+                                <thead class="bg-light">
                                     <tr>
-                                        <th width="5%">#</th>
-                                        <th width="45%">Product <span class="text-danger">*</span></th>
-                                        <th width="20%">Quantity <span class="text-danger">*</span></th>
-                                        <th width="15%">Actions</th>
+                                        <th width="5%" class="text-center">#</th>
+                                        <th width="55%">Product <span class="text-danger">*</span></th>
+                                        <th width="25%">Quantity <span class="text-danger">*</span></th>
+                                        <th width="15%" class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsBody">
@@ -88,21 +95,21 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="4" class="text-right">
+                                        <td colspan="4" class="text-right bg-light py-2">
                                             <button type="button" class="btn btn-success btn-sm" id="addItemBtn">
-                                                <i class="fa fa-plus"></i> Add Item
+                                                <i class="fa fa-plus mr-1"></i> Add Item
                                             </button>
-                                        </td>
+                                         </td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
-                        <div class="text-danger" id="itemsError"></div>
+                        <div class="text-danger small mt-1" id="itemsError"></div>
                     </div>
 
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary rounded-0" data-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary rounded-0">{{ __('Submit Request') }}</button>
+                    <div class="modal-footer" style="border-top: 1px solid #e9ecef; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary rounded-0 px-4" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary rounded-0 px-4">{{ __('Submit Request') }}</button>
                     </div>
                     {!! Form::close() !!}
                 </div>
@@ -110,15 +117,17 @@
         </div>
     </div>
 
-    <!-- Edit Request Modal -->
-    <div id="editRequest" class="modal fade">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6">{{ __('Edit Stock Request') }}</h4>
+    <!-- Edit Request Modal - Enhanced -->
+    <div id="editRequest" class="modal fade" data-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
+            <div class="modal-content" style="border-radius: 12px;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                    <h4 class="modal-title h5 font-weight-bold">
+                        <i class="fa fa-pencil-square-o text-warning mr-2"></i>{{ __('Edit Stock Request') }}
+                    </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="padding: 2rem;">
                     {!! Form::open(['route' => ['inventoryRequests.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editRequestForm']) !!}
                     
                     <!-- Add a hidden field to track if we want to save and approve -->
@@ -128,47 +137,52 @@
                         <!-- Driver Selection -->
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="driver_id" class="col-form-label">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
+                                <label for="driver_id" class="col-form-label font-weight-bold">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
                                 <div class="dropdown">
-                                    <button class="btn btn-outline-primary btn-block dropdown-toggle" type="button" id="dropdownDriverEdit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        {{ __('Select Driver') }}
+                                    <button class="btn btn-outline-primary btn-block dropdown-toggle text-left" type="button" id="dropdownDriverEdit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="padding: 10px 15px;">
+                                        <i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}
                                     </button>
-                                    <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverEdit" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                        <input type="text" class="form-control mb-3" id="driverSearchEdit" placeholder="Search Drivers...">
-                                        <div id="driverListEdit" class="list-group">
+                                    <div class="dropdown-menu p-3" aria-labelledby="dropdownDriverEdit" style="width: 100%; max-height: 350px; overflow-y: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                        <div class="input-group mb-3">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                            </div>
+                                            <input type="text" class="form-control" id="driverSearchEdit" placeholder="Search Drivers...">
+                                        </div>
+                                        <div id="driverListEdit" class="list-group" style="max-height: 250px; overflow-y: auto;">
                                             @foreach($drivers as $driver)
                                                 <a href="#" class="list-group-item list-group-item-action driver-item" data-value="{{ $driver->id }}">
-                                                    {{ $driver->name }}
+                                                    <i class="fa fa-user-circle-o mr-2 text-primary"></i>{{ $driver->name }}
                                                 </a>
                                             @endforeach
                                         </div>
                                     </div>
                                 </div>
                                 <input type="hidden" name="driver_id" id="selectedDriverEdit" required>
-                                <div class="text-danger" id="driverEditError"></div>
+                                <div class="text-danger small mt-1" id="driverEditError"></div>
                             </div>
                         </div>
                         
                         <!-- Remarks -->
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="remarks" class="col-form-label">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
-                                <textarea class="form-control" name="remarks" id="remarksEdit" rows="2" placeholder="Any additional notes..."></textarea>
+                                <label for="remarks" class="col-form-label font-weight-bold">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
+                                <textarea class="form-control" name="remarks" id="remarksEdit" rows="3" placeholder="Any additional notes..." style="resize: vertical;"></textarea>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Items Table for Edit -->
-                    <div class="form-group">
-                        <label class="col-form-label">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="editItemsTable">
-                                <thead>
+                    <div class="form-group mt-3">
+                        <label class="col-form-label font-weight-bold">{{ __('Items') }} <span class="text-danger">*</span>:</label>
+                        <div class="table-responsive border rounded" style="border-radius: 8px; overflow-x: auto;">
+                            <table class="table table-bordered mb-0" id="editItemsTable" style="min-width: 700px;">
+                                <thead class="bg-light">
                                     <tr>
-                                        <th width="5%">#</th>
-                                        <th width="45%">Product <span class="text-danger">*</span></th>
-                                        <th width="20%">Quantity <span class="text-danger">*</span></th>
-                                        <th width="15%">Actions</th>
+                                        <th width="5%" class="text-center">#</th>
+                                        <th width="55%">Product <span class="text-danger">*</span></th>
+                                        <th width="25%">Quantity <span class="text-danger">*</span></th>
+                                        <th width="15%" class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="editItemsBody">
@@ -176,26 +190,26 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="4" class="text-right">
+                                        <td colspan="4" class="text-right bg-light py-2">
                                             <button type="button" class="btn btn-success btn-sm" id="addEditItemBtn">
-                                                <i class="fa fa-plus"></i> Add Item
+                                                <i class="fa fa-plus mr-1"></i> Add Item
                                             </button>
-                                        </td>
+                                         </td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
-                        <div class="text-danger" id="editItemsError"></div>
+                        <div class="text-danger small mt-1" id="editItemsError"></div>
                     </div>
 
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary rounded-0" data-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary rounded-0">{{ __('Update Request') }}</button>
+                    <div class="modal-footer" style="border-top: 1px solid #e9ecef; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary rounded-0 px-4" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary rounded-0 px-4">{{ __('Update Request') }}</button>
                         
                         <!-- Add Save & Approve button for admins -->
                         @if(auth()->user()->hasRole('admin'))
-                            <button type="button" class="btn btn-success rounded-0" id="saveAndApproveBtn">
-                                {{ __('Save & Approve') }}
+                            <button type="button" class="btn btn-success rounded-0 px-4" id="saveAndApproveBtn">
+                                <i class="fa fa-check mr-1"></i> {{ __('Save & Approve') }}
                             </button>
                         @endif
                     </div>
@@ -205,58 +219,60 @@
         </div>
     </div>
     
-    <!-- View Request Modal -->
+    <!-- View Request Modal - Enhanced -->
     <div id="viewRequest" class="modal fade">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6">Stock Request Details <span id="viewRequestId"></span></h4>
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
+            <div class="modal-content" style="border-radius: 12px;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                    <h4 class="modal-title h5 font-weight-bold">
+                        <i class="fa fa-info-circle text-info mr-2"></i>Stock Request Details <span id="viewRequestId" class="text-muted"></span>
+                    </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="padding: 2rem;">
                     <div class="row">
                         <div class="col-md-12">
                             <table class="table table-bordered">
                                 <tbody>
-                                    <tr>
-                                        <th width="30%">Request ID:</th>
+                                    <tr style="background-color: #fafafa;">
+                                        <th width="30%" style="background-color: #f5f5f5;">Request ID:</th>
                                         <td id="viewRequestIdText"></td>
                                     </tr>
-                                    <tr>
-                                        <th>Driver:</th>
+                                    <tr style="background-color: #fafafa;">
+                                        <th style="background-color: #f5f5f5;">Driver:</th>
                                         <td id="viewDriverName"></td>
                                     </tr>
-                                    <tr>
-                                        <th>Status:</th>
+                                    <tr style="background-color: #fafafa;">
+                                        <th style="background-color: #f5f5f5;">Status:</th>
                                         <td><span id="viewStatusBadge"></span></td>
                                     </tr>
-                                    <tr>
-                                        <th>Remarks:</th>
-                                        <td id="viewRemarks"></td>
+                                    <tr style="background-color: #fafafa;">
+                                        <th style="background-color: #f5f5f5;">Remarks:</th>
+                                        <td id="viewRemarks">—</td>
                                     </tr>
-                                    <tr>
-                                        <th>Requested At:</th>
-                                        <td id="viewCreatedAt"></td>
+                                    <tr style="background-color: #fafafa;">
+                                        <th style="background-color: #f5f5f5;">Requested At:</th>
+                                        <td id="viewCreatedAt">—</td>
                                     </tr>
                                     <tr id="viewApprovedSection" style="display: none;">
-                                        <th>Approved By:</th>
-                                        <td id="viewApprovedBy"></td>
+                                        <th style="background-color: #f5f5f5;">Approved By:</th>
+                                        <td id="viewApprovedBy">—</td>
                                     </tr>
                                     <tr id="viewApprovedAtSection" style="display: none;">
-                                        <th>Approved At:</th>
-                                        <td id="viewApprovedAt"></td>
+                                        <th style="background-color: #f5f5f5;">Approved At:</th>
+                                        <td id="viewApprovedAt">—</td>
                                     </tr>
                                     <tr id="viewRejectedSection" style="display: none;">
-                                        <th>Rejected By:</th>
-                                        <td id="viewRejectedBy"></td>
+                                        <th style="background-color: #f5f5f5;">Rejected By:</th>
+                                        <td id="viewRejectedBy">—</td>
                                     </tr>
                                     <tr id="viewRejectedAtSection" style="display: none;">
-                                        <th>Rejected At:</th>
-                                        <td id="viewRejectedAt"></td>
+                                        <th style="background-color: #f5f5f5;">Rejected At:</th>
+                                        <td id="viewRejectedAt">—</td>
                                     </tr>
                                     <tr id="viewRejectionReasonSection" style="display: none;">
-                                        <th>Rejection Reason:</th>
-                                        <td id="viewRejectionReason"></td>
+                                        <th style="background-color: #f5f5f5;">Rejection Reason:</th>
+                                        <td id="viewRejectionReason">—</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -265,16 +281,16 @@
                     
                     <!-- Items Table Section -->
                     <div class="mt-4">
-                        <h5>Requested Items</h5>
+                        <h5 class="font-weight-bold mb-3"><i class="fa fa-list mr-2"></i>Requested Items</h5>
                         <div id="viewItemsTable"></div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="border-top: 1px solid #e9ecef;">
                     <div class="d-flex justify-content-between w-100">
                         <div id="viewActionButtons">
                             <!-- Action buttons will be shown here -->
                         </div>
-                        <button type="button" class="btn btn-secondary rounded-0" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary rounded-0 px-4" data-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -284,33 +300,359 @@
     <!-- Reject Reason Modal (for reject action) -->
     <div id="rejectReasonModal" class="modal fade">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Reject Request</h5>
+            <div class="modal-content" style="border-radius: 12px;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                    <h5 class="modal-title font-weight-bold">
+                        <i class="fa fa-times-circle text-danger mr-2"></i>Reject Request
+                    </h5>
                     <button type="button" class="close" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="padding: 1.5rem;">
                     <input type="hidden" id="rejectRequestId" value="">
                     <div class="form-group">
-                        <label for="rejection_reason_modal">Rejection Reason *</label>
-                        <textarea name="rejection_reason" id="rejection_reason_modal" class="form-control" rows="3" required placeholder="Please provide a reason for rejection"></textarea>
+                        <label for="rejection_reason_modal" class="font-weight-bold">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea name="rejection_reason" id="rejection_reason_modal" class="form-control" rows="3" placeholder="Please provide a reason for rejection..." style="border-radius: 8px;"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmRejectBtn">Confirm Reject</button>
+                <div class="modal-footer" style="border-top: 1px solid #e9ecef;">
+                    <button type="button" class="btn btn-secondary rounded-0 px-4" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger rounded-0 px-4" id="confirmRejectBtn">
+                        <i class="fa fa-check mr-1"></i> Confirm Reject
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+@endsection
 
 @push('scripts')
+    <style>
+        /* Enhanced styles - matching Stock Return */
+        .modal-dialog {
+            margin: 1.75rem auto;
+        }
+        
+        .modal-xl {
+            max-width: 1400px;
+        }
+        
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: visible !important;
+        }
+        
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            flex-shrink: 0;
+        }
+    
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        /* Critical fix for dropdown - make it appear above everything */
+        .dropdown {
+            position: relative;
+        }
+        
+        .dropdown-menu {
+            position: absolute !important;
+            z-index: 9999 !important;
+            max-height: 350px;
+            width: 200px;
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e0e0e0;
+            background: white;
+            will-change: transform;
+        }
+        
+        /* Ensure dropdown appears below the button by default */
+        .item-row .dropdown-menu,
+        .edit-item-row .dropdown-menu {
+            position: absolute !important;
+            top: 100% !important;
+            left: 0 !important;
+            right: auto !important;
+            margin-top: 5px !important;
+            margin-bottom: 0 !important;
+            bottom: auto !important;
+        }
+        
+        /* Fix for table responsive - prevent cutoff */
+        .table-responsive {
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+        }
+        
+        .table-responsive .table {
+            overflow: visible !important;
+            margin-bottom: 0;
+        }
+        
+        .table-responsive .table tbody {
+            overflow: visible !important;
+        }
+        
+        .table-responsive .table tr {
+            overflow: visible !important;
+        }
+        
+        .table-responsive .table td {
+            overflow: visible !important;
+        }
+        
+        /* Make each row position relative for better dropdown positioning */
+        .item-row, .edit-item-row {
+            position: relative;
+        }
+        
+        /* Remove overflow restrictions on containers */
+        #itemsTable, #editItemsTable {
+            overflow: visible !important;
+        }
+        
+        .card-body {
+            overflow: visible !important;
+        }
+        
+        /* Ensure modal doesn't clip dropdowns */
+        .modal {
+            overflow: visible !important;
+        }
+        
+        .modal-dialog {
+            overflow: visible !important;
+        }
+        
+        .dropdown-toggle::after {
+            margin-left: 10px;
+            float: right;
+            margin-top: 8px;
+        }
+        
+        .dropdown-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .dropdown-menu::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .dropdown-menu::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .btn-outline-primary {
+            border-color: #007bff;
+            color: #007bff;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #007bff;
+            color: #fff;
+        }
+        
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+        
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            color: #fff;
+        }
+        
+        .driver-item:hover,
+        .driver-item.active,
+        .product-select-item:hover,
+        .product-select-item.active,
+        .edit-product-select-item:hover,
+        .edit-product-select-item.active {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .list-group-item {
+            border: 1px solid rgba(0,0,0,.125);
+            margin-bottom: -1px;
+            padding: 10px 15px;
+        }
+        
+        .list-group-item:first-child {
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+        
+        .list-group-item:last-child {
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        
+        .badge {
+            font-size: 85%;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .badge-pending {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .badge-approved {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .badge-rejected {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .badge-cancelled {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .small {
+            font-size: 80%;
+        }
+        
+        .item-row td, .edit-item-row td {
+            overflow: visible !important;
+            position: static !important;
+        }
+        
+        .item-row .dropdown, .edit-item-row .dropdown {
+            position: static !important;
+        }
+
+        /* Make dropdown menu appear above everything with proper positioning */
+        .item-row .dropdown-menu,
+        .edit-item-row .dropdown-menu {
+            position: fixed !important;
+            top: auto !important;
+            left: auto !important;
+            z-index: 9999 !important;
+            min-width: 600px;
+            max-width: 600px;
+            margin-top: 0 !important;
+        }
+
+        /* Ensure table container doesn't clip dropdowns */
+        .table-responsive {
+            overflow: visible !important;
+        }
+
+        .table-responsive .table {
+            overflow: visible !important;
+        }
+
+        .table-responsive .table tbody {
+            overflow: visible !important;
+        }
+
+        .table-responsive .table tr {
+            overflow: visible !important;
+        }
+
+        /* Ensure modal body doesn't restrict dropdowns */
+        .modal-body {
+            overflow: visible !important;
+        }
+        /* Button styling */
+        .btn-sm {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        /* Error styling */
+        .is-invalid {
+            border-color: #dc3545 !important;
+        }
+        
+        .text-danger {
+            font-size: 0.75rem;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .modal-xl {
+                max-width: 95%;
+                margin: 1rem auto;
+            }
+            
+            .table-responsive {
+                overflow-x: auto;
+            }
+        }
+        
+        /* View modal table styling */
+        #viewItemsTable .table {
+            margin-bottom: 0;
+        }
+        
+        #viewItemsTable .table th {
+            background-color: #f8f9fa;
+        }
+        
+        /* Ensure dropdowns from table rows are visible above modal content */
+        .item-row .dropdown.show,
+        .edit-item-row .dropdown.show {
+            position: relative;
+            z-index: 10000;
+        }
+        
+        /* Fix for any hidden overflow on parent elements */
+        .container-fluid, .animated, .fadeIn, .row, .col-lg-12, .card, .card-body {
+            overflow: visible !important;
+        }
+    </style>
+
 <script>
     // Auto-open script for inventory requests
     $(document).ready(function() {
         console.log('Inventory Requests page loaded');
+        
+        // Initialize DataTable
+        var table = window.LaravelDataTables["dataTableBuilder"] || $('.data-table').DataTable();
+        
+        if (table) {
+            // Hide loading when DataTable initializes
+            $(document).on('init.dt', function (e, settings) {
+                if (e.namespace === 'dt') {
+                    setTimeout(function() {
+                        HideLoad();
+                    }, 100);
+                }
+            });
+            
+            // Also hide loading on draw (for filters, pagination, etc.)
+            table.on('draw', function () {
+                setTimeout(function() {
+                    HideLoad();
+                }, 100);
+            });
+            
+            // Force hide loading after DataTable is initialized
+            setTimeout(function() {
+                HideLoad();
+            }, 1000);
+        }
         
         // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -387,118 +729,6 @@
                 tryOpenModal();
             }
         }, 2000);
-    });
-</script>
-@endpush
-
-@endsection
-
-@push('scripts')
-    <style>
-        .dropdown-menu {
-            border-radius: 0.25rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        }
-        .dropdown-toggle::after {
-            margin-left: 10px;
-        }
-        .dropdown-menu::-webkit-scrollbar {
-            width: 8px;
-        }
-        .dropdown-menu::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        .dropdown-menu::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        .dropdown-menu::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        .btn-outline-primary {
-            border-color: #007bff;
-            color: #007bff;
-        }
-        .btn-outline-primary:hover {
-            background-color: #007bff;
-            color: #fff;
-        }
-        .btn-outline-secondary {
-            border-color: #6c757d;
-            color: #6c757d;
-        }
-        .btn-outline-secondary:hover {
-            background-color: #6c757d;
-            color: #fff;
-        }
-        .product-item:hover, 
-        .product-item.active,
-        .driver-item:hover,
-        .driver-item.active,
-        .product-select-item:hover,
-        .product-select-item.active {
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-        .list-group-item {
-            border: 1px solid rgba(0,0,0,.125);
-            margin-bottom: -1px;
-        }
-        .badge {
-            font-size: 85%;
-        }
-        .badge-pending {
-            background-color: #ffc107;
-            color: #212529;
-        }
-        .badge-approved {
-            background-color: #28a745;
-            color: white;
-        }
-        .badge-rejected {
-            background-color: #dc3545;
-            color: white;
-        }
-        .badge-cancelled {
-            background-color: #6c757d;
-            color: white;
-        }
-        .small {
-            font-size: 80%;
-        }
-        .item-row td {
-            vertical-align: middle !important;
-        }
-    </style>
-
-<script>
-        $(document).ready(function () {
-        // Initialize DataTable
-        var table = window.LaravelDataTables["dataTableBuilder"] || $('.data-table').DataTable();
-        
-        if (table) {
-            // Hide loading when DataTable initializes
-            $(document).on('init.dt', function (e, settings) {
-                if (e.namespace === 'dt') {
-                    setTimeout(function() {
-                        HideLoad();
-                    }, 100);
-                }
-            });
-            
-            // Also hide loading on draw (for filters, pagination, etc.)
-            table.on('draw', function () {
-                setTimeout(function() {
-                    HideLoad();
-                }, 100);
-            });
-            
-            // Force hide loading after DataTable is initialized
-            setTimeout(function() {
-                HideLoad();
-            }, 1000);
-        }
         
         // Store current request ID for actions
         var currentRequestId = null;
@@ -524,6 +754,47 @@
         });
         
         // ============================================
+        // DRIVER SEARCH FUNCTIONALITY
+        // ============================================
+        
+        // Driver search functionality for create modal
+        $('#driverSearchCreate').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $('#driverListCreate .driver-item').each(function() {
+                var driverName = $(this).text().toLowerCase();
+                if (driverName.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Driver search functionality for edit modal
+        $('#driverSearchEdit').on('keyup', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $('#driverListEdit .driver-item').each(function() {
+                var driverName = $(this).text().toLowerCase();
+                if (driverName.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+
+        // Clear search when modal closes
+        $('#createRequest').on('hidden.bs.modal', function () {
+            $('#driverSearchCreate').val('');
+            $('#driverListCreate .driver-item').show();
+        });
+
+        $('#editRequest').on('hidden.bs.modal', function () {
+            $('#driverSearchEdit').val('');
+            $('#driverListEdit .driver-item').show();
+        });
+        
+        // ============================================
         // CREATE MODAL FUNCTIONS
         // ============================================
         
@@ -538,29 +809,34 @@
         function addItemRow() {
             var row = `
                 <tr class="item-row" data-index="${itemCounter}">
-                    <td class="align-middle text-center">${itemCounter + 1}</td>
-                    <td>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left product-dropdown" type="button" id="productDropdown${itemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: hidden; text-overflow: ellipsis;">
-                                {{ __('Select Product') }}
+                    <td class="align-middle text-center font-weight-bold">${itemCounter + 1}</td>
+                    <td style="min-width: 400px;">
+                        <div class="dropdown w-100">
+                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left product-dropdown" type="button" id="productDropdown${itemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: visible; text-overflow: ellipsis; padding: 8px 12px;">
+                                <i class="fa fa-cube mr-2"></i>{{ __('Select Product') }}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="productDropdown${itemCounter}" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                <input type="text" class="form-control mb-3 product-search" placeholder="Search Products..." data-index="${itemCounter}">
-                                <div class="product-list" data-index="${itemCounter}">
+                            <div class="dropdown-menu p-3" aria-labelledby="productDropdown${itemCounter}" style="width: 600px; min-width: 600px; max-height: 350px; overflow-y: auto;">
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                    </div>
+                                    <input type="text" class="form-control product-search" placeholder="Search Products..." data-index="${itemCounter}">
+                                </div>
+                                <div class="product-list" data-index="${itemCounter}" style="max-height: 230px; overflow-y: auto;">
                                     @foreach($products as $product)
                                         <a href="#" class="list-group-item list-group-item-action product-select-item" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}">
-                                            {{ $product->name }} ({{ $product->code }})
+                                            <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                         </a>
                                     @endforeach
                                 </div>
                             </div>
                         </div>
                         <input type="hidden" class="product-id-input" name="items[${itemCounter}][product_id]" value="">
-                        <div class="text-danger product-error small"></div>
+                        <div class="text-danger product-error small mt-1"></div>
                     </td>
-                    <td>
-                        <input type="number" min="1" class="form-control quantity-input" name="items[${itemCounter}][quantity]" placeholder="Enter quantity">
-                        <div class="text-danger quantity-error small"></div>
+                    <td style="min-width: 140px;">
+                        <input type="number" min="1" class="form-control quantity-input" name="items[${itemCounter}][quantity]" placeholder="Enter quantity" style="padding: 8px 12px;">
+                        <div class="text-danger quantity-error small mt-1"></div>
                     </td>
                     <td class="align-middle text-center">
                         <button type="button" class="btn btn-danger btn-sm remove-item-btn" ${itemCounter === 0 ? 'disabled' : ''}>
@@ -582,12 +858,12 @@
         // Driver selection for create modal
         $(document).on('click', '#driverListCreate .driver-item', function(e) {
             e.preventDefault();
-            var driverName = $(this).text();
+            var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
-            $('#dropdownDriverCreate').text(driverName);
+            $('#dropdownDriverCreate').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverCreate').val(driverId);
             $('#driverError').text('');
         });
@@ -596,7 +872,9 @@
         $(document).on('keyup', '.product-search', function() {
             var searchTerm = $(this).val().toLowerCase();
             var index = $(this).data('index');
-            var productList = $(this).siblings('.product-list[data-index="' + index + '"]');
+            // Find the product list within the same dropdown menu
+            var dropdownMenu = $(this).closest('.dropdown-menu');
+            var productList = dropdownMenu.find('.product-list');
             
             productList.find('.product-select-item').each(function() {
                 var productText = $(this).text().toLowerCase();
@@ -616,7 +894,7 @@
             var productName = $(this).data('name');
             
             // Update the dropdown button
-            $('#productDropdown' + index).text(productName).attr('title', productName);
+            $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
             
             // Set the hidden input value
             $(this).closest('tr').find('.product-id-input').val(productId);
@@ -638,8 +916,6 @@
         $(document).on('click', '.remove-item-btn', function() {
             if ($('#itemsBody tr').length > 1) {
                 var row = $(this).closest('tr');
-                var rowIndex = parseInt(row.data('index'));
-                
                 row.remove();
                 
                 // Renumber rows and update indices
@@ -682,7 +958,7 @@
             initializeItemsTable();
             $('#createRequestForm')[0].reset();
             $('#selectedDriverCreate').val('');
-            $('#dropdownDriverCreate').text('{{ __('Select Driver') }}');
+            $('#dropdownDriverCreate').html('<i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}');
             $('#driverListCreate .driver-item').removeClass('active');
             $('#driverError, #itemsError').text('');
             $('#remarks').val('');
@@ -704,36 +980,41 @@
             var displayName = productName || '{{ __('Select Product') }}';
             var row = `
                 <tr class="edit-item-row" data-index="${editItemCounter}">
-                    <td class="align-middle text-center">${editItemCounter + 1}</td>
-                    <td>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left edit-product-dropdown" type="button" id="editProductDropdown${editItemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: hidden; text-overflow: ellipsis;">
-                                ${displayName}
+                    <td class="align-middle text-center font-weight-bold">${editItemCounter + 1}</td>
+                    <td style="min-width: 600px;">
+                        <div class="dropdown w-100">
+                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left edit-product-dropdown" type="button" id="editProductDropdown${editItemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: visible; text-overflow: ellipsis; padding: 8px 12px;">
+                                <i class="fa fa-cube mr-2"></i>${displayName}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="editProductDropdown${editItemCounter}" style="width: 100%; max-height: 300px; overflow-y: auto;">
-                                <input type="text" class="form-control mb-3 edit-product-search" placeholder="Search Products..." data-index="${editItemCounter}">
-                                <div class="edit-product-list" data-index="${editItemCounter}">
+                            <div class="dropdown-menu p-3" aria-labelledby="editProductDropdown${editItemCounter}" style="width: 100%; min-width: 600px; max-height: 350px; overflow-y: auto;">
+                                <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                    </div>
+                                    <input type="text" class="form-control edit-product-search" placeholder="Search Products..." data-index="${editItemCounter}">
+                                </div>
+                                <div class="edit-product-list" data-index="${editItemCounter}" style="max-height: 230px; overflow-y: auto;">
                                     @foreach($products as $product)
                                         <a href="#" class="list-group-item list-group-item-action edit-product-select-item" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}">
-                                            {{ $product->name }} ({{ $product->code }})
+                                            <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                         </a>
                                     @endforeach
                                 </div>
                             </div>
                         </div>
                         <input type="hidden" class="edit-product-id-input" name="items[${editItemCounter}][product_id]" value="${productId}">
-                        <div class="text-danger edit-product-error small"></div>
-                    </td>
-                    <td>
-                        <input type="number" min="1" class="form-control edit-quantity-input" name="items[${editItemCounter}][quantity]" placeholder="Enter quantity" value="${quantity}">
-                        <div class="text-danger edit-quantity-error small"></div>
-                    </td>
+                        <div class="text-danger edit-product-error small mt-1"></div>
+                    </div>
+                    <td style="min-width: 150px;">
+                        <input type="number" min="1" class="form-control edit-quantity-input" name="items[${editItemCounter}][quantity]" placeholder="Enter quantity" value="${quantity}" style="padding: 8px 12px;">
+                        <div class="text-danger edit-quantity-error small mt-1"></div>
+                    </div>
                     <td class="align-middle text-center">
                         <button type="button" class="btn btn-danger btn-sm remove-edit-item-btn" ${editItemCounter === 0 ? 'disabled' : ''}>
                             <i class="fa fa-trash"></i>
                         </button>
-                    </td>
-                </tr>
+                    </div>
+                </div>
             `;
             
             $('#editItemsBody').append(row);
@@ -766,7 +1047,7 @@
             
             // Fill basic info
             $('#selectedDriverEdit').val(requestData.driver_id);
-            $('#dropdownDriverEdit').text(requestData.driver_name || 'Select Driver');
+            $('#dropdownDriverEdit').html(`<i class="fa fa-user mr-2"></i>${requestData.driver_name || 'Select Driver'}`);
             $('#remarksEdit').val(requestData.remarks || '');
             
             // Highlight selected driver
@@ -801,12 +1082,12 @@
         // Driver selection for edit modal
         $(document).on('click', '#driverListEdit .driver-item', function(e) {
             e.preventDefault();
-            var driverName = $(this).text();
+            var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
-            $('#dropdownDriverEdit').text(driverName);
+            $('#dropdownDriverEdit').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverEdit').val(driverId);
             $('#driverEditError').text('');
         });
@@ -815,7 +1096,7 @@
         $(document).on('keyup', '.edit-product-search', function() {
             var searchTerm = $(this).val().toLowerCase();
             var index = $(this).data('index');
-            var productList = $(this).siblings('.edit-product-list[data-index="' + index + '"]');
+            var productList = $(this).siblings('.edit-product-list');
             
             productList.find('.edit-product-select-item').each(function() {
                 var productText = $(this).text().toLowerCase();
@@ -835,7 +1116,7 @@
             var productName = $(this).data('name');
             
             // Update the dropdown button
-            $('#editProductDropdown' + index).text(productName).attr('title', productName);
+            $('#editProductDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
             
             // Set the hidden input value
             $(this).closest('tr').find('.edit-product-id-input').val(productId);
@@ -857,8 +1138,6 @@
         $(document).on('click', '.remove-edit-item-btn', function() {
             if ($('#editItemsBody tr').length > 1) {
                 var row = $(this).closest('tr');
-                var rowIndex = parseInt(row.data('index'));
-                
                 row.remove();
                 
                 // Renumber rows and update indices
@@ -967,7 +1246,7 @@
             // Show items table
             if (requestData.items && Array.isArray(requestData.items) && requestData.items.length > 0) {
                 var itemsHtml = '<div class="table-responsive"><table class="table table-sm table-bordered">';
-                itemsHtml += '<thead><tr><th>#</th><th>Product</th><th>Requested Quantity</th></tr></thead><tbody>';
+                itemsHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product</th><th width="20%" class="text-center">Requested Quantity</th></tr></thead><tbody>';
                 
                 var totalQuantity = 0;
                 
@@ -981,16 +1260,16 @@
                     }
                     
                     itemsHtml += '<tr>';
-                    itemsHtml += '<td>' + (index + 1) + '</td>';
+                    itemsHtml += '<td class="text-center">' + (index + 1) + '</td>';
                     itemsHtml += '<td>' + productName + '</td>'; 
-                    itemsHtml += '<td class="text-center">' + quantity + '</td>';
+                    itemsHtml += '<td class="text-center"><strong>' + quantity + '</strong></td>';
                     itemsHtml += '</tr>';
                     
                     totalQuantity += parseInt(quantity);
                 });
                 
                 itemsHtml += '</tbody>';
-                itemsHtml += '<tfoot><tr>';
+                itemsHtml += '<tfoot class="bg-light"><tr>';
                 itemsHtml += '<td colspan="2" class="text-right"><strong>Total:</strong></td>';
                 itemsHtml += '<td class="text-center"><strong>' + totalQuantity + '</strong></td>';
                 itemsHtml += '</tr></tfoot>';
@@ -1000,14 +1279,14 @@
             } else {
                 // For backward compatibility with old single-item requests
                 var singleItemHtml = '<div class="table-responsive"><table class="table table-sm table-bordered">';
-                singleItemHtml += '<thead><tr><th>#</th><th>Product</th><th>Requested Quantity</th></tr></thead><tbody>';
+                singleItemHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product</th><th width="20%" class="text-center">Requested Quantity</th></tr></thead><tbody>';
                 
                 if (requestData.product_id && requestData.quantity) {
                     var productName = getProductName(requestData.product_id);
                     singleItemHtml += '<tr>';
-                    singleItemHtml += '<td>1</td>';
+                    singleItemHtml += '<td class="text-center">1</td>';
                     singleItemHtml += '<td>' + (requestData.product_name || productName) + '</td>'; 
-                    singleItemHtml += '<td class="text-center">' + requestData.quantity + '</td>';
+                    singleItemHtml += '<td class="text-center"><strong>' + requestData.quantity + '</strong></td>';
                     singleItemHtml += '</tr>';
                 }
                 
@@ -1044,11 +1323,11 @@
             var actionButtonsHtml = '';
             if (status === 'pending') {
                 actionButtonsHtml = `
-                    <button type="button" class="btn btn-success mr-2" id="approveFromViewBtn">
-                        <i class="fa fa-check"></i> Approve
+                    <button type="button" class="btn btn-success mr-2 rounded-0 px-4" id="approveFromViewBtn">
+                        <i class="fa fa-check mr-1"></i> Approve
                     </button>
-                    <button type="button" class="btn btn-danger" id="rejectFromViewBtn">
-                        <i class="fa fa-times"></i> Reject
+                    <button type="button" class="btn btn-danger rounded-0 px-4" id="rejectFromViewBtn">
+                        <i class="fa fa-times mr-1"></i> Reject
                     </button>
                 `;
             }
@@ -1073,14 +1352,14 @@
             // Validate driver
             var driverId = $('#selectedDriverCreate').val();
             if (!driverId) {
-                $('#driverError').text('Please select a driver');
+                $('#driverError').text('⚠️ Please select a driver');
                 return false;
             }
             
             // Validate items
             var hasErrors = false;
             var items = [];
-            var productIds = new Set(); // To check for duplicate products
+            var productIds = new Set();
             
             $('#itemsBody tr').each(function(index) {
                 var productId = $(this).find('.product-id-input').val();
@@ -1088,28 +1367,24 @@
                 var productError = $(this).find('.product-error');
                 var quantityError = $(this).find('.quantity-error');
                 
-                // Reset errors
                 productError.text('');
                 quantityError.text('');
                 
-                // Validate product
                 if (!productId) {
-                    productError.text('Please select a product');
+                    productError.text('⚠️ Please select a product');
                     hasErrors = true;
                 } else if (productIds.has(productId)) {
-                    productError.text('Duplicate product selected');
+                    productError.text('⚠️ Duplicate product selected');
                     hasErrors = true;
                 } else {
                     productIds.add(productId);
                 }
                 
-                // Validate quantity
                 if (!quantity || quantity < 1) {
-                    quantityError.text('Please enter a valid quantity (minimum 1)');
+                    quantityError.text('⚠️ Please enter a valid quantity (minimum 1)');
                     hasErrors = true;
                 }
                 
-                // Add to items array only if valid
                 if (productId && quantity && quantity >= 1) {
                     items.push({
                         product_id: parseInt(productId),
@@ -1119,12 +1394,11 @@
             });
             
             if (items.length === 0) {
-                $('#itemsError').text('Please add at least one valid item with product selected and quantity entered');
+                $('#itemsError').text('⚠️ Please add at least one valid item with product selected and quantity entered');
                 hasErrors = true;
             }
             
             if (hasErrors) {
-                // Highlight problematic rows
                 $('#itemsBody tr').each(function(index) {
                     var productId = $(this).find('.product-id-input').val();
                     var quantity = $(this).find('.quantity-input').val();
@@ -1144,7 +1418,6 @@
                 return false;
             }
             
-            // Prepare all form data including items
             var formData = {
                 driver_id: driverId,
                 items: items,
@@ -1152,20 +1425,18 @@
                 _token: '{{ csrf_token() }}'
             };
             
-            // Submit via AJAX
-            ShowLoad();
+            if (typeof ShowLoad === 'function') ShowLoad();
             $.ajax({
                 url: $(this).attr('action'),
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function(response) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     if (response.success) {
                         $('#createRequest').modal('hide');
                         showNotification('success', response.message);
                         
-                        // Refresh DataTable
                         if (table && typeof table.ajax !== 'undefined') {
                             table.ajax.reload(null, false);
                         } else if (table && typeof table.draw !== 'undefined') {
@@ -1183,7 +1454,7 @@
                     }
                 },
                 error: function(xhr) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     var errorMessage = 'An error occurred';
                     
                     if (xhr.responseJSON) {
@@ -1209,21 +1480,18 @@
         $('#editRequestForm').submit(function(e) {
             e.preventDefault();
             
-            // Reset errors
             $('#driverEditError, #editItemsError').text('');
             $('.edit-product-error, .edit-quantity-error').text('');
             
-            // Validate driver
             var driverId = $('#selectedDriverEdit').val();
             if (!driverId) {
-                $('#driverEditError').text('Please select a driver');
+                $('#driverEditError').text('⚠️ Please select a driver');
                 return false;
             }
             
-            // Validate items
             var hasErrors = false;
             var items = [];
-            var productIds = new Set(); // To check for duplicate products
+            var productIds = new Set();
             
             $('#editItemsBody tr').each(function(index) {
                 var productId = $(this).find('.edit-product-id-input').val();
@@ -1231,28 +1499,24 @@
                 var productError = $(this).find('.edit-product-error');
                 var quantityError = $(this).find('.edit-quantity-error');
                 
-                // Reset errors
                 productError.text('');
                 quantityError.text('');
                 
-                // Validate product
                 if (!productId) {
-                    productError.text('Please select a product');
+                    productError.text('⚠️ Please select a product');
                     hasErrors = true;
                 } else if (productIds.has(productId)) {
-                    productError.text('Duplicate product selected');
+                    productError.text('⚠️ Duplicate product selected');
                     hasErrors = true;
                 } else {
                     productIds.add(productId);
                 }
                 
-                // Validate quantity
                 if (!quantity || quantity < 1) {
-                    quantityError.text('Please enter a valid quantity (minimum 1)');
+                    quantityError.text('⚠️ Please enter a valid quantity (minimum 1)');
                     hasErrors = true;
                 }
                 
-                // Add to items array only if valid
                 if (productId && quantity && quantity >= 1) {
                     items.push({
                         product_id: parseInt(productId),
@@ -1262,12 +1526,11 @@
             });
             
             if (items.length === 0) {
-                $('#editItemsError').text('Please add at least one valid item with product selected and quantity entered');
+                $('#editItemsError').text('⚠️ Please add at least one valid item with product selected and quantity entered');
                 hasErrors = true;
             }
             
             if (hasErrors) {
-                // Highlight problematic rows
                 $('#editItemsBody tr').each(function(index) {
                     var productId = $(this).find('.edit-product-id-input').val();
                     var quantity = $(this).find('.edit-quantity-input').val();
@@ -1287,33 +1550,29 @@
                 return false;
             }
             
-            // Prepare all form data including items
             var formData = {
                 driver_id: driverId,
                 items: items,
                 remarks: $('#remarksEdit').val(),
-                save_and_approve: $('#saveAndApprove').val(), // Include the flag
+                save_and_approve: $('#saveAndApprove').val(),
                 _token: '{{ csrf_token() }}',
                 _method: 'PUT'
             };
             
-            // Submit via AJAX
-            ShowLoad();
+            if (typeof ShowLoad === 'function') ShowLoad();
             $.ajax({
                 url: $(this).attr('action'),
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
                 success: function(response) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     if (response.success) {
                         $('#editRequest').modal('hide');
                         showNotification('success', response.message);
                         
-                        // Reset the flag
                         $('#saveAndApprove').val('0');
                         
-                        // Refresh DataTable
                         if (table && typeof table.ajax !== 'undefined') {
                             table.ajax.reload(null, false);
                         } else if (table && typeof table.draw !== 'undefined') {
@@ -1331,7 +1590,7 @@
                     }
                 },
                 error: function(xhr) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     var errorMessage = 'An error occurred';
                     
                     if (xhr.responseJSON) {
@@ -1382,56 +1641,9 @@
             rejectRequest($('#rejectRequestId').val(), rejectReason);
         });
         
-        // ============================================
-        // DELETE FUNCTIONALITY
-        // ============================================
-        
-        // Handle delete action via AJAX
-        $(document).on('submit', 'form[action*="destroy"]', function(e) {
-            e.preventDefault();
-            var form = $(this);
-            
-            if (confirm('Are you sure you want to delete this inventory request?')) {
-                ShowLoad();
-                $.ajax({
-                    url: form.attr('action'),
-                    type: 'POST',
-                    data: form.serialize(),
-                    headers: {
-                        'X-HTTP-Method-Override': 'DELETE'
-                    },
-                    success: function(response) {
-                        HideLoad();
-                        if (response.success) {
-                            showNotification('success', response.message);
-                            
-                            // Refresh the DataTable
-                            if (table && typeof table.ajax !== 'undefined') {
-                                table.ajax.reload(null, false);
-                            } else if (table && typeof table.draw !== 'undefined') {
-                                table.draw(false);
-                            } else {
-                                location.reload();
-                            }
-                        } else {
-                            showNotification('error', response.message || 'An error occurred');
-                        }
-                    },
-                    error: function(xhr) {
-                        HideLoad();
-                        showNotification('error', xhr.responseJSON?.message || 'An error occurred');
-                    }
-                });
-            }
-        });
-        
-        // ============================================
-        // HELPER FUNCTIONS
-        // ============================================
-        
         // Helper function to approve request
         function approveRequest(requestId) {
-            ShowLoad();
+            if (typeof ShowLoad === 'function') ShowLoad();
             
             var url = '{{ route("inventoryRequests.approve", ":id") }}';
             url = url.replace(':id', requestId);
@@ -1444,14 +1656,12 @@
                 },
                 dataType: 'json',
                 success: function(response) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     if (response.success) {
                         showNotification('success', response.message);
                         
-                        // Close all modals
                         $('#viewRequest, #rejectReasonModal').modal('hide');
                         
-                        // Refresh the DataTable
                         if (table && typeof table.ajax !== 'undefined') {
                             table.ajax.reload(null, false);
                         } else if (table && typeof table.draw !== 'undefined') {
@@ -1460,13 +1670,12 @@
                             location.reload();
                         }
                         updateNotificationBadges();
-
                     } else {
                         showNotification('error', response.message || 'Failed to approve request');
                     }
                 },
                 error: function(xhr) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     var errorMessage = 'An error occurred while approving';
                     
                     if (xhr.responseJSON) {
@@ -1493,7 +1702,6 @@
                 url: '{{ route("notification.counts") }}',
                 type: 'GET',
                 success: function(data) {
-                    // Update Stock Requests badge
                     var stockRequestBadge = $('#stockRequestBadge');
                     if (data.pendingStockRequests > 0) {
                         stockRequestBadge.text(data.pendingStockRequests).show();
@@ -1501,7 +1709,6 @@
                         stockRequestBadge.hide();
                     }
                     
-                    // Update Stock Counts badge (in case you want to update both)
                     var stockCountBadge = $('#stockCountBadge');
                     if (data.pendingStockCounts > 0) {
                         stockCountBadge.text(data.pendingStockCounts).show();
@@ -1513,8 +1720,8 @@
         }
 
         // Helper function to reject request
-        function rejectRequest(requestId, rejectReason, modal = null) {
-            ShowLoad();
+        function rejectRequest(requestId, rejectReason) {
+            if (typeof ShowLoad === 'function') ShowLoad();
             
             var url = '{{ route("inventoryRequests.reject", ":id") }}';
             url = url.replace(':id', requestId);
@@ -1528,15 +1735,12 @@
                 },
                 dataType: 'json',
                 success: function(response) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     if (response.success) {
                         showNotification('success', response.message);
                         
-                        // Close all modals
-                        if (modal) modal.modal('hide');
                         $('#viewRequest, #rejectReasonModal').modal('hide');
                         
-                        // Refresh the DataTable
                         if (table && typeof table.ajax !== 'undefined') {
                             table.ajax.reload(null, false);
                         } else if (table && typeof table.draw !== 'undefined') {
@@ -1556,7 +1760,7 @@
                     }
                 },
                 error: function(xhr) {
-                    HideLoad();
+                    if (typeof HideLoad === 'function') HideLoad();
                     var errorMessage = 'An error occurred while rejecting';
                     
                     if (xhr.responseJSON) {
@@ -1578,7 +1782,51 @@
             });
         }
 
-        // Helper function for status badge class
+        // ============================================
+        // DELETE FUNCTIONALITY
+        // ============================================
+        
+        $(document).on('submit', 'form[action*="destroy"]', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            
+            if (confirm('Are you sure you want to delete this inventory request?')) {
+                if (typeof ShowLoad === 'function') ShowLoad();
+                $.ajax({
+                    url: form.attr('action'),
+                    type: 'POST',
+                    data: form.serialize(),
+                    headers: {
+                        'X-HTTP-Method-Override': 'DELETE'
+                    },
+                    success: function(response) {
+                        if (typeof HideLoad === 'function') HideLoad();
+                        if (response.success) {
+                            showNotification('success', response.message);
+                            
+                            if (table && typeof table.ajax !== 'undefined') {
+                                table.ajax.reload(null, false);
+                            } else if (table && typeof table.draw !== 'undefined') {
+                                table.draw(false);
+                            } else {
+                                location.reload();
+                            }
+                        } else {
+                            showNotification('error', response.message || 'An error occurred');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (typeof HideLoad === 'function') HideLoad();
+                        showNotification('error', xhr.responseJSON?.message || 'An error occurred');
+                    }
+                });
+            }
+        });
+        
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        
         function getStatusBadgeClass(status) {
             switch (status) {
                 case 'pending': return 'badge-pending';
@@ -1589,14 +1837,10 @@
             }
         }
 
-        // Helper function for notifications
         function showNotification(type, message) {
-            // Check if toastr is available
             if (typeof toastr !== 'undefined') {
                 toastr[type](message);
-            } 
-            // Check if Swal (SweetAlert) is available
-            else if (typeof Swal !== 'undefined') {
+            } else if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: type,
                     text: message,
@@ -1605,16 +1849,13 @@
                     showConfirmButton: false,
                     timer: 3000
                 });
-            }
-            // Fallback to regular alert
-            else {
+            } else {
                 alert(message);
             }
         }
         
-        // Optional: Add better error handling for AJAX requests
         $(document).ajaxError(function(event, jqxhr, settings, thrownError) {
-            if (jqxhr.status === 419) { // CSRF token mismatch
+            if (jqxhr.status === 419) {
                 showNotification('error', 'Your session has expired. Please refresh the page.');
             } else if (jqxhr.status === 500) {
                 showNotification('error', 'Server error occurred. Please try again.');
@@ -1625,20 +1866,17 @@
         // CLEAR MODALS ON CLOSE
         // ============================================
         
-        // Clear edit modal when closed
         $('#editRequest').on('hidden.bs.modal', function () {
             $('#editRequestForm')[0].reset();
             $('#selectedDriverEdit').val('');
-            $('#dropdownDriverEdit').text('Select Driver');
+            $('#dropdownDriverEdit').html('<i class="fa fa-user mr-2"></i>Select Driver');
             $('#driverListEdit .driver-item').removeClass('active');
             $('#editItemsBody').empty();
             editItemCounter = 0;
             $('#editItemsError, #driverEditError').text('');
         });
 
-        // Clear view modal when closed
         $('#viewRequest').on('hidden.bs.modal', function () {
-            // Reset view modal fields
             $('#viewRequestId').text('');
             $('#viewRequestIdText, #viewDriverName, #viewRemarks, #viewCreatedAt, #viewApprovedBy, #viewApprovedAt, #viewRejectedBy, #viewRejectedAt, #viewRejectionReason').text('');
             $('#viewStatusBadge').html('');
@@ -1648,7 +1886,6 @@
             currentRequestStatus = null;
         });
 
-        // Clear reject modal when closed
         $('#rejectReasonModal').on('hidden.bs.modal', function () {
             $('#rejectRequestId').val('');
             $('#rejection_reason_modal').val('');
