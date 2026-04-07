@@ -5498,14 +5498,27 @@ class DriverController extends Controller
                     ->pluck('price', 'product_id')
                     ->toArray();
             }
-            
-            if($driverInventory){
-                // HAS INVENTORY - Get all products with their categories as string
+            if (!$hasStock) {
+                return response()->json([
+                    'result' => false,
+                    'message' => __LINE__ . $this->message_separator . 'Driver has no inventory stock',
+                    'data' =>null
+                ], 200);
+            }
+
+            $hasStock = !empty(array_filter($driverInventory, function ($qty) {
+                return $qty > 0;
+            }));
+            if ($hasStock) {                
+                $productIdsWithStock = array_keys(array_filter($driverInventory, function ($qty) {
+                    return $qty > 0;
+                }));
+
                 $products = Product::where('status', 1)
+                    ->whereIn('id', $productIdsWithStock)
                     ->select('id', 'name', 'category', 'price', 'status', 'code')
                     ->orderBy('name')
                     ->get();
-                
                 // Group products by category string
                 $groupedProducts = [];
                 
