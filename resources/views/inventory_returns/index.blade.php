@@ -829,8 +829,14 @@
             var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
-            $(this).siblings().removeClass('active');
+            // Remove active class and background from all driver items
+            $('#driverListCreate .driver-item').removeClass('active bg-primary text-white');
+            $('#driverListCreate .driver-item').css('background', '');
+            
+            // Add active class to selected item
             $(this).addClass('active bg-primary text-white');
+            
+            // Update the dropdown button text
             $('#dropdownDriverCreate').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverCreate').val(driverId);
             $('#driverError').text('');
@@ -1003,7 +1009,9 @@
             $('#createReturnForm')[0].reset();
             $('#selectedDriverCreate').val('');
             $('#dropdownDriverCreate').html('<i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}');
-            $('#driverListCreate .driver-item').removeClass('active');
+            // Clear all active classes from driver items
+            $('#driverListCreate .driver-item').removeClass('active bg-primary text-white');
+            $('#driverListCreate .driver-item').css('background', '');
             $('#driverError, #itemsError').text('');
             $('#remarks').val('');
             driverInventory = [];
@@ -1123,8 +1131,14 @@
             var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
-            $(this).siblings().removeClass('active');
+            // Remove active class and background from all driver items
+            $('#driverListEdit .driver-item').removeClass('active bg-primary text-white');
+            $('#driverListEdit .driver-item').css('background', '');
+            
+            // Add active class to selected item
             $(this).addClass('active bg-primary text-white');
+            
+            // Update the dropdown button text
             $('#dropdownDriverEdit').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverEdit').val(driverId);
             $('#driverEditError').text('');
@@ -1757,7 +1771,9 @@
             $('#editReturnForm')[0].reset();
             $('#selectedDriverEdit').val('');
             $('#dropdownDriverEdit').html('<i class="fa fa-user mr-2"></i>Select Driver');
-            $('#driverListEdit .driver-item').removeClass('active');
+            // Clear all active classes from driver items
+            $('#driverListEdit .driver-item').removeClass('active bg-primary text-white');
+            $('#driverListEdit .driver-item').css('background', '');
             $('#editItemsBody').empty();
             editItemCounter = 0;
             $('#editItemsError, #driverEditError').text('');
