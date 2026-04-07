@@ -72,7 +72,9 @@ class Customer extends Model
      */
     public function customerGroups()
     {
-        return CustomerGroup::whereRaw("JSON_CONTAINS(customer_ids, '" . $this->id . "', '$[*].id')");
+        return CustomerGroup::whereRaw(
+            "customer_ids LIKE '%\"id\":{$this->id}%'"
+        );
     }
 
     public function driver()

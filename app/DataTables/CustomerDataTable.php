@@ -85,11 +85,11 @@ class CustomerDataTable extends DataTable
                 (
                     SELECT GROUP_CONCAT(cg.name ORDER BY cg.name SEPARATOR ', ')
                     FROM customer_groups cg
-                    WHERE 
-                        cg.customer_ids LIKE CONCAT('%\"id\":', customers.id, ',%')
-                        OR cg.customer_ids LIKE CONCAT('%\"id\":', customers.id, '}%')
-                        OR cg.customer_ids LIKE CONCAT('%\"id\": ', customers.id, ',%')
-                        OR cg.customer_ids LIKE CONCAT('%\"id\": ', customers.id, '}%')
+                    WHERE JSON_CONTAINS(
+                        cg.customer_ids,
+                        JSON_OBJECT('id', customers.id),
+                        '$'
+                    )
                 ) as customer_groups
             ");
     }
