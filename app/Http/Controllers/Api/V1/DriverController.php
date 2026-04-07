@@ -7017,12 +7017,12 @@ class DriverController extends Controller
                 $itemsWithProductNames = [];
                 if ($request->items && is_array($request->items)) {
                     foreach ($request->items as $item) {
-                        $product = Product::with('category:id,name')->find($item['product_id'] ?? null);
+                        $product = Product::find($item['product_id'] ?? null);
                         $itemsWithProductNames[] = [
                             'product_id' => $item['product_id'] ?? null,
                             'product_name' => $product ? $product->name : 'Unknown Product',
                             'quantity' => $item['quantity'] ?? 0,
-                            'product_category' => $product && $product->category ? $product->category->name : null,
+                            'product_category' => $product->category ? $product->category : null,
                             'product_code' => $product ? $product->code : null,
                             'product_price' => $product ? $product->price : null
                         ];
