@@ -290,12 +290,6 @@ class CustomerController extends AppBaseController
                 if ($assign) {
                     $group = CustomerGroup::find($assign->customer_group_id);
                     
-                    // Update group name if needed
-                    if ($group->name != $input['company']) {
-                        $group->name = $input['company'];
-                        $group->save();
-                    }
-                    
                     // Ensure customer is in the group (just in case)
                     $customerIds = $group->customer_ids ?? [];
                     $customerExists = false;
