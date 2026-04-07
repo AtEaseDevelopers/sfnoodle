@@ -5510,8 +5510,11 @@ class DriverController extends Controller
                 $groupedProducts = [];
                 
                 foreach ($products as $product) {
-                    $categoryName = $product->category ?: 'Uncategorized'; // Default category if empty
-                    
+                    $categoryName = $product->category ?: 'Uncategorized'; 
+                    $quantity = $driverInventory[$product->id] ?? 0;
+                    if ($quantity <= 0) {
+                        continue;
+                    }
                     if (!isset($groupedProducts[$categoryName])) {
                         $groupedProducts[$categoryName] = [
                             'category_id' => null, // Keep for backward compatibility
