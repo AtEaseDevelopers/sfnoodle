@@ -5944,12 +5944,22 @@ class DriverController extends Controller
                 'data' => null
             ], 200);
         }
+        $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+            ->where('quantity', $driver->trip_id)
+            ->first();
 
         // Check if there's already a pending inventory count for this driver
         $inventoryCount = InventoryCount::where('driver_id', $driver->id)
-            ->where('trip_id', $driver->trip_id)
+            ->where('trip_id', '>', 0)
             ->first();
-
+            
+        if(!$inventoryCount){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'You have no Inventory, Please add some products to your inventory.',
+                'data' => null
+            ], 200);
+        }
         if($inventoryCount){
             return response()->json([
                 'result' => false,
