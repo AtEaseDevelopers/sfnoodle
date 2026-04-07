@@ -335,6 +335,7 @@ class InventoryReturnController extends Controller
         }
         
         $inventory = InventoryBalance::where('driver_id', $driverId)
+            ->where('quantity', '>', 0)  // Add this line to filter out zero quantities
             ->with('product:id,name,code')
             ->get()
             ->map(function($item) {
@@ -345,7 +346,6 @@ class InventoryReturnController extends Controller
                     'quantity' => $item->quantity
                 ];
             });
-        
         return response()->json([
             'success' => true,
             'inventory' => $inventory

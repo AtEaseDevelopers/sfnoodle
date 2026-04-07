@@ -263,6 +263,7 @@
 
 @push('scripts')
     <style>
+        
         /* Same styles as inventory requests */
         .dropdown-menu {
             border-radius: 0.25rem;
@@ -348,12 +349,75 @@
             background: #f9f9f9;
             font-size: 0.9em;
         }
+        /* Fix modal and dropdown issues */
+        .modal {
+            overflow: visible !important;
+        }
+
+        .modal-dialog {
+            margin: 1.75rem auto;
+            pointer-events: auto;
+            overflow: visible !important;
+        }
+
+        .modal-content {
+            overflow: visible !important;
+        }
+
+        .modal-body {
+            overflow: visible !important;
+            position: static;
+        }
+
+        /* Fix dropdown positioning */
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            position: absolute !important;
+            z-index: 9999 !important;
+            max-height: 300px;
+            overflow-y: auto;
+            top: 100% !important;
+            left: 0 !important;
+            right: auto !important;
+            transform: none !important;
+        }
+
+        /* Ensure dropdown appears above modal */
+        .modal-open .dropdown-menu {
+            z-index: 9999 !important;
+        }
+
+        /* For table cells with dropdown */
+        .item-row td {
+            position: relative;
+        }
+
+        /* Make dropdown menu display properly */
+        .product-dropdown + .dropdown-menu,
+        .edit-product-dropdown + .dropdown-menu {
+            position: absolute !important;
+            top: 100% !important;
+            left: 0 !important;
+            right: auto !important;
+            z-index: 9999 !important;
+            min-width: 100%;
+        }
+
+        /* Fix for when dropdown is near bottom of modal */
+        .dropdown-menu.show {
+            transform: translateY(0) !important;
+            top: 100% !important;
+            bottom: auto !important;
+        }
     </style>
 
 <script>
     $(document).ready(function () {
         // Initialize DataTable
-        var table = window.LaravelDataTables["dataTableBuilder"] || $('.data-table').DataTable();
+         var table = window.LaravelDataTables["dataTableBuilder"] || $('.data-table').DataTable();
         
         // Store current request ID for actions
         var currentRequestId = null;
@@ -379,7 +443,8 @@
         });
         
         // Store driver inventory data
-        var driverInventory = {};
+        var driverInventory = [];
+        var driverInventoryMap = {}; // Add this for quick lookup
         
         // ============================================
         // CREATE MODAL FUNCTIONS
@@ -406,8 +471,9 @@
                                 <input type="text" class="form-control mb-3 product-search" placeholder="Search Products..." data-index="${itemCounter}">
                                 <div class="product-list" data-index="${itemCounter}">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action product-select-item" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}">
+                                        <a href="#" class="list-group-item list-group-item-action product-select-item" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
                                             {{ $product->name }} ({{ $product->code }})
+                                            <span class="product-available-qty text-muted float-right"></span>
                                         </a>
                                     @endforeach
                                 </div>
@@ -432,12 +498,86 @@
             `;
             
             $('#itemsBody').append(row);
+
+            $(`#productDropdown${itemCounter}`).on('shown.bs.dropdown', function() {
+                var $menu = $(this).next('.dropdown-menu');
+                var $button = $(this);
+                var buttonOffset = $button.offset();
+                var modalBody = $button.closest('.modal-body');
+                var modalBodyOffset = modalBody.offset();
+                var relativeTop = buttonOffset.top - modalBodyOffset.top + $button.outerHeight();
+                var spaceBelow = modalBody.height() - relativeTop;
+                
+                // If not enough space below, show dropdown above
+                if (spaceBelow < 300) {
+                    $menu.css({
+                        'top': 'auto',
+                        'bottom': '100%',
+                        'transform': 'translateY(-10px)'
+                    });
+                } else {
+                    $menu.css({
+                        'top': '100%',
+                        'bottom': 'auto',
+                        'transform': 'none'
+                    });
+                }
+            });
             itemCounter++;
             
             // Enable remove buttons if more than one row
             if ($('#itemsBody tr').length > 1) {
                 $('#itemsBody tr:first .remove-item-btn').prop('disabled', false);
             }
+        }
+        
+        // Function to update product quantities in dropdown lists
+        function updateProductQuantitiesInDropdown(inventoryMap) {
+            // Update create modal product lists
+            $('.product-list .product-select-item').each(function() {
+                var productId = $(this).data('value');
+                var quantity = inventoryMap[productId] || 0;
+                var productName = $(this).data('name');
+                var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
+                
+                // Update the display text with quantity
+                $(this).html(`${productName} (${productCode}) - Available: ${quantity}`);
+                
+                // Store quantity in data attribute
+                $(this).data('quantity', quantity);
+                
+                // Add color coding based on availability
+                if (quantity === 0) {
+                    $(this).hide();
+                } else if (quantity < 10) {
+                    $(this).addClass('text-warning');
+                } else {
+                    $(this).removeClass('text-danger text-warning');
+                }
+            });
+            
+            // Update edit modal product lists
+            $('.edit-product-list .edit-product-select-item').each(function() {
+                var productId = $(this).data('value');
+                var quantity = inventoryMap[productId] || 0;
+                var productName = $(this).data('name');
+                var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
+                
+                // Update the display text with quantity
+                $(this).html(`${productName} (${productCode}) - Available: ${quantity}`);
+                
+                // Store quantity in data attribute
+                $(this).data('quantity', quantity);
+                
+                // Add color coding based on availability
+                if (quantity === 0) {
+                    $(this).addClass('text-danger');
+                } else if (quantity < 10) {
+                    $(this).addClass('text-warning');
+                } else {
+                    $(this).removeClass('text-danger text-warning');
+                }
+            });
         }
         
         // Driver selection for create modal - fetch inventory when driver selected
@@ -469,6 +609,12 @@
                     if (response.success) {
                         driverInventory = response.inventory;
                         
+                        // Create inventory map for quick lookup
+                        driverInventoryMap = {};
+                        driverInventory.forEach(function(item) {
+                            driverInventoryMap[item.product_id] = item.quantity;
+                        });
+                        
                         // Update available quantities for existing items
                         $('#itemsBody tr').each(function() {
                             var productId = $(this).find('.product-id-input').val();
@@ -476,23 +622,27 @@
                                 var available = getAvailableQuantity(productId);
                                 var index = $(this).data('index');
                                 $('#availableQuantity' + index).text(available);
+                                
+                                // Update max attribute for quantity input
+                                $(this).find('.quantity-input').attr('max', available);
                             }
                         });
+                        
+                        // Update product dropdowns with quantities
+                        updateProductQuantitiesInDropdown(driverInventoryMap);
                     }
                 },
                 error: function() {
                     HideLoad();
-                    driverInventory = {};
+                    driverInventory = [];
+                    driverInventoryMap = {};
                 }
             });
         }
         
         // Get available quantity for a product
         function getAvailableQuantity(productId) {
-            var inventory = driverInventory.find(function(item) {
-                return item.product_id == productId;
-            });
-            return inventory ? inventory.quantity : 0;
+            return driverInventoryMap[productId] || 0;
         }
         
         // Product selection in create modal - show available quantity
@@ -501,10 +651,16 @@
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
+            var availableQuantity = $(this).data('quantity') || 0;
             var driverId = $('#selectedDriverCreate').val();
             
             if (!driverId) {
                 alert('Please select a driver first');
+                return;
+            }
+            
+            if (availableQuantity === 0) {
+                alert('This product is out of stock for the selected driver');
                 return;
             }
             
@@ -522,12 +678,38 @@
             $(this).addClass('active');
             
             // Show available quantity
-            var available = getAvailableQuantity(productId);
-            $('#availableQuantity' + index).text(available);
+            $('#availableQuantity' + index).text(availableQuantity);
             
-            // If driver inventory is empty, fetch it
-            if (driverInventory.length === 0) {
-                fetchDriverInventory(driverId);
+            // Set max attribute on quantity input
+            $(this).closest('tr').find('.quantity-input').attr('max', availableQuantity);
+            
+            // Validate current quantity if it exceeds available
+            var currentQuantity = $(this).closest('tr').find('.quantity-input').val();
+            if (currentQuantity && parseInt(currentQuantity) > availableQuantity) {
+                $(this).closest('tr').find('.quantity-input').val(availableQuantity);
+                $(this).closest('tr').find('.quantity-error').text('Quantity adjusted to available stock: ' + availableQuantity);
+            }
+        });
+        
+        // Validate quantity on input change
+        $(document).on('change keyup', '.quantity-input', function() {
+            var row = $(this).closest('tr');
+            var productId = row.find('.product-id-input').val();
+            var quantity = parseInt($(this).val());
+            var available = getAvailableQuantity(productId);
+            var quantityError = row.find('.quantity-error');
+            
+            if (productId && quantity) {
+                if (quantity > available) {
+                    quantityError.text('Quantity exceeds available stock. Maximum: ' + available);
+                    $(this).addClass('is-invalid');
+                } else if (quantity < 1) {
+                    quantityError.text('Quantity must be at least 1');
+                    $(this).addClass('is-invalid');
+                } else {
+                    quantityError.text('');
+                    $(this).removeClass('is-invalid');
+                }
             }
         });
         
@@ -556,8 +738,6 @@
         $(document).on('click', '.remove-item-btn', function() {
             if ($('#itemsBody tr').length > 1) {
                 var row = $(this).closest('tr');
-                var rowIndex = parseInt(row.data('index'));
-                
                 row.remove();
                 
                 // Renumber rows and update indices
@@ -607,11 +787,12 @@
             $('#driverListCreate .driver-item').removeClass('active');
             $('#driverError, #itemsError').text('');
             $('#remarks').val('');
-            driverInventory = {};
+            driverInventory = [];
+            driverInventoryMap = {};
         });
         
         // ============================================
-        // EDIT MODAL FUNCTIONS
+        // EDIT MODAL FUNCTIONS (Keep your existing edit functions)
         // ============================================
         
         // Initialize edit modal items table
@@ -636,8 +817,9 @@
                                 <input type="text" class="form-control mb-3 edit-product-search" placeholder="Search Products..." data-index="${editItemCounter}">
                                 <div class="edit-product-list" data-index="${editItemCounter}">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}">
+                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
                                             {{ $product->name }} ({{ $product->code }})
+                                            <span class="product-available-qty text-muted float-right"></span>
                                         </a>
                                     @endforeach
                                 </div>
@@ -659,6 +841,29 @@
             `;
             
             $('#editItemsBody').append(row);
+            $(`#editProductDropdown${editItemCounter}`).on('shown.bs.dropdown', function() {
+                var $menu = $(this).next('.dropdown-menu');
+                var $button = $(this);
+                var buttonOffset = $button.offset();
+                var modalBody = $button.closest('.modal-body');
+                var modalBodyOffset = modalBody.offset();
+                var relativeTop = buttonOffset.top - modalBodyOffset.top + $button.outerHeight();
+                var spaceBelow = modalBody.height() - relativeTop;
+                
+                if (spaceBelow < 300) {
+                    $menu.css({
+                        'top': 'auto',
+                        'bottom': '100%',
+                        'transform': 'translateY(-10px)'
+                    });
+                } else {
+                    $menu.css({
+                        'top': '100%',
+                        'bottom': 'auto',
+                        'transform': 'none'
+                    });
+                }
+            });
             editItemCounter++;
             
             // Enable remove buttons if more than one row
@@ -666,6 +871,7 @@
                 $('#editItemsBody tr:first .remove-edit-item-btn').prop('disabled', false);
             }
         }
+        
         
         // Handle edit modal opening
         $(document).on('click', '.edit-return-btn', function(e) {

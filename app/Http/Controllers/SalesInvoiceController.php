@@ -16,6 +16,7 @@ use App\Models\SalesInvoiceDetails;
 use App\Models\InvoicePayment;
 use App\Models\Trip;
 use App\Models\Product;
+use App\Models\Invoice;
 use App\Models\User;
 use App\Models\Driver;
 use App\Models\Task;
@@ -382,10 +383,10 @@ class SalesInvoiceController extends AppBaseController
             return redirect(route('salesInvoices.index'));
         }
 
-        $task = Task::where('sales_invoice_id',$salesInvoice->id)->first();
+        $task = Invoice::where('sales_invoice_id',$salesInvoice->id)->first();
         if(!empty($task)){
             if ($task->status != 0) {
-                Flash::error('Sales invoice had been processed by driver');
+                Flash::error('Sales invoice had been convert to invoice, cannot be deleted.');
 
                 return redirect(route('salesInvoices.index'));
             }
