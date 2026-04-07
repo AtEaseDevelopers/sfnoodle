@@ -25,7 +25,30 @@ class CustomerDataTable extends DataTable
                 return $customer->driver ?? '-';
             })
             ->addColumn('customer_groups', function ($customer) {
-                return $customer->customer_groups ?? '-';
+                // Get ALL customer groups and filter in PHP (simpler but less efficient for large datasets)
+                $allGroups = \App\Models\CustomerGroup::withTrashed() // Include soft deleted if needed
+                    ->orderBy('name')
+                    ->get();
+                
+                $customerGroups = collect();
+                
+                foreach ($allGroups as $group) {
+                    $customerIds = $group->customer_ids ?? [];
+                    
+                    // Check if customer ID exists in the group
+                    foreach ($customerIds as $item) {
+                        if (isset($item['id']) && $item['id'] == $customer->id) {
+                            $customerGroups->push($group->name);
+                            break; // No need to check further in this group
+                        }
+                    }
+                }
+                
+                if ($customerGroups->isEmpty()) {
+                    return '-';
+                }
+                
+                return $customerGroups->implode(', ');
             })
             ->filterColumn('driver_name', function ($query, $keyword) {
                 if (!empty($keyword)) {
@@ -80,18 +103,7 @@ class CustomerDataTable extends DataTable
     public function query(Customer $model)
     {
         return $model->newQuery()
-            ->select('customers.*')
-            ->selectRaw("
-                (
-                    SELECT GROUP_CONCAT(cg.name ORDER BY cg.name SEPARATOR ', ')
-                    FROM customer_groups cg
-                    WHERE JSON_CONTAINS(
-                        cg.customer_ids,
-                        JSON_OBJECT('id', customers.id),
-                        '$'
-                    )
-                ) as customer_groups
-            ");
+            ->select('customers.*');
     }
 
     /**
