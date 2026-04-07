@@ -9,9 +9,9 @@
             padding: 0;
         }
         body{
-            font-size: 12px;
+            font-size: 16px;
             margin: 0;
-            padding: 0 10px; /* Add overall body padding */
+            padding: 0 5px; /* Add overall body padding */
             font-family: 'Courier New', monospace;
             line-height: 1.2;
             box-sizing: border-box;
@@ -105,7 +105,7 @@
 </head>
 <body>
     <div class="header-section">
-        <div class="invoice-title">================= SALES ORDER =================</div>
+        <div class="invoice-title">================== SALES ORDER ==================</div>
             <div class="section-separator"></div>
 
         <div class="company-name">{{ config('invoice.name', $salesInvoice['customer']['groupcompany']->name ?? 'SF NOODLES SON BHD') }}</div>
