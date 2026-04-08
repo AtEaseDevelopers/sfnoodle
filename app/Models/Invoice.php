@@ -42,7 +42,6 @@ class Invoice extends Model
     ];
     
     protected $casts = [
-        'date' => 'date',
         'is_driver' => 'boolean',
         'created_by' => 'integer',
     ];
