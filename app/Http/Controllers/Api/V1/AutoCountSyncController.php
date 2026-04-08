@@ -54,6 +54,9 @@ class AutoCountSyncController extends Controller
                 $phone   = isset($row['phone']) ? trim((string) $row['phone']) : null;
                 $address = isset($row['Address']) ? trim((string) $row['Address']) : null;
                 $driver  = isset($row['SalesAgent']) ? trim((string) $row['SalesAgent']) : null;
+                $displayTerm = isset($row['DisplayTerm']) ? trim((string) $row['DisplayTerm']) : '';
+                $normalizedDisplayTerm = strtoupper(str_replace(['.', ' '], '', $displayTerm));
+                $paymentTerm = $normalizedDisplayTerm === 'COD' ? 'Cash' : 'Credit';
 
                 // Basic validation – must have code and company
                 if ($code === '' || $company === '') {
@@ -70,7 +73,7 @@ class AutoCountSyncController extends Controller
 
                 $data = [
                     'company'     => $company,
-                    'paymentterm' => 'Cash', // default for now
+                    'paymentterm' => $paymentTerm,
                     'phone'       => $phone,
                     'address'     => $address,
                     'driver'      => $driver,
@@ -153,6 +156,7 @@ class AutoCountSyncController extends Controller
             foreach ($products as $row) {
                 $code = isset($row['ItemCode']) ? trim((string) $row['ItemCode']) : '';
                 $name = isset($row['Description']) ? trim((string) $row['Description']) : '';
+                $category = isset($row['ItemGroup']) ? trim((string) $row['ItemGroup']) : null;
                 $uom  = isset($row['SalesUOM']) ? trim((string) $row['SalesUOM']) : null;
 
                 if ($code === '' || $name === '') {
@@ -180,6 +184,7 @@ class AutoCountSyncController extends Controller
                 $data = [
                     'name'   => $name,
                     'price'  => $price,
+                    'category' => $category,
                     'uom'    => $uom,
                     'status' => 1,   // active
                 ];
