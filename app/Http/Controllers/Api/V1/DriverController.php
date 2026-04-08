@@ -7949,7 +7949,7 @@ class DriverController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'result' => false,
-                'message' => 'Error marking notification as read',
+                'message' => $e->getMessage(),
                 'data' => null
             ], 500);
         }
