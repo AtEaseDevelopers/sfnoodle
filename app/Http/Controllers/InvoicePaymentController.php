@@ -315,15 +315,20 @@ class InvoicePaymentController extends AppBaseController
         return redirect(route('invoicePayments.index'));
     }
     
-    public function getinvoice($id)
+    public function getinvoice(Request $request)
     {
-        $invoice = Invoice::with('invoicedetail')->where('id',$id)->first();
-
-        if (empty($invoice)) {
+        $invoice_ids = $request->input('invoice_ids');
+        if (is_array($invoice_ids)) {
+            $invoices = Invoice::with('invoiceDetails')->whereIn('id', $invoice_ids)->get();
+        } else {
+            $invoices = Invoice::with('invoiceDetails')->where('id', $invoice_ids)->get();
+        }
+    
+        if ($invoices->isEmpty()) {
             return response()->json(['status' => false, 'message' => 'Invoice not found!']);
         }
 
-        return response()->json(['status' => true, 'message' => 'Invoice found!', 'data' => $invoice]);
+        return response()->json(['status' => true, 'message' => 'Invoice found!', 'data' => $invoices]);
     
     }
 
@@ -495,8 +500,8 @@ class InvoicePaymentController extends AppBaseController
 
     public function getcustomerinvoice($id)
     {
-        $invoices = Invoice::with(['invoicedetail', 'invoicepayment' => function ($query) {
-            $query->where('status', 1); // Only include payments where status = 1
+        $invoices = Invoice::with(['invoiceDetails', 'invoicePayments' => function ($query) {
+                $query->where('status', 1);
         }])
         ->where('customer_id', $id)
         ->get(['id', 'invoiceno', 'date']); // Include id, invoiceno, and date
@@ -506,12 +511,12 @@ class InvoicePaymentController extends AppBaseController
         }
 
         $invoiceData = $invoices->map(function ($invoice) {
-            $totalPayments = $invoice->invoicepayment->sum('amount');
+            $totalPayments = $invoice->invoicePayments->sum('amount');
 
             return [
                 'id' => $invoice->id,
                 'invoiceno' => $invoice->invoiceno,
-                'date' => $invoice->date, // Format the date as needed
+                'date' =>  date_format(date_create($invoice->date), 'd M Y'), // Format the date as needed
                 'total_amount' => $totalPayments // Total amount of approved payments
             ];
         });

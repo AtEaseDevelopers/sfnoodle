@@ -182,12 +182,12 @@ class TripDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'uuid'=> new \Yajra\DataTables\Html\Column([
-                'title' => trans('trips.trip_id'),
-                'data' => 'uuid',
-                'name' => 'uuid',
+            // 'uuid'=> new \Yajra\DataTables\Html\Column([
+            //     'title' => trans('trips.trip_id'),
+            //     'data' => 'uuid',
+            //     'name' => 'uuid',
                 
-            ]),
+            // ]),
 
             'date',
 

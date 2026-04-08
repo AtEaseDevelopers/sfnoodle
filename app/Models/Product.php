@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property string $name
  * @property number $price
  * @property integer $status
- * @property integer $category_id
+ * @property string $category
  */
 class Product extends Model
 {
@@ -35,7 +35,7 @@ class Product extends Model
         'price',
         'uom',
         'status',
-        'category_id',
+        'category', // Changed from category_id
         'uom'
     ];
 
@@ -51,9 +51,7 @@ class Product extends Model
         'price' => 'float',
         'uom' => 'string',
         'status' => 'integer',
-        'category_id' => 'integer',
-        'uom' => 'string'  
-
+        'category' => 'string' // Changed from category_id
     ];
 
     /**
@@ -65,19 +63,10 @@ class Product extends Model
         'code' => 'required|string|max:255|unique:products,code',
         'name' => 'required|string|max:255',
         'price' => 'required|numeric|min:0',
-        'category_id' => 'nullable|exists:product_categories,id',
+        'category' => 'nullable|string|max:255', // Changed validation
         'status' => 'required|integer|in:0,1',
-        'uom' => 'required|string|max:50',  
-
+        'uom' => 'required|string|max:50',
     ];
-
-    /**
-     * Get the category
-     */
-    public function category()
-    {
-        return $this->belongsTo(ProductCategory::class, 'category_id');
-    }
 
     /**
      * Get status options
@@ -107,10 +96,10 @@ class Product extends Model
     }
 
     /**
-     * Get category name
+     * Get category name (now returns the category string directly)
      */
     public function getCategoryNameAttribute()
     {
-        return $this->category ? $this->category->name : 'N/A';
+        return $this->category ?: 'N/A';
     }
 }

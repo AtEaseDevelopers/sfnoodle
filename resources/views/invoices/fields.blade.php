@@ -348,10 +348,11 @@
                             var priceField = $(this).find('.price');
                             var productId = productSelect.val();
                             
-                            if (productId && productPrices[productId]) {
-                                // Only update if the price field is enabled (not manually edited)
-                                if (!priceField.data('manually-edited')) {
-                                    priceField.val(productPrices[productId]);
+                            if (productId && productPrices[productId] !== undefined) {
+                                // Only update if the price field is NOT manually edited OR it's currently empty
+                                if (!priceField.data('manually-edited') || priceField.val() === '' || priceField.val() === 'Loading...') {
+                                    var priceValue = productPrices[productId];
+                                    priceField.val(priceValue !== null && priceValue !== undefined ? priceValue : '');
                                     priceField.removeClass('auto-filled').addClass('customer-price');
                                     
                                     // Recalculate row total
@@ -546,6 +547,10 @@
             return path.split('/').pop();
         }
 
+        setTimeout(function() {
+            autoFillAllExistingPrices();
+        }, 100);
+        
         // If in edit mode and invoice data exists, populate fields
         if(isEditMode) {
             var invoice = {!! isset($invoice) ? json_encode($invoice) : 'null' !!};
@@ -600,14 +605,16 @@
         });
 
         // Function to auto-fill price when product is selected
-        function autoFillPrice(selectElement) {
+        function autoFillPrice(selectElement, skipManualCheck = false) {
             var productId = selectElement.val();
             var priceField = selectElement.closest('tr').find('.price');
             
-            if (productId && productPrices[productId]) {
-                // Auto-fill the price only if not manually edited
-                if (!priceField.data('manually-edited')) {
-                    priceField.val(productPrices[productId]);
+            if (productId && productPrices[productId] !== undefined) {
+                // Auto-fill the price only if not manually edited OR if we're forcing it (like on page load)
+                if (skipManualCheck || !priceField.data('manually-edited')) {
+                    var priceValue = productPrices[productId];
+                    // Handle price of 0 correctly - show 0 instead of empty
+                    priceField.val(priceValue !== null && priceValue !== undefined ? priceValue : '');
                     priceField.addClass('customer-price');
                     
                     // Calculate row total
@@ -625,18 +632,53 @@
                         priceField.removeClass('auto-filled');
                     }, 1000);
                 }
-            } else {
-                // Clear price if product is deselected
+            } else if (productId && productPrices[productId] === undefined) {
+                // Product exists but no price found - show empty
+                if (!priceField.data('manually-edited')) {
+                    priceField.val('');
+                    priceField.removeClass('customer-price');
+                }
+            } else if (!productId) {
+                // No product selected
                 if (!priceField.data('manually-edited')) {
                     priceField.val('');
                     priceField.removeClass('customer-price');
                 }
             }
         }
-
+        // Function to auto-fill prices for all existing products on page load (for edit mode)
+        function autoFillAllExistingPrices() {
+            $('.product-select').each(function() {
+                var productId = $(this).val();
+                var priceField = $(this).closest('tr').find('.price');
+                
+                if (productId && productPrices[productId] !== undefined) {
+                    // Skip manual check for initial load
+                    var priceValue = productPrices[productId];
+                    // Handle price of 0 correctly
+                    priceField.val(priceValue !== null && priceValue !== undefined ? priceValue : '');
+                    priceField.addClass('customer-price');
+                    priceField.data('manually-edited', true); // Mark as manually edited so customer changes don't override existing prices
+                    
+                    // Calculate row total
+                    calculateRowTotal($(this).closest('tr'));
+                } else if (productId && productPrices[productId] === undefined && priceField.val() !== '') {
+                    // Keep existing price from database
+                    priceField.data('manually-edited', true);
+                }
+            });
+            
+            // Calculate grand total after all rows are processed
+            calculateGrandTotal();
+            
+            // Update payment amount if needed
+            if ($('#status').val() == '{{ \App\Models\Invoice::STATUS_COMPLETED }}') {
+                updatePaymentAmount();
+            }
+        }
         // Handle product selection change
         $(document).on('change', '.product-select', function() {
-            autoFillPrice($(this));
+            autoFillPrice($(this), false);
         });
 
         // Add new row
@@ -760,7 +802,8 @@
         
         // Initialize manually-edited flag for existing price fields
         $('.price').each(function() {
-            if ($(this).val()) {
+            var currentPrice = $(this).val();
+            if (currentPrice && currentPrice !== '' && currentPrice !== '0.00' && currentPrice !== '0') {
                 // If price is already set (from database), mark it as manually edited
                 // so it won't be changed when customer changes
                 $(this).data('manually-edited', true);

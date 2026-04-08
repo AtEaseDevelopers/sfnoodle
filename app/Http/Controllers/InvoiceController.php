@@ -95,12 +95,11 @@ class InvoiceController extends AppBaseController
      *
      * @param Request $request
      *
-     * @return Response
+    * @return Response
      */
     public function store(Request $request)
     {
         $input = $request->all(); 
-
         $additionalRules = [
             'payment_attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'payment_remark' => 'nullable|string|max:255',

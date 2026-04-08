@@ -35,58 +35,136 @@ class InventoryBalanceController extends AppBaseController
      */
     public function index(InventoryBalanceDataTable $inventoryBalanceDataTable)
     {
-        return $inventoryBalanceDataTable->render('inventory_balances.index');
+        // Get drivers for the dropdowns
+        $driverItems = Driver::pluck('name', 'id')->toArray();
+        
+        // Get products for the dropdowns
+        $productItems = \App\Models\Product::pluck('name', 'id')->toArray();
+        
+        return $inventoryBalanceDataTable->render('inventory_balances.index', compact('driverItems', 'productItems'));
     }
+
 	public function stockin(Request $request)
-	{
-		$data = $request->all();
-		$driverIds = $data['driver_id'];  // This will be an array of selected driver IDs
+    {
+        $data = $request->all();
+        
+        // Get driver_ids - could be array or comma-separated string
+        $driverIds = $data['driver_ids'];
+        
+        // Convert to array if it's a string
+        if (is_string($driverIds)) {
+            $driverIds = explode(',', $driverIds);
+        }
+        
+        // Ensure driver_ids is an array and remove any empty values
+        if (!is_array($driverIds)) {
+            $driverIds = [$driverIds];
+        }
+        
+        $driverIds = array_filter($driverIds); // Remove empty values
+        $productId = $data['product_id'];
+        $quantity = $data['quantity'];
+        
+        $successCount = 0;
+        $errorMessages = [];
+        
+        foreach ($driverIds as $driverId) {
+            // Trim whitespace and convert to integer
+            $driverId = trim($driverId);
+            
+            // Skip empty driver IDs
+            if (empty($driverId)) {
+                continue;
+            }
+            
+            try {
+                $inventoryBalance = InventoryBalance::where('product_id', $productId)
+                    ->where('driver_id', $driverId)
+                    ->first();
 
-		foreach ($driverIds as $driverId) {
-			$inventoryBalance = InventoryBalance::where('product_id', $data['product_id'])
-				->where('driver_id', $driverId)
-				->first();
+                if (!empty($inventoryBalance)) {
+                    // Update the existing inventory balance
+                    $inventoryBalance->quantity = $inventoryBalance->quantity + $quantity;
+                    $inventoryBalance->save();
 
-			if (!empty($inventoryBalance)) {
-				// Update the existing inventory balance
-				$inventoryBalance->quantity = $inventoryBalance->quantity + $data['quantity'];
-				$inventoryBalance->save();
+                    // Create an inventory transaction record
+                    $inventoryTransaction = new InventoryTransaction();
+                    $inventoryTransaction->type = 1; // Stock In
+                    $inventoryTransaction->driver_id = $driverId;
+                    $inventoryTransaction->product_id = $productId;
+                    $inventoryTransaction->quantity = $quantity;
+                    $inventoryTransaction->save();
 
-				// Create an inventory transaction record
-				$inventoryTransaction = new InventoryTransaction();
-				$inventoryTransaction->type = 1;
-				$inventoryTransaction->driver_id = $driverId;
-				$inventoryTransaction->product_id = $inventoryBalance->product_id;
-				$inventoryTransaction->quantity = $data['quantity'];
-				$inventoryTransaction->date = date("Y-m-d H:i:s");
-				$inventoryTransaction->user = Auth::user()->email . ' (' . Auth::user()->name . ')';
-				$inventoryTransaction->save();
+                    $successCount++;
+                } else {
+                    // Insert a new inventory balance
+                    $newInventoryBalance = new InventoryBalance();
+                    $newInventoryBalance->product_id = $productId;
+                    $newInventoryBalance->driver_id = $driverId;
+                    $newInventoryBalance->quantity = $quantity;
+                    $newInventoryBalance->save();
 
-				Flash::success('Inventory Balance for driver ID ' . $driverId . ' has been updated successfully.');
-			} else {
-				// Insert a new inventory balance
-				$newInventoryBalance = new InventoryBalance();
-				$newInventoryBalance->product_id = $data['product_id'];
-				$newInventoryBalance->driver_id = $driverId;
-				$newInventoryBalance->quantity = $data['quantity'];
-				$newInventoryBalance->save();
+                    // Create an inventory transaction record
+                    $inventoryTransaction = new InventoryTransaction();
+                    $inventoryTransaction->type = 1; // Stock In
+                    $inventoryTransaction->driver_id = $driverId;
+                    $inventoryTransaction->product_id = $productId;
+                    $inventoryTransaction->quantity = $quantity;
+                    $inventoryTransaction->save();
 
-				// Create an inventory transaction record
-				$inventoryTransaction = new InventoryTransaction();
-				$inventoryTransaction->type = 1;
-				$inventoryTransaction->driver_id = $driverId;
-				$inventoryTransaction->product_id = $data['product_id'];
-				$inventoryTransaction->quantity = $data['quantity'];
-				$inventoryTransaction->date = date("Y-m-d H:i:s");
-				$inventoryTransaction->user = Auth::user()->email . ' (' . Auth::user()->name . ')';
-				$inventoryTransaction->save();
+                    $successCount++;
+                }
+            } catch (\Exception $e) {
+                $errorMessages[] = "Driver ID {$driverId}: " . $e->getMessage();
+            }
+        }
+        
+        if ($successCount > 0) {
+            if (count($driverIds) == 1) {
+                Flash::success("Inventory Balance for driver has been updated successfully.");
+            } else {
+                Flash::success("{$successCount} out of " . count($driverIds) . " drivers have been updated successfully.");
+            }
+        }
+        
+        if (!empty($errorMessages)) {
+            Flash::error("Errors occurred: " . implode("; ", $errorMessages));
+        }
 
-				Flash::success('Inventory Balance for driver ID ' . $driverId . ' has been inserted successfully.');
-			}
-		}
+        return redirect(route('inventoryBalances.index'));
+    }
 
-		return redirect(route('inventoryBalances.index'));
-	}
+    public function stockout(Request $request)
+    {
+        $data = $request->all();
+        $driverId = $data['driver_id'];  // Now single value, not array
+        
+        $inventoryBalance = InventoryBalance::where('product_id', $data['product_id'])
+            ->where('driver_id', $driverId)
+            ->first();
+            
+        if (!empty($inventoryBalance)) {
+            if ($inventoryBalance->quantity >= $data['quantity']) {
+                $inventoryBalance->quantity = $inventoryBalance->quantity - $data['quantity'];
+                $inventoryBalance->save();
+                
+                $inventorytransaction = new InventoryTransaction();
+                $inventorytransaction->type = 2;
+                $inventorytransaction->driver_id = $driverId;
+                $inventorytransaction->product_id = $data['product_id'];
+                $inventorytransaction->quantity = $data['quantity'] * -1;
+                $inventorytransaction->save();
+                
+                Flash::success('Inventory Balance had been updated successfully.');
+            } else {
+                Flash::error('Transfer quantity cannot exceed inventory balance quantity.');
+            }
+        } else {
+            Flash::error('Inventory Balance not found.');
+        }
+
+        return redirect(route('inventoryBalances.index'));
+    }
 
     public function getstock($driver_id,$product_id)
     {
@@ -100,33 +178,6 @@ class InventoryBalanceController extends AppBaseController
         }else{
             return response()->json(['status' => false, 'message' => 'Stock not found!', 'quantity' => 0]);
         }
-    }
-
-    public function stockout(Request $request)
-    {
-        $data = $request->all();
-        $inventoryBalance = InventoryBalance::where('product_id',$data['product_id'])->where('driver_id',$data['driver_id'])->first();
-        if(!empty($inventoryBalance)){
-            if($inventoryBalance->quantity >= $data['quantity']){
-                $inventoryBalance->quantity = $inventoryBalance->quantity - $data['quantity'];
-                $inventoryBalance->save();
-                $inventorytransaction = new InventoryTransaction();
-                $inventorytransaction->type = 2;
-                $inventorytransaction->driver_id = $data['driver_id'];
-                $inventorytransaction->product_id = $data['product_id'];
-                $inventorytransaction->quantity = $data['quantity'] * -1;
-                $inventorytransaction->date = date("Y-m-d H:i:s");
-                $inventorytransaction->user = Auth::user()->email . ' (' . Auth::user()->name . ')';
-                $inventorytransaction->save();
-                Flash::success('Inventory Balance had been updated successfully.');
-            }else{
-                Flash::error('Transfer quantity cannot more than inventory balance quantity.');
-            }
-        }else{
-            Flash::error('Inventory Balance not found.');
-        }
-
-        return redirect(route('inventoryBalances.index'));
     }
 
     public function getProductsByDriver(Request $request)

@@ -345,6 +345,16 @@ class SalesInvoice extends Model
             $invoice->driver_id = $driver_id ?? 0;
             $invoice->save();
             
+            $details = $details ?: $this->salesInvoiceDetails->map(function($detail) {
+                return [
+                    'product_id' => $detail->product_id,
+                    'quantity' => $detail->quantity,
+                    'price' => $detail->price,
+                    'totalprice' => $detail->totalprice,
+                    'remark' => $detail->remark
+                ];
+            })->toArray();
+            
             // Copy invoice details from $details array
                 foreach ($details as $detail) {
                     // Calculate total price if not provided
