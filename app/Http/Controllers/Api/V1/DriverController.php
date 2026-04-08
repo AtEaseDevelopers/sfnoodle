@@ -7937,7 +7937,6 @@ class DriverController extends Controller
             ->where('is_read', false)
             ->update([
                 'is_read' => true,
-                'read_at' => now()
             ]);
 
             return response()->json([
