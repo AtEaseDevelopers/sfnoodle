@@ -9,7 +9,7 @@
             padding: 0;
         }
         body{
-            font-size: 16px;
+            font-size: 18px;
             margin: 0;
             padding: 0 5px; /* Add overall body padding */
             font-family: 'Courier New', monospace;
@@ -23,7 +23,7 @@
         }
         table th, table td{
             padding: 2px 0;
-            font-size: 12px;
+            font-size: 16px;
             vertical-align: top;
         }
         .header-section {
@@ -32,21 +32,21 @@
         }
         .company-name {
             font-weight: bold;
-            font-size: 14px;
+            font-size: 16px;
             margin-bottom: 3px;
         }
         .company-details {
-            font-size: 11px;
+            font-size: 14px;
             margin-bottom: 2px;
         }
         .invoice-title {
-            font-size: 13px;
+            font-size: 16px;
             font-weight: bold;
             text-align: center;
             margin: 5px 0;
         }
         .invoice-remark {
-            font-size: 13px;
+            font-size: 15px;
             text-align: start;
             margin: 5px 0;
         }
@@ -102,7 +102,7 @@
 </head>
 <body>
     <div class="header-section">
-        <div class="invoice-title">==================== INVOICES ====================</div>
+        <div class="invoice-title">=============== INVOICES ===============</div>
             <div class="section-separator"></div>
 
         <div class="company-name">{{ config('invoice.name', $invoices['customer']['groupcompany']->name ?? 'SF NOODLES SON BHD') }}</div>
@@ -117,7 +117,7 @@
 
     <table>
         <tr>
-            <td class="left-align">Document #</td>
+            <td class="left-align">Invoice Date</td>
             <td class="right-align">{{ date_format(date_create($invoices['date']),'d M Y') ?? '' }}</td>
         </tr>
         <tr>
