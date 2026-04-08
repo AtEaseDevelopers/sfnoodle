@@ -23,7 +23,7 @@
         }
         table th, table td{
             padding: 2px 0;
-            font-size: 16px;
+            font-size: 18px;
             vertical-align: top;
         }
         .header-section {
@@ -174,8 +174,8 @@
 
     <table>
         <tr>
-            <td class="left-align" style="font-weight: bold; font-size: 24px;">Total</td>
-            <td class="right-align" style="font-weight: bold; font-size: 24px;">RM {{ number_format($totalamount, 2) }}</td>
+            <td class="left-align" style="font-weight: bold; font-size: 30px;">Total</td>
+            <td class="right-align" style="font-weight: bold; font-size: 30px;">RM {{ number_format($totalamount, 2) }}</td>
         </tr>
     </table>
 
