@@ -142,16 +142,13 @@
         <table class="trip-info">
             <tr>
                 <td><strong>Agent :</strong> {{ $salesman }}</td>
-                <td><strong>Trip ID :</strong> {{ $trip_id }}</td>
-            </tr>
-            <tr>
-                <td><strong>Printed Time :</strong> {{ $printed_time }}</td>
                 <td><strong>Start Time :</strong> {{ $start_time }}</td>
             </tr>
             <tr>
-                <td></td>
+                <td><strong>Printed Time :</strong> {{ $printed_time }}</td>
                 <td colspan="2"><strong>End Time :</strong> {{ $end_time }}</td>
             </tr>
+           
         </table>
         <!-- Sales Summary -->
         <div class="section-title">Sales Summary</div>
@@ -161,7 +158,6 @@
                     <tr>
                         <th>Product</th>
                         <th>Quantity</th>
-                        <th>UOM</th>
                         <th>Amount</th>
                     </tr>
                 </thead>
@@ -170,14 +166,12 @@
                     <tr>
                         <td>{{ $item['code'] }}</td>
                         <td>{{ $item['quantity'] }}</td>
-                        <td>{{ $item['uom'] }}</td>
                         <td>RM {{ $item['amount'] }}</td>
                     </tr>
                     @endforeach
                     <tr class="total-row">
                         <td><strong>Total</strong></td>
                         <td><strong>{{ $total_quantity }}</strong></td>
-                        <td></td>
                         <td><strong>{{ $total_amount }}</strong></td>
                     </tr>
                 </tbody>
@@ -190,7 +184,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Brand</th>
+                            <th>Code</th>
                             <th>Open</th>
                             <th>StockIn</th>
                             <th>Sales</th>

@@ -72,19 +72,26 @@
             margin-right: auto;
         }
        
-        
+        .product-table {
+            border-collapse: separate;
+            border-spacing: 0 20px; /* horizontal | vertical (space between rows) */
+        }
+
         .col-sku {
             width: 40%;
         }
         .col-qty {
             width: 20%;
+            padding-right: 20px; /* Add padding to the right of the quantity column */
             text-align: right;
         }
         .col-price {
             width: 20%;
+            padding-left: 10px; /* Add padding to the right of the quantity column */
             text-align: right;
         }
         .col-total {
+            padding-left: 20px; /* Add padding to the right of the quantity column */
             width: 20%;
             text-align: right;
         }
@@ -142,13 +149,13 @@
     <div class="section-separator"></div>
 
     <!-- OPTION 1: Wrap table in a div container -->
-    <div class="table-container">
+    <div class="table-container" style ="padding: 0 15px;"> <!-- Add padding to the container -->
         <table class="product-table">
             <tr>
-                <th class="col-sku left-align">SKU</th>
-                <th class="col-qty">Qty</th>
-                <th class="col-price">U.Price</th>
-                <th class="col-total">Total</th>
+                <th class="col-sku left-align">SKU </th>
+                <th class="col-qty">Qty </th>
+                <th class="col-price"> U.Price </th>
+                <th class="col-total">Total </th>
             </tr>
             @php
                 $totalamount = 0;
@@ -161,7 +168,7 @@
                     <td class="col-sku left-align">{{ $invoiceDetail['product']['code'] }}</td>
                     <td class="col-qty">{{ $invoiceDetail['quantity'] }}</td>
                     <td class="col-price">{{ number_format($invoiceDetail['price'], 2) }}</td>
-                    <td class="col-total" style="font-size:22px;">{{ number_format($invoiceDetail['totalprice'], 2) }}</td>
+                    <td class="col-total" >{{ number_format($invoiceDetail['totalprice'], 2) }}</td>
                 </tr>
             @endforeach
         </table>

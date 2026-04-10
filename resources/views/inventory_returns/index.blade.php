@@ -214,9 +214,9 @@
     <div id="viewRequest" class="modal fade">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-info text-white py-3">
+                <div class="modal-header bg-info py-3">
                     <h4 class="modal-title h5 font-weight-bold mb-0">
-                        <i class="fa fa-info-circle mr-2"></i>Stock Return Details <span id="viewRequestId" class="font-weight-light"></span>
+                        <i class="fa fa-info-circle mr-2"></i>Stock Return Details <span id="viewRequestId"></span>
                     </h4>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
@@ -1256,16 +1256,18 @@
                 
                 requestData.items.forEach(function(item, index) {
                     var quantity = item.quantity || 0;
+                    var productCode = item.product_code;
                     var productName = item.product_name;
-                    if (!productName && item.product_id) {
-                        productName = getProductName(item.product_id);
-                    } else if (!productName) {
-                        productName = 'Unknown Product';
-                    }
-                    
+
+                    if (!productCode && item.product_id) {
+                        var product = productsLookup[item.product_id];
+                        productCode = product ? product.code : '';
+                    }    
+                    var displayText = productCode ? productCode : (productName || 'Unknown Product');
+
                     itemsHtml += '<tr>';
                     itemsHtml += '<td class="text-center">' + (index + 1) + '</td>';
-                    itemsHtml += '<td>' + productName + '</td>'; 
+                    itemsHtml += '<td>' + displayText  + '</td>'; 
                     itemsHtml += '<td class="text-center"><span class="badge badge-primary px-3 py-2 rounded-pill">' + quantity + '</span></td>';
                     itemsHtml += '</tr>';
                     
@@ -1286,9 +1288,11 @@
                 
                 if (requestData.product_id && requestData.quantity) {
                     var productName = getProductName(requestData.product_id);
+                    var productCode = requestData.product_code;
+                    var displayText = productCode ? productCode : (productName || 'Unknown Product');   
                     singleItemHtml += '<tr>';
                     singleItemHtml += '<td class="text-center">1</td>';
-                    singleItemHtml += '<td>' + (requestData.product_name || productName) + '</td>'; 
+                    singleItemHtml += '<td>' + displayText + '</td>'; 
                     singleItemHtml += '<td class="text-center"><span class="badge badge-primary px-3 py-2 rounded-pill">' + requestData.quantity + '</span></td>';
                     singleItemHtml += '</tr>';
                 }

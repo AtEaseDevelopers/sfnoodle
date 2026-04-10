@@ -796,12 +796,21 @@
                     var diffSymbol = difference > 0 ? '+' : '';
                     
                     var productName = getProductName(item.product_id);
+                    var productCode = item.product_code;
+                    if (!productCode && item.product_id) {
+                        var product = productsLookup[item.product_id];
+                        productCode = product ? product.code : '';
+                        productName = product ? product.name : 'Unknown Product';
+                    }
+                    
+                    // Display product code, fallback to product name if code not available
+                    var displayText = productCode ? productCode : (productName || 'Unknown Product');
 
                     var row = `
                         <tr class="${hasSavedCount ? 'has-saved-count' : ''}">
                             <td class="align-middle text-center">${index + 1}</td>
                             <td class="align-middle">
-                                <strong>${productName}</strong>
+                                <strong>${displayText}</strong>
                             </td>
                             <td class="align-middle text-center">
                                 <span class="badge badge-info">${currentQty}</span>
@@ -1094,17 +1103,19 @@
                     var difference = countedQty !== null ? countedQty - currentQty : null;
                     var diffClass = difference === null ? '' : (difference > 0 ? 'text-success' : difference < 0 ? 'text-danger' : '');
                     var diffSymbol = difference > 0 ? '+' : '';
+                    var productCode = item.product_code;
                     var productName = item.product_name;
-                    if (!productName && item.product_id) {
-                        var product = productsLookup[item.product_id];
-                        productName = product ? product.name : 'Product ' + item.product_id;
-                    } else if (!productName) {
-                        productName = 'Unknown Product';
-                    }
                     
+                    if (!productCode && item.product_id) {
+                        var product = productsLookup[item.product_id];
+                        productCode = product ? product.code : '';
+                        productName = product ? product.name : 'Unknown Product';
+                    }
+                    var displayText = productCode ? productCode : (productName || 'Unknown Product');
+
                     itemsHtml += '<tr>';
                     itemsHtml += '<td>' + (index + 1) + '</td>';
-                    itemsHtml += '<td>' + productName + '</td>'; 
+                    itemsHtml += '<td>' + displayText + '</td>'; 
                     itemsHtml += '<td class="text-center">' + currentQty + '</td>';
                     itemsHtml += '<td class="text-center">' + (countedQty !== null ? countedQty : '-') + '</td>';
                     itemsHtml += '<td class="text-center ' + diffClass + '">' + (difference !== null ? diffSymbol + difference : '-') + '</td>';
