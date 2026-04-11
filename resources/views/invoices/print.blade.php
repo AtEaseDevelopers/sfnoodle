@@ -26,7 +26,7 @@
             font-size: 18px;
             vertical-align: top;
         }
-        .header-section {
+       .header-section {
             text-align: center;
             margin-bottom: 10px;
         }
@@ -45,11 +45,6 @@
             text-align: center;
             margin: 5px 0;
         }
-        .invoice-remark {
-            font-size: 15px;
-            text-align: start;
-            margin: 5px 0;
-        }
         .section-separator {
             border-top: 1px dashed #000;
             margin: 5px 0;
@@ -63,7 +58,11 @@
         .center-align {
             text-align: center;
         }
-
+        .total-section {
+            margin-top: 10px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+        }
         .product-table {
             margin: 5px 0;
             /* Add padding to the entire table */
@@ -72,26 +71,23 @@
             margin-right: auto;
         }
        
-        .product-table {
-            border-collapse: separate;
-            border-spacing: 0 20px; /* horizontal | vertical (space between rows) */
+        .invoice-remark {
+            font-size: 13px;
+            text-align: start;
+            margin: 5px 0;
         }
-
         .col-sku {
             width: 40%;
         }
         .col-qty {
             width: 20%;
-            padding-right: 20px; /* Add padding to the right of the quantity column */
             text-align: right;
         }
         .col-price {
             width: 20%;
-            padding-left: 10px; /* Add padding to the right of the quantity column */
             text-align: right;
         }
         .col-total {
-            padding-left: 20px; /* Add padding to the right of the quantity column */
             width: 20%;
             text-align: right;
         }
@@ -102,7 +98,7 @@
         .thank-you {
             text-align: center;
             font-weight: bold;
-            margin-top: 5px;    
+            margin-top: 5px;
         }
         
     </style>
@@ -148,40 +144,76 @@
 
     <div class="section-separator"></div>
 
-    <!-- OPTION 1: Wrap table in a div container -->
-    <div class="table-container" style ="padding: 0 15px;"> <!-- Add padding to the container -->
+    <!-- Items Table Section -->
+    <div class="table-container">
         <table class="product-table">
             <tr>
-                <th class="col-sku left-align">SKU </th>
-                <th class="col-qty">Qty </th>
-                <th class="col-price"> U.Price </th>
-                <th class="col-total">Total </th>
+                <th class="col-sku left-align">SKU</th>
+                <th class="col-qty" style="padding-right: 10px;">Qty</th>
+                <th class="col-price">U.Price</th>
+                <th class="col-total">Total</th>
             </tr>
+            
             @php
-                $totalamount = 0;
+                // Use the pre-calculated allItems array if available, otherwise calculate on the fly
+                if (!isset($allItems)) {
+                    $purchasedItems = [];
+                    foreach ($invoices['invoiceDetails'] as $invoiceDetail) {
+                        $purchasedItems[] = [
+                            'product_id' => $invoiceDetail['product_id'],
+                            'quantity' => $invoiceDetail['quantity'],
+                            'price' => $invoiceDetail['price']
+                        ];
+                    }
+                    $focItems = App\Models\Foc::calculateFocItems($invoices['customer_id'], $purchasedItems);
+                    $allItems = [];
+                    
+                    foreach ($invoices['invoiceDetails'] as $invoiceDetail) {
+                        $allItems[] = [
+                            'product_code' => $invoiceDetail['product']['code'],
+                            'quantity' => $invoiceDetail['quantity'],
+                            'price' => $invoiceDetail['price'],
+                            'totalprice' => $invoiceDetail['totalprice'],
+                            'is_foc' => false
+                        ];
+                    }
+                    
+                    foreach ($focItems as $focItem) {
+                        $allItems[] = [
+                            'product_code' => $focItem['product_code'],
+                            'quantity' => $focItem['quantity'],
+                            'price' => 0,
+                            'totalprice' => 0,
+                            'is_foc' => true
+                        ];
+                    }
+                }
             @endphp
-            @foreach ($invoices['invoiceDetails'] as $invoiceDetail)
-                @php
-                    $totalamount = ($totalamount ?? 0) + $invoiceDetail['totalprice'];
-                @endphp
-                <tr>
-                    <td class="col-sku left-align">{{ $invoiceDetail['product']['code'] }}</td>
-                    <td class="col-qty">{{ $invoiceDetail['quantity'] }}</td>
-                    <td class="col-price">{{ number_format($invoiceDetail['price'], 2) }}</td>
-                    <td class="col-total" >{{ number_format($invoiceDetail['totalprice'], 2) }}</td>
-                </tr>
+            
+            @foreach ($allItems as $item)
+            <tr>
+                <td class="col-sku left-align">
+                    {{ $item['product_code'] }}@if($item['is_foc']) (FOC)@endif
+                </td>
+                <td class="col-qty" style="padding-right: 10px;">{{ $item['quantity'] }}</td>
+                <td class="col-price">{{ number_format($item['price'], 2) }}</td>
+                <td class="col-total">{{ number_format($item['totalprice'], 2) }}</td>
+            </tr>
             @endforeach
         </table>
     </div>
 
-<div class="section-separator"></div>
+    <div class="section-separator"></div>
 
     <table>
         <tr>
             <td class="left-align" style="font-weight: bold; font-size: 30px;">Total</td>
-            <td class="right-align" style="font-weight: bold; font-size: 30px;">RM {{ number_format($totalamount, 2) }}</td>
+            <td class="right-align" style="font-weight: bold; font-size: 30px;">
+                RM {{ number_format($totalAmount ?? $totalamount, 2) }}
+            </td>
         </tr>
     </table>
+
 
     <div class="footer-line"></div>
     

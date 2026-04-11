@@ -319,16 +319,6 @@ class Invoice extends Model
     }
 
     /**
-     * Get formatted date
-     *
-     * @return string
-     */
-    public function getFormattedDateAttribute()
-    {
-        return $this->date ? $this->date->format('d-m-Y H:i:s') : '';
-    }
-
-    /**
      * Scope a query to only include invoices created by driver.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query

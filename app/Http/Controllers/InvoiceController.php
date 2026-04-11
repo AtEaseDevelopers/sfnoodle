@@ -545,38 +545,86 @@ class InvoiceController extends AppBaseController
         return view('invoices.print');
     }
 
-    public function getInvoiceViewPDF($id,$function)
+    public function getInvoiceViewPDF($id, $function)
     {
         $id = Crypt::decrypt($id);
-        $invoice = Invoice::where('id',$id)
-        ->with(['customer', 'InvoiceDetails.product', 'createdByUser', 'createdByDriver'])
-        ->first();
-    
-
+        $invoice = Invoice::where('id', $id)
+            ->with(['customer', 'invoiceDetails.product', 'createdByUser', 'createdByDriver'])
+            ->first();
+        
+        // Prepare purchased items for FOC calculation
+        $purchasedItems = [];
+        foreach ($invoice->invoiceDetails as $detail) {
+            $purchasedItems[] = [
+                'product_id' => $detail->product_id,
+                'quantity' => $detail->quantity,
+                'price' => $detail->price
+            ];
+        }
+        
+        // Calculate FOC items using the invoice date (not current date)
+        $invoiceDate = $invoice->date;
+        $focItems = \App\Models\Foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
+        
+        // Merge original items with FOC items for display
+        $allItems = [];
+        
+        // Add purchased items
+        foreach ($invoice->invoiceDetails as $detail) {
+            $allItems[] = [
+                'product_code' => $detail->product->code,
+                'product_name' => $detail->product->name,
+                'quantity' => $detail->quantity,
+                'price' => $detail->price,
+                'totalprice' => $detail->totalprice,
+                'is_foc' => false
+            ];
+        }
+        
+        // Add FOC items
+        foreach ($focItems as $focItem) {
+            $allItems[] = [
+                'product_code' => $focItem['product_code'],
+                'product_name' => $focItem['product_name'],
+                'quantity' => $focItem['quantity'],
+                'price' => 0,
+                'totalprice' => 0,
+                'is_foc' => true
+            ];
+        }
+        
+        // Calculate total amount (excluding FOC items since they're zero)
+        $totalAmount = $invoice->invoiceDetails->sum('totalprice');
+        
         $min = 450;
         $each = 23;
-        $height = (count($invoice['invoiceDetails']) * $each) + $min;
-
+        $height = (count($allItems) * $each) + $min;
+        
         $creator = $invoice->creator; // Returns User or Driver model
-
-        try{
+        
+        try {
             $pdf = Pdf::loadView('invoices.print', array(
                 'invoices' => $invoice,
-                'creatorName' => $creator->name
+                'creatorName' => $creator->name,
+                'allItems' => $allItems,
+                'totalAmount' => $totalAmount,
+                'focItems' => $focItems,
+                'invoiceDate' => $invoiceDate // Pass the date to view if needed
             ));
-
-            if($function == 'download'){
-                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])->download('download.pdf');
-            }elseif($function == 'view'){
-                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])->stream('view.pdf');
+            
+            if ($function == 'download') {
+                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
+                    ->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])
+                    ->download('download.pdf');
+            } elseif ($function == 'view') {
+                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
+                    ->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])
+                    ->stream('view.pdf');
             }
-        }
-        catch(Exception $e){
+        } catch (Exception $e) {
             dd($e->getMessage());
-
             abort(404);
         }
-
     }
 
     public function cancelInvoice($id, Request $request)

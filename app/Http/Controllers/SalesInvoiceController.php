@@ -655,36 +655,86 @@ class SalesInvoiceController extends AppBaseController
         }
     }
 
-    public function getSalesInvoiceViewPDF($id,$function)
+   public function getSalesInvoiceViewPDF($id, $function)
     {
         $id = Crypt::decrypt($id);
-        $salesInvoice = SalesInvoice::where('id',$id)
-        ->with(['customer', 'salesInvoiceDetails.product', 'createdByUser', 'createdByDriver'])
-        ->first();
+        $salesInvoice = SalesInvoice::where('id', $id)
+            ->with(['customer', 'salesInvoiceDetails.product', 'createdByUser', 'createdByDriver'])
+            ->first();
+        
+        // Prepare purchased items for FOC calculation
+        $purchasedItems = [];
+        foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+            $purchasedItems[] = [
+                'product_id' => $detail->product_id,
+                'quantity' => $detail->quantity,
+                'price' => $detail->price
+            ];
+        }
+        
+        // Calculate FOC items using the sales invoice date (not current date)
+        $invoiceDate = $salesInvoice->date;
+        $focItems = \App\Models\Foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
+        
+        // Merge original items with FOC items for display
+        $allItems = [];
+        
+        // Add purchased items
+        foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+            $allItems[] = [
+                'product_code' => $detail->product->code,
+                'product_name' => $detail->product->name,
+                'quantity' => $detail->quantity,
+                'price' => $detail->price,
+                'totalprice' => $detail->totalprice,
+                'is_foc' => false
+            ];
+        }
+        
+        // Add FOC items
+        foreach ($focItems as $focItem) {
+            $allItems[] = [
+                'product_code' => $focItem['product_code'],
+                'product_name' => $focItem['product_name'],
+                'quantity' => $focItem['quantity'],
+                'price' => 0,
+                'totalprice' => 0,
+                'is_foc' => true
+            ];
+        }
+        
+        // Calculate total amount (excluding FOC items since they're zero)
+        $totalAmount = $salesInvoice->salesInvoiceDetails->sum('totalprice');
         
         $min = 450;
         $each = 23;
-        $height = (count($salesInvoice['salesInvoiceDetails']) * $each) + $min;
-
+        $height = (count($allItems) * $each) + $min;
+        
         $creator = $salesInvoice->creator; // Returns User or Driver model
-                        
-        try{
+        
+        try {
             $pdf = Pdf::loadView('sales_invoices.print', array(
                 'salesInvoice' => $salesInvoice,
-                'creatorName' => $creator->name
+                'creatorName' => $creator->name,
+                'allItems' => $allItems,
+                'totalAmount' => $totalAmount,
+                'focItems' => $focItems,
+                'invoiceDate' => $invoiceDate // Pass the date to view if needed
             ));
-
-            if($function == 'download'){
-                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])->download('download.pdf');
-            }elseif($function == 'view'){
-                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])->stream('view.pdf');
+            
+            if ($function == 'download') {
+                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
+                    ->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])
+                    ->download('download.pdf');
+            } elseif ($function == 'view') {
+                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
+                    ->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])
+                    ->stream('view.pdf');
             }
-        }
-        catch(Exception $e){
+        } catch (Exception $e) {
             dd($e->getMessage());
             abort(404);
         }
-
     }
     
     /** 
@@ -845,7 +895,6 @@ class SalesInvoiceController extends AppBaseController
             try {
                 // Convert to invoice (creates the invoice only)
                 $invoice = $salesInvoice->convertToInvoice();
-                
                 if (!$invoice) {
                     DB::rollBack();
                     return response()->json([

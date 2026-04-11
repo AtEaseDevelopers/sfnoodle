@@ -56,7 +56,6 @@ class SalesInvoice extends Model
     protected $casts = [
         'id' => 'integer',
         'invoiceno' => 'string',
-        'date' => 'datetime:d-m-Y H:i:s',
         'customer_id' => 'integer',
         'paymentterm' => 'string',
         'status' => 'integer',
@@ -329,7 +328,6 @@ class SalesInvoice extends Model
         try {
             // Generate invoice number with prefix
             $invoiceNumber = $this->generateInvoiceNumberForConversion($driver_id);
-
             // Create the invoice
             $invoice = new \App\Models\Invoice();
             $invoice->invoiceno = $invoiceNumber;
@@ -472,12 +470,6 @@ class SalesInvoice extends Model
     {
         return $this->belongsTo(Driver::class, 'driver_id');
     }
-
-    public function getDateAttribute($value)
-    {
-        return Carbon::parse($value)->format('d-m-Y H:i:s');
-    }
-    
     /**
      * Scope a query to only include pending invoices.
      *

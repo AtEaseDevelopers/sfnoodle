@@ -144,28 +144,61 @@
 
     <div class="section-separator"></div>
 
-    <!-- OPTION 1: Wrap table in a div container -->
+    <!-- Items Table Section -->
     <div class="table-container">
         <table class="product-table">
             <tr>
                 <th class="col-sku left-align">SKU</th>
-                <th class="col-qty">Qty</th>
+                <th class="col-qty" style="padding-right: 10px;"> Qty</th>
                 <th class="col-price">U.Price</th>
                 <th class="col-total">Total</th>
             </tr>
+            
             @php
-                $totalamount = 0;
+                // Use the pre-calculated allItems array if available, otherwise calculate on the fly
+                if (!isset($allItems)) {
+                    $purchasedItems = [];
+                    foreach ($salesInvoice['salesInvoiceDetails'] as $detail) {
+                        $purchasedItems[] = [
+                            'product_id' => $detail['product_id'],
+                            'quantity' => $detail['quantity'],
+                            'price' => $detail['price']
+                        ];
+                    }
+                    $focItems = App\Models\Foc::calculateFocItems($salesInvoice['customer_id'], $purchasedItems);
+                    $allItems = [];
+                    
+                    foreach ($salesInvoice['salesInvoiceDetails'] as $detail) {
+                        $allItems[] = [
+                            'product_code' => $detail['product']['code'],
+                            'quantity' => $detail['quantity'],
+                            'price' => $detail['price'],
+                            'totalprice' => $detail['totalprice'],
+                            'is_foc' => false
+                        ];
+                    }
+                    
+                    foreach ($focItems as $focItem) {
+                        $allItems[] = [
+                            'product_code' => $focItem['product_code'],
+                            'quantity' => $focItem['quantity'],
+                            'price' => 0,
+                            'totalprice' => 0,
+                            'is_foc' => true
+                        ];
+                    }
+                }
             @endphp
-            @foreach ($salesInvoice['salesInvoiceDetails'] as $salesInvoiceDetail)
-                @php
-                    $totalamount = ($totalamount ?? 0) + $salesInvoiceDetail['totalprice'];
-                @endphp
-                <tr>
-                    <td class="col-sku left-align">{{ $salesInvoiceDetail['product']['code'] }}</td>
-                    <td class="col-qty">{{ $salesInvoiceDetail['quantity'] }}</td>
-                    <td class="col-price">{{ number_format($salesInvoiceDetail['price'], 2) }}</td>
-                    <td class="col-total">{{ number_format($salesInvoiceDetail['totalprice'], 2) }}</td>
-                </tr>
+            
+            @foreach ($allItems as $item)
+            <tr>
+                <td class="col-sku left-align">
+                    {{ $item['product_code'] }}@if($item['is_foc']) (FOC)@endif
+                </td>
+                <td class="col-qty" style="padding-right: 10px;">{{ $item['quantity'] }}</td>
+                <td class="col-price">{{ number_format($item['price'], 2) }}</td>
+                <td class="col-total">{{ number_format($item['totalprice'], 2) }}</td>
+            </tr>
             @endforeach
         </table>
     </div>
@@ -175,7 +208,9 @@
     <table>
         <tr>
             <td class="left-align" style="font-weight: bold; font-size: 30px;">Total</td>
-            <td class="right-align" style="font-weight: bold; font-size: 30px;">RM {{ number_format($totalamount, 2) }}</td>
+            <td class="right-align" style="font-weight: bold; font-size: 30px;">
+                RM {{ number_format($totalAmount ?? $totalAmount, 2) }}
+            </td>
         </tr>
     </table>
 
