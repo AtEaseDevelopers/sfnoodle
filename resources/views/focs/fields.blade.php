@@ -48,39 +48,12 @@
     {!! Form::text('startdate', null, ['class' => 'form-control', 'id' => 'startdate']) !!}
 </div>
 
-@push('scripts')
-    <script type="text/javascript">
-        $('#startdate').datetimepicker({
-            format: 'DD-MM-YYYY',
-            useCurrent: true,
-            icons: {
-                up: "icon-arrow-up-circle icons font-2xl",
-                down: "icon-arrow-down-circle icons font-2xl"
-            },
-            sideBySide: true
-        });
-    </script>
-@endpush
-
 <!-- Enddate Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('enddate', __('focs.end_date')) !!}<span class="asterisk"> *</span>
     {!! Form::text('enddate', null, ['class' => 'form-control', 'id' => 'enddate']) !!}
 </div>
 
-@push('scripts')
-    <script type="text/javascript">
-        $('#enddate').datetimepicker({
-            format: 'DD-MM-YYYY',
-            useCurrent: true,
-            icons: {
-                up: "icon-arrow-up-circle icons font-2xl",
-                down: "icon-arrow-down-circle icons font-2xl"
-            },
-            sideBySide: true
-        });
-    </script>
-@endpush
 
 <!-- Status Field -->
 <div class="form-group col-sm-6">
@@ -99,6 +72,16 @@
 
 @push('scripts')
     <script>
+        $('#enddate').datetimepicker({
+            format: 'DD-MM-YYYY',
+            useCurrent: true,
+            icons: {
+                up: "icon-arrow-up-circle icons font-2xl",
+                down: "icon-arrow-down-circle icons font-2xl"
+            },
+            sideBySide: true
+        });
+        
         $(document).ready(function () {
             // Custom matcher for Select2 to search by both name and code
             function matchCustom(params, data) {
@@ -112,13 +95,17 @@
                     return null;
                 }
 
-                // Get the product code from the data-code attribute
+                // Get the product code from the data-code attribute and ensure it's a string
                 var productCode = $(data.element).data('code');
                 var searchTerm = params.term.toLowerCase();
                 
+                // Convert productCode to string if it exists, otherwise empty string
+                var productCodeStr = productCode ? String(productCode).toLowerCase() : '';
+                var textStr = data.text ? String(data.text).toLowerCase() : '';
+                
                 // Check if search term matches product name OR product code
-                if (data.text.toLowerCase().indexOf(searchTerm) > -1 || 
-                    (productCode && productCode.toLowerCase().indexOf(searchTerm) > -1)) {
+                if (textStr.indexOf(searchTerm) > -1 || 
+                    (productCodeStr && productCodeStr.indexOf(searchTerm) > -1)) {
                     // Modified to return the modified data object
                     var modifiedData = $.extend({}, data, true);
                     return modifiedData;
