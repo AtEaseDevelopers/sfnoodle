@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Models\Driver;
 use App\Models\Task;
 use App\Models\Code;
+use App\Models\Foc;
 use App\Models\SpecialPrice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Session;
@@ -674,7 +675,7 @@ class SalesInvoiceController extends AppBaseController
         
         // Calculate FOC items using the sales invoice date (not current date)
         $invoiceDate = $salesInvoice->date;
-        $focItems = \App\Models\Foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
+        $focItems = Foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
         
         // Merge original items with FOC items for display
         $allItems = [];
