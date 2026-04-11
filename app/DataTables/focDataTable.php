@@ -27,7 +27,7 @@ class focDataTable extends DataTable
      * @param \App\Models\foc $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(Foc $model)
+    public function query(foc $model)
     {
         return $model->newQuery()
         ->with('product:id,name')

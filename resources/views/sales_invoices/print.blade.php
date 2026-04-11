@@ -165,7 +165,7 @@
                             'price' => $detail['price']
                         ];
                     }
-                    $focItems = App\Models\Foc::calculateFocItems($salesInvoice['customer_id'], $purchasedItems);
+                    $focItems = App\Models\foc::calculateFocItems($salesInvoice['customer_id'], $purchasedItems);
                     $allItems = [];
                     
                     foreach ($salesInvoice['salesInvoiceDetails'] as $detail) {
