@@ -72,6 +72,15 @@
 
 @push('scripts')
     <script>
+        $('#startdate').datetimepicker({
+            format: 'DD-MM-YYYY',
+            useCurrent: true,
+            icons: {
+                up: "icon-arrow-up-circle icons font-2xl",
+                down: "icon-arrow-down-circle icons font-2xl"
+            },
+            sideBySide: true
+        });
         $('#enddate').datetimepicker({
             format: 'DD-MM-YYYY',
             useCurrent: true,
@@ -81,7 +90,7 @@
             },
             sideBySide: true
         });
-        
+
         $(document).ready(function () {
             // Custom matcher for Select2 to search by both name and code
             function matchCustom(params, data) {
