@@ -19,6 +19,7 @@ use App\Models\Product;
 use App\Models\Task;
 use App\Models\Code;
 use App\Models\User;
+use App\Models\Foc;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Session;
 use Exception;
@@ -564,7 +565,7 @@ class InvoiceController extends AppBaseController
         
         // Calculate FOC items using the invoice date (not current date)
         $invoiceDate = $invoice->date;
-        $focItems = \App\Models\Foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
+        $focItems = Foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
         
         // Merge original items with FOC items for display
         $allItems = [];
