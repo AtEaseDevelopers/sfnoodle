@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\SalesInvoice;
 use App\Models\SpecialPrice;
-use App\Models\foc;
+use App\Models\Foc;
 use App\Models\Assign;
 use App\Models\CustomerGroup;
 use Illuminate\Support\Facades\Session;
@@ -360,9 +360,9 @@ class CustomerController extends AppBaseController
         }
 
         // Check if customer is used in FOC
-        $foc = foc::where('customer_id', $id)->exists();
+        $foc = Foc::where('customer_id', $id)->exists();
         if ($foc) {
-            Flash::error('Unable to delete ' . $customer->company . ', ' . $customer->company . ' is being used in FOC');
+            Flash::error('Unable to delete ' . $customer->company . ', ' . $customer->company . ' is being used in Foc');
             return redirect(route('customers.index'));
         }
 
@@ -400,9 +400,9 @@ class CustomerController extends AppBaseController
             // Check if customer is used in any dependent records
             $salesInvoice = SalesInvoice::where('customer_id', $id)->exists();
             $specialPrice = SpecialPrice::where('customer_id', $id)->exists();
-            $foc = foc::where('customer_id', $id)->exists();
+            $Foc = Foc::where('customer_id', $id)->exists();
             
-            if ($salesInvoice || $specialPrice || $foc) {
+            if ($salesInvoice || $specialPrice || $Foc) {
                 continue;
             }
 

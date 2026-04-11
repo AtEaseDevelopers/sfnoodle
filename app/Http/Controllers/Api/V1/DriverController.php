@@ -4031,7 +4031,6 @@ class DriverController extends Controller
     public function getSalesInvoicepdf($invoice_id)
     {
         try {
-
             $salesInvoice = SalesInvoice::where('id', $invoice_id)
                 ->with(['customer', 'salesInvoiceDetails.product', 'createdByUser', 'createdByDriver'])
                 ->first();
@@ -4044,14 +4043,61 @@ class DriverController extends Controller
                 ], 200);
             }
 
+            // Prepare purchased items for FOC calculation
+            $purchasedItems = [];
+            foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+                $purchasedItems[] = [
+                    'product_id' => $detail->product_id,
+                    'quantity' => $detail->quantity,
+                    'price' => $detail->price
+                ];
+            }
+            
+            // Calculate FOC items using the sales invoice date
+            $invoiceDate = $salesInvoice->date;
+            $focItems = \App\Models\Foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
+            
+            // Merge original items with FOC items for display
+            $allItems = [];
+            
+            // Add purchased items
+            foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+                $allItems[] = [
+                    'product_code' => $detail->product->code,
+                    'product_name' => $detail->product->name,
+                    'quantity' => $detail->quantity,
+                    'price' => $detail->price,
+                    'totalprice' => $detail->totalprice,
+                    'is_foc' => false
+                ];
+            }
+            
+            // Add FOC items
+            foreach ($focItems as $focItem) {
+                $allItems[] = [
+                    'product_code' => $focItem['product_code'],
+                    'product_name' => $focItem['product_name'],
+                    'quantity' => $focItem['quantity'],
+                    'price' => 0,
+                    'totalprice' => 0,
+                    'is_foc' => true
+                ];
+            }
+            
+            // Calculate total amount (excluding FOC items since they're zero)
+            $totalAmount = $salesInvoice->salesInvoiceDetails->sum('totalprice');
+            
             $min = 450;
             $each = 23;
-            $height = (count($salesInvoice['salesInvoiceDetails']) * $each) + $min;
+            $height = (count($allItems) * $each) + $min;
             $creator = $salesInvoice->creator;
             
             $pdf = Pdf::loadView('sales_invoices.print', array(
                 'salesInvoice' => $salesInvoice,
-                'creatorName' => $creator->name
+                'creatorName' => $creator->name,
+                'allItems' => $allItems,
+                'totalAmount' => $totalAmount,
+                'focItems' => $focItems
             ));
             
             $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
@@ -4067,6 +4113,7 @@ class DriverController extends Controller
             ], 200);
         }
     }
+
 
     public function convertSalesInvoice(Request $request, $id)
     {
@@ -5213,9 +5260,8 @@ class DriverController extends Controller
 	public function getinvoicepdf($invoice_id)
     {
         try {
-
             $invoice = Invoice::where('id', $invoice_id)
-                ->with(['customer', 'InvoiceDetails.product', 'createdByUser', 'createdByDriver'])
+                ->with(['customer', 'invoiceDetails.product', 'createdByUser', 'createdByDriver'])
                 ->first();
 
             if (empty($invoice)) {
@@ -5226,14 +5272,61 @@ class DriverController extends Controller
                 ], 200);
             }
             
+            // Prepare purchased items for FOC calculation
+            $purchasedItems = [];
+            foreach ($invoice->invoiceDetails as $detail) {
+                $purchasedItems[] = [
+                    'product_id' => $detail->product_id,
+                    'quantity' => $detail->quantity,
+                    'price' => $detail->price
+                ];
+            }
+            
+            // Calculate FOC items using the invoice date
+            $invoiceDate = $invoice->date;
+            $focItems = \App\Models\Foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
+            
+            // Merge original items with FOC items for display
+            $allItems = [];
+            
+            // Add purchased items
+            foreach ($invoice->invoiceDetails as $detail) {
+                $allItems[] = [
+                    'product_code' => $detail->product->code,
+                    'product_name' => $detail->product->name,
+                    'quantity' => $detail->quantity,
+                    'price' => $detail->price,
+                    'totalprice' => $detail->totalprice,
+                    'is_foc' => false
+                ];
+            }
+            
+            // Add FOC items
+            foreach ($focItems as $focItem) {
+                $allItems[] = [
+                    'product_code' => $focItem['product_code'],
+                    'product_name' => $focItem['product_name'],
+                    'quantity' => $focItem['quantity'],
+                    'price' => 0,
+                    'totalprice' => 0,
+                    'is_foc' => true
+                ];
+            }
+            
+            // Calculate total amount (excluding FOC items since they're zero)
+            $totalAmount = $invoice->invoiceDetails->sum('totalprice');
+            
             $min = 450;
             $each = 23;
-            $height = (count($invoice['invoiceDetails']) * $each) + $min;
+            $height = (count($allItems) * $each) + $min;
             $creator = $invoice->creator;
             
             $pdf = Pdf::loadView('invoices.print', [
                 'invoices' => $invoice,
-                'creatorName' => $creator->name
+                'creatorName' => $creator->name,
+                'allItems' => $allItems,
+                'totalAmount' => $totalAmount,
+                'focItems' => $focItems
             ]);
             
             $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
