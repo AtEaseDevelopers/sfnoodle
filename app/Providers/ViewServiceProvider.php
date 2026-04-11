@@ -187,17 +187,30 @@ class ViewServiceProvider extends ServiceProvider
             $view->with('groups', $groups);
         });
         View::composer(['focs.fields'], function ($view) {
-            $productItems = Product::pluck('name','id')->toArray();
-            $view->with('productItems', $productItems);
+            // Get products with both name and code
+            $products = Product::select('id', 'name', 'code')->get();
+            
+            // Create an array with formatted display: "Product Name (Product Code)"
+            $productItems = $products->pluck('name', 'id')->toArray();
+            
+            // Also pass the full products data for JavaScript to enable searching by code
+            $productData = $products->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code,
+                    'display' => $product->name . ' (' . $product->code . ')'
+                ];
+            });
+            
+            $view->with('productItems', $productItems)
+                ->with('productData', $productData);
         });
         View::composer(['focs.fields'], function ($view) {
             $customerItems = Customer::orderBy("company")->pluck('company','id')->toArray();
             $view->with('customerItems', $customerItems);
         });
-        View::composer(['focs.fields'], function ($view) {
-            $productItems = Product::pluck('name','id')->toArray();
-            $view->with('productItems', $productItems);
-        });
+
         View::composer(['special_prices.fields'], function ($view) {
             $customerItems = Customer::orderBy("company")->pluck('company','id')->toArray();
             $view->with('customerItems', $customerItems);

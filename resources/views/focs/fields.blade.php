@@ -1,7 +1,14 @@
 <!-- Product Id Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('product_id', __('focs.product')) !!}<span class="asterisk"> *</span>
-    {!! Form::select('product_id', $productItems, null, ['class' => 'form-control select2-product', 'placeholder' => 'Pick a Product...','autofocus']) !!}
+    <select name="product_id" id="product_id" class="form-control select2-product" style="width: 100%;">
+        <option value="">Pick a Product...</option>
+        @foreach($productData as $product)
+            <option value="{{ $product['id'] }}" data-code="{{ $product['code'] }}">
+                {{ $product['name'] }} ({{ $product['code'] }})
+            </option>
+        @endforeach
+    </select>
 </div>
 
 <!-- Customer Id Field -->
@@ -19,7 +26,14 @@
 <!-- Free Product Id Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('free_product_id', __('focs.free_product')) !!}<span class="asterisk"> *</span>
-    {!! Form::select('free_product_id', $productItems, null, ['class' => 'form-control select2-free-product', 'placeholder' => 'Pick a Free Product...']) !!}
+    <select name="free_product_id" id="free_product_id" class="form-control select2-free-product" style="width: 100%;">
+        <option value="">Pick a Free Product...</option>
+        @foreach($productData as $product)
+            <option value="{{ $product['id'] }}" data-code="{{ $product['code'] }}">
+                {{ $product['name'] }} ({{ $product['code'] }})
+            </option>
+        @endforeach
+    </select>
 </div>
 
 <!-- Free Quantity Field -->
@@ -85,29 +99,70 @@
 
 @push('scripts')
     <script>
-        $(document).keyup(function(e) {
-            if (e.key === "Escape") {
-                $('form a.btn-secondary')[0].click();
-            }
-        });
         $(document).ready(function () {
+            // Custom matcher for Select2 to search by both name and code
+            function matchCustom(params, data) {
+                // If there are no search terms, return all of the data
+                if ($.trim(params.term) === '') {
+                    return data;
+                }
+
+                // Skip if there is no 'element' property (for grouped data)
+                if (typeof data.element === 'undefined') {
+                    return null;
+                }
+
+                // Get the product code from the data-code attribute
+                var productCode = $(data.element).data('code');
+                var searchTerm = params.term.toLowerCase();
+                
+                // Check if search term matches product name OR product code
+                if (data.text.toLowerCase().indexOf(searchTerm) > -1 || 
+                    (productCode && productCode.toLowerCase().indexOf(searchTerm) > -1)) {
+                    // Modified to return the modified data object
+                    var modifiedData = $.extend({}, data, true);
+                    return modifiedData;
+                }
+
+                // Return `null` if the term should not be displayed
+                return null;
+            }
+
+            // Initialize Select2 for product field with custom matcher
+            $('.select2-product').select2({
+                placeholder: "Search by product name or code...",
+                allowClear: true,
+                width: '100%',
+                matcher: matchCustom,
+                language: {
+                    searching: function() {
+                        return "Searching...";
+                    },
+                    noResults: function() {
+                        return "No product found. Try searching by name or code.";
+                    }
+                }
+            });
+            
+            // Initialize Select2 for free product field with custom matcher
+            $('.select2-free-product').select2({
+                placeholder: "Search by product name or code...",
+                allowClear: true,
+                width: '100%',
+                matcher: matchCustom,
+                language: {
+                    searching: function() {
+                        return "Searching...";
+                    },
+                    noResults: function() {
+                        return "No product found. Try searching by name or code.";
+                    }
+                }
+            });
+            
             // Initialize Select2 for customer field
             $('.select2-customer').select2({
                 placeholder: "Search for a customer...",
-                allowClear: true,
-                width: '100%'
-            });
-            
-            // Initialize Select2 for product field
-            $('.select2-product').select2({
-                placeholder: "Search for a product...",
-                allowClear: true,
-                width: '100%'
-            });
-            
-            // Initialize Select2 for free product field
-            $('.select2-free-product').select2({
-                placeholder: "Search for a free product...",
                 allowClear: true,
                 width: '100%'
             });
