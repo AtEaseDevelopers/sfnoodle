@@ -164,9 +164,9 @@ class focDataTable extends DataTable
             'data' => 'customer.company',
             'name' => 'customer.company']),
 
-            'achievequantity'=> new \Yajra\DataTables\Html\Column(['title' => trans('focs.achieve_quantity'),
-            'data' => 'achievequantity',
-            'name' => 'achievequantity']),
+            // 'achievequantity'=> new \Yajra\DataTables\Html\Column(['title' => trans('focs.achieve_quantity'),
+            // 'data' => 'achievequantity',
+            // 'name' => 'achievequantity']),
 
             'quantity',
 
