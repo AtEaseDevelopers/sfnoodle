@@ -5565,6 +5565,167 @@ class DriverController extends Controller
         }
     }
 
+    public function getRecentProducts(Request $request, $customer_id = null, $days = 7)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        try {
+            // Get driver's inventory balances
+            $driverInventory = InventoryBalance::where('driver_id', $driver->id)
+                ->pluck('quantity', 'product_id')
+                ->toArray();
+            
+            // Get special prices if customer_id is provided
+            $specialPrices = [];
+            if ($customer_id) {
+                $specialPrices = SpecialPrice::where('customer_id', $customer_id)
+                    ->where('status', 1)
+                    ->pluck('price', 'product_id')
+                    ->toArray();
+            }
+            
+            // Get recent invoices from last X days
+            $recentDate = Carbon::now()->subDays($days);
+            
+            // Get product IDs from recent invoices (including both driver and admin invoices)
+            // But exclude cancelled invoices
+            $recentProductIds = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
+                $query->where('date', '>=', $recentDate)
+                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
+            })
+            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(invoice_details.created_at) as last_used'))
+            ->groupBy('product_id')
+            ->orderBy('last_used', 'desc')
+            ->orderBy('usage_count', 'desc')
+            ->pluck('product_id')
+            ->toArray();
+            
+            if (empty($recentProductIds)) {
+                return response()->json([
+                    'result' => true,
+                    'message' => __LINE__ . $this->message_separator . 'No recent products found',
+                    'data' => []
+                ], 200);
+            }
+            
+            // Get all products that were in recent invoices
+            $products = Product::where('status', 1)
+                ->whereIn('id', $recentProductIds)
+                ->select('id', 'name', 'category', 'price', 'status', 'code')
+                ->get();
+            
+            // Maintain order based on recent usage (last used first)
+            $products = $products->sortBy(function($product) use ($recentProductIds) {
+                return array_search($product->id, $recentProductIds);
+            });
+            
+            // Group products by category string
+            $groupedProducts = [];
+            
+            foreach ($products as $product) {
+                $categoryName = $product->category ?: 'Uncategorized';
+                
+                if (!isset($groupedProducts[$categoryName])) {
+                    $groupedProducts[$categoryName] = [
+                        'category_id' => null,
+                        'category_name' => $categoryName,
+                        'products' => []
+                    ];
+                }
+                
+                // Get quantity from driver's inventory, default to 0 if not found
+                $quantity = $driverInventory[$product->id] ?? 0;
+                
+                // Get price: use special price if available, otherwise default price
+                $price = $specialPrices[$product->id] ?? $product->price;
+                
+                $groupedProducts[$categoryName]['products'][] = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code,
+                    'price' => $price,
+                    'quantity' => $quantity,
+                    'status' => $product->getStatusTextAttribute(),
+                    'usage_count' => null, // Will be filled below
+                    'last_used' => null
+                ];
+            }
+            
+            // Get usage statistics for each product
+            $usageStats = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
+                $query->where('date', '>=', $recentDate)
+                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
+            })
+            ->whereIn('product_id', $recentProductIds)
+            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(created_at) as last_used'))
+            ->groupBy('product_id')
+            ->get()
+            ->keyBy('product_id');
+            
+            // Add usage statistics to products
+            foreach ($groupedProducts as &$category) {
+                foreach ($category['products'] as &$product) {
+                    if (isset($usageStats[$product['id']])) {
+                        $product['usage_count'] = $usageStats[$product['id']]->usage_count;
+                        $product['last_used'] = Carbon::parse($usageStats[$product['id']]->last_used)->toDateTimeString();
+                    } else {
+                        $product['usage_count'] = 0;
+                        $product['last_used'] = null;
+                    }
+                }
+            }
+            
+            // Convert to array and sort categories alphabetically
+            $output = array_values($groupedProducts);
+            
+            // Sort products within each category by last_used (most recent first)
+            foreach ($output as &$category) {
+                usort($category['products'], function($a, $b) {
+                    if ($a['last_used'] === $b['last_used']) {
+                        return $b['usage_count'] - $a['usage_count'];
+                    }
+                    return strcmp($b['last_used'] ?? '', $a['last_used'] ?? '');
+                });
+            }
+            
+            // Sort categories by name
+            usort($output, function($a, $b) {
+                return strcmp($a['category_name'], $b['category_name']);
+            });
+            
+            return response()->json([
+                'result' => true,
+                'message' => __LINE__ . $this->message_separator . 'Recent products retrieved successfully',
+                'data' => [
+                    'products' => $output,
+                    'summary' => [
+                        'days' => $days,
+                        'total_products' => count($recentProductIds),
+                        'date_range' => [
+                            'from' => $recentDate->toDateString(),
+                            'to' => Carbon::now()->toDateString()
+                        ]
+                    ]
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Error getting recent products: ' . $e->getMessage(),
+                'data' => null
+            ], 200);
+        }
+    }
+
     public function getAllProduct(Request $request, $customer_id = null)
     {
         // Validate session
