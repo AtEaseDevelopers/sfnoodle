@@ -5632,14 +5632,7 @@ class DriverController extends Controller
                 if (empty($imagePath)) {
                     return null;
                 }
-                // Check if the path already starts with 'storage/' or 'http'
-                if (str_starts_with($imagePath, 'storage/')) {
-                    return url($imagePath);
-                } elseif (str_starts_with($imagePath, 'http')) {
-                    return $imagePath;
-                } else {
-                    return url('storage/' . $imagePath);
-                }
+                return url($imagePath);
             };
             
             // Group products by category string
