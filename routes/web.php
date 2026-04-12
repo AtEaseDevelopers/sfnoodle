@@ -363,6 +363,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::resource('products', App\Http\Controllers\ProductController::class);
         Route::post('/products/massdestroy', [App\Http\Controllers\ProductController::class, 'massdestroy']);
         Route::post('/products/massupdatestatus', [App\Http\Controllers\ProductController::class, 'massupdatestatus']);
+        Route::delete('products/remove-image/{id}', [App\Http\Controllers\ProductController::class, 'removeImage'])->name('products.remove-image');
     });
     Route::group(['middleware' => ['permission:productcategory']], function() {
         // Product Categories

@@ -71,7 +71,7 @@ class InvoicePayment extends Model
      */
     public static $rules = [
         'invoice_id' => 'nullable',
-        'customer_id' => 'required',
+        'customer_id' => 'nullable',
         'type' => 'required',
         'amount' => 'required|numeric|numeric',
         'status' => 'nullable',

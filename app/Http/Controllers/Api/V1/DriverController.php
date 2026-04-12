@@ -5619,13 +5619,28 @@ class DriverController extends Controller
             // Get all products that were in recent invoices
             $products = Product::where('status', 1)
                 ->whereIn('id', $recentProductIds)
-                ->select('id', 'name', 'category', 'price', 'status', 'code')
+                ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
                 ->get();
             
             // Maintain order based on recent usage (last used first)
             $products = $products->sortBy(function($product) use ($recentProductIds) {
                 return array_search($product->id, $recentProductIds);
             });
+            
+            // Helper function to get full image URL
+            $getImageUrl = function($imagePath) {
+                if (empty($imagePath)) {
+                    return null;
+                }
+                // Check if the path already starts with 'storage/' or 'http'
+                if (str_starts_with($imagePath, 'storage/')) {
+                    return url($imagePath);
+                } elseif (str_starts_with($imagePath, 'http')) {
+                    return $imagePath;
+                } else {
+                    return url('storage/' . $imagePath);
+                }
+            };
             
             // Group products by category string
             $groupedProducts = [];
@@ -5654,6 +5669,7 @@ class DriverController extends Controller
                     'price' => $price,
                     'quantity' => $quantity,
                     'status' => $product->getStatusTextAttribute(),
+                    'image_url' => $getImageUrl($product->image_path),
                     'usage_count' => null, // Will be filled below
                     'last_used' => null
                 ];

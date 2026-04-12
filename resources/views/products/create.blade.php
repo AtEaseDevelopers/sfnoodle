@@ -18,7 +18,7 @@
                                 <strong>{{ __('products.create_products')}}</strong>
                             </div>
                             <div class="card-body">
-                                {!! Form::open(['route' => 'products.store']) !!}
+                                {!! Form::open(['route' => 'products.store','files' => true,'enctype' => 'multipart/form-data']) !!}
 
                                    @include('products.fields')
 

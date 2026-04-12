@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property number $price
  * @property integer $status
  * @property string $category
+ * @property string $image_path
+ * @property string $uom
  */
 class Product extends Model
 {
@@ -35,8 +37,8 @@ class Product extends Model
         'price',
         'uom',
         'status',
-        'category', // Changed from category_id
-        'uom'
+        'category',
+        'image_path' // Add this
     ];
 
     /**
@@ -51,7 +53,8 @@ class Product extends Model
         'price' => 'float',
         'uom' => 'string',
         'status' => 'integer',
-        'category' => 'string' // Changed from category_id
+        'category' => 'string',
+        'image_path' => 'string' // Add this
     ];
 
     /**
@@ -63,9 +66,10 @@ class Product extends Model
         'code' => 'required|string|max:255|unique:products,code',
         'name' => 'required|string|max:255',
         'price' => 'required|numeric|min:0',
-        'category' => 'nullable|string|max:255', // Changed validation
+        'category' => 'nullable|string|max:255',
         'status' => 'required|integer|in:0,1',
         'uom' => 'required|string|max:50',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048' // Add validation for image upload
     ];
 
     /**
@@ -101,5 +105,25 @@ class Product extends Model
     public function getCategoryNameAttribute()
     {
         return $this->category ?: 'N/A';
+    }
+
+    /**
+     * Get image URL
+     */
+    public function getImageUrlAttribute()
+    {
+        if ($this->image_path && file_exists(public_path($this->image_path))) {
+            return asset($this->image_path);
+        }
+        return asset('images/no-image.png'); // Default no-image placeholder
+    }
+
+    /**
+     * Get image HTML for display
+     */
+    public function getImageHtmlAttribute($width = 100, $height = 100)
+    {
+        $url = $this->image_url;
+        return "<img src='{$url}' width='{$width}' height='{$height}' style='object-fit: cover;' alt='{$this->name}'>";
     }
 }

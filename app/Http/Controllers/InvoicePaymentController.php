@@ -145,17 +145,29 @@ class InvoicePaymentController extends AppBaseController
 
         if (empty($invoicePayment)) {
             Flash::error(__('invoice_payments.payment_not_found'));
-
             return redirect(route('invoicePayments.index'));
         }
 
-        // if($invoicePayment->status == 1){
-        //     Flash::error('Cannot edit completed Payment!');
-
-        //     return redirect(route('invoicePayments.index'));
-        // }
-
-        return view('invoice_payments.edit')->with('invoicePayment', $invoicePayment);
+        // Get the invoice IDs from the invoicePayment (assuming it has invoice_id field or relationship)
+        // If invoicePayment has a single invoice_id
+        $selectedInvoices = [];
+        if ($invoicePayment->invoice_id) {
+            $selectedInvoices = [$invoicePayment->invoice_id];
+        }
+        
+        // If invoicePayment has multiple invoices (if you have a many-to-many relationship)
+        // $selectedInvoices = $invoicePayment->invoices->pluck('id')->toArray();
+        
+        // Get all invoices (for the dropdown options)
+        $invoices = Invoice::with('customer')
+            ->where('status', Invoice::STATUS_COMPLETED)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Get customer items for dropdown
+        $customerItems = Customer::pluck('company', 'id')->toArray();
+        
+        return view('invoice_payments.edit', compact('invoicePayment', 'selectedInvoices', 'invoices', 'customerItems'));
     }
 
     /**
@@ -421,6 +433,15 @@ class InvoicePaymentController extends AppBaseController
             return null;
         }
 
+        if (isset($input['invoice_id'])) {
+            if (is_array($input['invoice_id'])) {
+                // If it's an array, take the first value
+                $input['invoice_id'] = !empty($input['invoice_id']) ? (int)$input['invoice_id'][0] : null;
+            } else {
+                // If it's a string or other type, convert to integer
+                $input['invoice_id'] = (int)$input['invoice_id'];
+            }
+        }
         $invoice = Invoice::where('id', $input['invoice_id'])->first();
 
         DB::beginTransaction();
