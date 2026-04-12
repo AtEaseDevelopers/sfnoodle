@@ -5762,10 +5762,18 @@ class DriverController extends Controller
                     ->toArray();
             }
             
+            // Helper function to get full image URL
+            $getImageUrl = function($imagePath) {
+                if (empty($imagePath)) {
+                    return null;
+                }
+                return url($imagePath);
+            };
+            
             if($driverInventory){
                 // HAS INVENTORY - Get all products with their categories as string
                 $products = Product::where('status', 1)
-                    ->select('id', 'name', 'category', 'price', 'status', 'code')
+                    ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
                     ->orderBy('name')
                     ->get();
                 
@@ -5795,7 +5803,8 @@ class DriverController extends Controller
                         'code' => $product->code,
                         'price' => $price,
                         'quantity' => $quantity,
-                        'status' => $product->getStatusTextAttribute()
+                        'status' => $product->getStatusTextAttribute(),
+                        'image_url' => $getImageUrl($product->image_path)
                     ];
                 }
                 
@@ -5817,7 +5826,7 @@ class DriverController extends Controller
             } else {
                 // NO INVENTORY - Get all products directly
                 $products = Product::where('status', 1)
-                    ->select('id', 'name', 'category', 'code', 'price', 'status')
+                    ->select('id', 'name', 'category', 'code', 'price', 'status', 'image_path')
                     ->orderBy('name')
                     ->get();
                 
@@ -5844,7 +5853,8 @@ class DriverController extends Controller
                         'code' => $product->code,
                         'price' => $price,
                         'quantity' => 0, // Always 0 when no inventory
-                        'status' => $product->getStatusTextAttribute()
+                        'status' => $product->getStatusTextAttribute(),
+                        'image_url' => $getImageUrl($product->image_path)
                     ];
                 }
                 
@@ -8047,9 +8057,17 @@ class DriverController extends Controller
                 })
                 ->toArray();
 
-            // Get all active products with category string
+            // Helper function to get full image URL
+            $getImageUrl = function($imagePath) {
+                if (empty($imagePath)) {
+                    return null;
+                }
+                return url($imagePath);
+            };
+
+            // Get all active products with category string and image
             $products = Product::where('status', 1)
-                ->select('id', 'name', 'category', 'code', 'price', 'status')
+                ->select('id', 'name', 'category', 'code', 'price', 'status', 'image_path')
                 ->orderBy('name')
                 ->get();
             
@@ -8071,7 +8089,8 @@ class DriverController extends Controller
                     'name' => $product->name,
                     'code' => $product->code,
                     'price' => $product->price,
-                    'status' => $product->getStatusTextAttribute()
+                    'status' => $product->getStatusTextAttribute(),
+                    'image_url' => $getImageUrl($product->image_path)
                 ];
             }
             
@@ -8100,7 +8119,8 @@ class DriverController extends Controller
                             'code' => $product['code'],
                             'price' => $product['price'],
                             'quantity' => $driverInventory[$product['id']] ?? 0,
-                            'status' => $product['status']
+                            'status' => $product['status'],
+                            'image_url' => $product['image_url']
                         ];
                     }, $category['products']);
                     
