@@ -6102,6 +6102,7 @@ class DriverController extends Controller
             ], 200);
         }
     }
+
     public function getStockReturn(Request $request)
     {
         // Validate session
@@ -6123,10 +6124,19 @@ class DriverController extends Controller
         }
         
         try {
+            // Helper function to convert UTC to UTC+8 (Malaysia Time)
+            $convertToUTC8 = function($datetime) {
+                if (empty($datetime)) {
+                    return null;
+                }
+                return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+            };
+            
             $inventoryReturns = InventoryReturn::where('driver_id', $driver->id)
                 ->where('trip_id', $driver->trip_id)
+                ->orderBy('created_at', 'desc')  // Order by created_at, latest first
                 ->get()
-                ->map(function ($inventoryReturn) {
+                ->map(function ($inventoryReturn) use ($convertToUTC8) {
                     // Get approver and rejector names
                     $approver = $inventoryReturn->approved_by ? User::find($inventoryReturn->approved_by) : null;
                     $rejector = $inventoryReturn->rejected_by ? User::find($inventoryReturn->rejected_by) : null;
@@ -6144,7 +6154,7 @@ class DriverController extends Controller
                         }
                     }
                     
-                    // Return formatted data
+                    // Return formatted data with converted dates
                     return [
                         'id' => $inventoryReturn->id,
                         'driver_id' => $inventoryReturn->driver_id,
@@ -6157,10 +6167,10 @@ class DriverController extends Controller
                         'approved_by_name' => $approver ? $approver->name : null,
                         'rejected_by' => $inventoryReturn->rejected_by,
                         'rejected_by_name' => $rejector ? $rejector->name : null,
-                        'approved_at' => $inventoryReturn->approved_at,
-                        'rejected_at' => $inventoryReturn->rejected_at,
-                        'created_at' => $inventoryReturn->created_at,
-                        'updated_at' => $inventoryReturn->updated_at,
+                        'approved_at' => $convertToUTC8($inventoryReturn->approved_at),
+                        'rejected_at' => $convertToUTC8($inventoryReturn->rejected_at),
+                        'created_at' => $convertToUTC8($inventoryReturn->created_at),
+                        'updated_at' => $convertToUTC8($inventoryReturn->updated_at),
                         'item_count' => $inventoryReturn->item_count,
                         'total_quantity' => $inventoryReturn->total_quantity,
                     ];
@@ -7268,15 +7278,26 @@ class DriverController extends Controller
         }
         
         try {
+            // Get inventory requests from last 7 days only, ordered by created_at descending (latest first)
             $inventoryRequests = InventoryRequest::with([
                 'driver:id,name',
                 'approver:id,name',    // User who approved
                 'rejector:id,name',    // User who rejected
-                // Removed single product relationship since we now have multiple products
-            ])->get();
+            ])
+            ->where('created_at', '>=', Carbon::now()->subDays(7))
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+            // Helper function to convert UTC to UTC+8 (Malaysia Time)
+            $convertToUTC8 = function($datetime) {
+                if (empty($datetime)) {
+                    return null;
+                }
+                return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+            };
             
             // Transform the data to include product names in items array
-            $inventoryRequests->transform(function($request) {
+            $inventoryRequests->transform(function($request) use ($convertToUTC8) {
                 // Get approver and rejector names from relationships
                 $approverName = $request->approver ? $request->approver->name : null;
                 $rejectorName = $request->rejector ? $request->rejector->name : null;
@@ -7299,6 +7320,14 @@ class DriverController extends Controller
                 
                 // Convert to array and add the processed data
                 $requestArray = $request->toArray();
+                
+                // Convert datetime fields to UTC+8
+                $dateFields = ['created_at', 'updated_at', 'approved_at', 'rejected_at'];
+                foreach ($dateFields as $field) {
+                    if (isset($requestArray[$field])) {
+                        $requestArray[$field] = $convertToUTC8($requestArray[$field]);
+                    }
+                }
                 
                 // Add processed items with product names
                 $requestArray['items'] = $itemsWithProductNames;
@@ -7607,7 +7636,10 @@ class DriverController extends Controller
             ], 401);
         }
         
-        $inventoryCounts = InventoryCount::all();
+        // Get inventory counts from last 7 days only, ordered by created_at descending (latest first)
+        $inventoryCounts = InventoryCount::where('created_at', '>=', Carbon::now()->subDays(7))
+            ->orderBy('created_at', 'desc')
+            ->get();
         
         // Get all unique product IDs from all inventory counts
         $allProductIds = [];
@@ -7628,8 +7660,16 @@ class DriverController extends Controller
             ->get()
             ->keyBy('id');
         
+        // Helper function to convert UTC to UTC+8 (Malaysia Time)
+        $convertToUTC8 = function($datetime) {
+            if (empty($datetime)) {
+                return null;
+            }
+            return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+        };
+        
         // Format the response
-        $formattedCounts = $inventoryCounts->map(function ($count) use ($products) {
+        $formattedCounts = $inventoryCounts->map(function ($count) use ($products, $convertToUTC8) {
             $items = $count->items;
             $formattedItems = [];
             
@@ -7641,7 +7681,7 @@ class DriverController extends Controller
                     return [
                         'product_id' => $item['product_id'],
                         'product_name' => $product ? $product->name : null,
-                        'product_code' => $product ? $product->code : null, // Add other product fields if needed
+                        'product_code' => $product ? $product->code : null,
                         'counted_quantity' => $item['counted_quantity'],
                         'current_quantity' => $item['current_quantity']
                     ];
@@ -7665,10 +7705,10 @@ class DriverController extends Controller
                 'approved_by' => $count->approved_by,
                 'trip_id' => $count->trip_id,
                 'rejected_by' => $count->rejected_by,
-                'approved_at' => $count->approved_at,
-                'rejected_at' => $count->rejected_at,
-                'created_at' => $count->created_at,
-                'updated_at' => $count->updated_at
+                'approved_at' => $convertToUTC8($count->approved_at),
+                'rejected_at' => $convertToUTC8($count->rejected_at),
+                'created_at' => $convertToUTC8($count->created_at),
+                'updated_at' => $convertToUTC8($count->updated_at)
             ];
         });
 
@@ -7862,19 +7902,19 @@ class DriverController extends Controller
             }
 
             // Check if driver has enough stock for all items
-            $errors = [];
-            foreach ($items as $item) {
-                $inventoryBalance = InventoryBalance::where([
-                    'driver_id' => $request->driver_id,
-                    'product_id' => $item['product_id']
-                ])->first();
+            // $errors = [];
+            // foreach ($items as $item) {
+            //     $inventoryBalance = InventoryBalance::where([
+            //         'driver_id' => $request->driver_id,
+            //         'product_id' => $item['product_id']
+            //     ])->first();
 
-                $currentBalance = $inventoryBalance->quantity ?? 0;
-                if ($currentBalance < $item['quantity']) {
-                    $product = Product::find($item['product_id']);
-                    $errors[] = $product->name . ': Available stock: ' . $currentBalance . ', Requested: ' . $item['quantity'];
-                }
-            }
+            //     $currentBalance = $inventoryBalance->quantity ?? 0;
+            //     if ($currentBalance < $item['quantity']) {
+            //         $product = Product::find($item['product_id']);
+            //         $errors[] = $product->name . ': Available stock: ' . $currentBalance . ', Requested: ' . $item['quantity'];
+            //     }
+            // }
 
             if (!empty($errors)) {
                 return response()->json([
