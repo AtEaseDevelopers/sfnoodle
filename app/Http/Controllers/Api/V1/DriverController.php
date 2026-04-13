@@ -1733,7 +1733,7 @@ class DriverController extends Controller
                     $invoicedetail->remark = "FOC"; // Mark as FOC but do NOT count towards achievequantity
                 } else {
                     // Only update FOC achievequantity if the product is NOT FOC
-                    $foc = Foc::where('customer_id', $customer->id)
+                    $foc = foc::where('customer_id', $customer->id)
                         ->where('product_id', $id['product_id'])
                         ->where('startdate', '<=', date('Y-m-d H:i:s'))
                         ->where('enddate', '>', date('Y-m-d H:i:s'))
@@ -4055,7 +4055,7 @@ class DriverController extends Controller
             
             // Calculate FOC items using the sales invoice date
             $invoiceDate = $salesInvoice->date;
-            $focItems = \App\Models\Foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
+            $focItems = \App\Models\foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
             
             // Merge original items with FOC items for display
             $allItems = [];
@@ -5284,7 +5284,7 @@ class DriverController extends Controller
             
             // Calculate FOC items using the invoice date
             $invoiceDate = $invoice->date;
-            $focItems = \App\Models\Foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
+            $focItems = \App\Models\foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
             
             // Merge original items with FOC items for display
             $allItems = [];
