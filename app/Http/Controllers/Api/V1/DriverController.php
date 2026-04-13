@@ -6783,7 +6783,31 @@ class DriverController extends Controller
                     ];
                 }
             }
-            
+            $customerSummary = $invoices
+                ->groupBy('customer_id')
+                ->map(function($customerInvoices, $customerId) {
+                    $firstInvoice = $customerInvoices->first();
+                    $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : 'Unknown Customer';
+                    
+                    // Calculate total amount for this customer
+                    $totalAmount = $customerInvoices->sum(function($invoice) {
+                        return $invoice->total; // Using the total accessor
+                    });
+                    
+                    // Count number of invoices for this customer
+                    $invoiceCount = $customerInvoices->count();
+                    
+                    return [
+                        'customer_id' => $customerId,
+                        'customer_name' => $customerName,
+                        'total_amount' => (float) $totalAmount,
+                        'formatted_amount' => number_format($totalAmount, 2),
+                        'invoice_count' => $invoiceCount
+                    ];
+                })
+                ->values() // Reset array keys
+                ->sortByDesc('total_amount') // Sort by total amount descending
+                ->toArray();
             
             $result = [
                 'sales' => round($totalAmount,2),
@@ -6793,6 +6817,9 @@ class DriverController extends Controller
 
                 'inventory_balance'=> $inventoryBalances,
                 'trip' => $tripArray,
+                'customer_summary' => $customerSummary,
+
+
             ];
             return response()->json([
                 'result' => true,
@@ -6874,6 +6901,32 @@ class DriverController extends Controller
                 ->values()
                 ->toArray();
 
+            $customerSummary = $invoices
+                ->groupBy('customer_id')
+                ->map(function($customerInvoices, $customerId) {
+                    $firstInvoice = $customerInvoices->first();
+                    $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : '-';
+                    
+                    // Calculate total amount for this customer
+                    $totalAmount = $customerInvoices->sum(function($invoice) {
+                        return $invoice->total; // Using the total accessor
+                    });
+                    
+                    // Count number of invoices for this customer
+                    $invoiceCount = $customerInvoices->count();
+                    
+                    return [
+                        'customer_id' => $customerId,
+                        'customer_name' => $customerName,
+                        'total_amount' => (float) $totalAmount,
+                        'formatted_amount' => number_format($totalAmount, 2),
+                        'invoice_count' => $invoiceCount
+                    ];
+                })
+                ->values() // Reset array keys
+                ->sortByDesc('total_amount') // Sort by total amount descending
+                ->toArray();
+                
             $summaryData = [
                 'trip_summary' => [
                     'trip_id' => $tripSummary['trip_info']['trip_id'] ?? 'T-' . $driver->trip_id,
@@ -6893,6 +6946,8 @@ class DriverController extends Controller
                 ],
                 'stock_summary' => $inventoryBalances, // Directly use the array
                 'products_sold' => $productsSold,
+                'customer_summary' => $customerSummary, 
+
             ];
             
              return response()->json([
