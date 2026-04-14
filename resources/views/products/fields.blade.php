@@ -119,6 +119,79 @@
                 </div>
             </div>
         </div>
+        <!-- Tiered Pricing Section -->
+        <div class="col-md-12 mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line"></i> Volume Pricing</h5>
+                </div>
+                <div class="card-body">
+                    
+                    <table class="table table-bordered" id="tiered-pricing-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40%">Quantity</th>
+                                <th style="width: 40%">Price per Unit ({{ config('app.currency', 'RM') }})</th>
+                                <th style="width: 20%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $tieredPricing = isset($product) && $product->tiered_pricing ? $product->tiered_pricing : old('tiered_pricing', []);
+                                if (empty($tieredPricing) && old('tiered_pricing') === null) {
+                                    // Add one empty row as default
+                                    $tieredPricing = [['quantity' => '', 'price' => '']];
+                                }
+                            @endphp
+                            
+                            @foreach($tieredPricing as $index => $tier)
+                                <tr class="tier-row">
+                                    <td>
+                                        <input type="number" 
+                                            name="tiered_pricing[{{ $index }}][quantity]" 
+                                            class="form-control tier-quantity" 
+                                            placeholder="" 
+                                            value="{{ old("tiered_pricing.{$index}.quantity", $tier['quantity'] ?? '') }}"
+                                            min="1" step="1">
+                                    </td>
+                                    <td>
+                                        <input type="number" 
+                                            name="tiered_pricing[{{ $index }}][price]" 
+                                            class="form-control tier-price" 
+                                            placeholder="" 
+                                            value="{{ old("tiered_pricing.{$index}.price", $tier['price'] ?? '') }}"
+                                            min="0" step="0.01">
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-danger btn-sm remove-tier-row" {{ $loop->first && count($tieredPricing) == 1 ? 'disabled' : '' }}>
+                                            </i> Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">
+                                    <button type="button" class="btn btn-success btn-sm" id="add-tier-row">
+                                        </i> Add 
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    
+                    <!-- Preview calculated pricing -->
+                    <div class="mt-3" id="pricing-preview" style="display: none;">
+                        <div class="alert alert-success">
+                            <strong><i class="fas fa-calculator"></i> Pricing Preview:</strong>
+                            <div id="preview-content"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -133,6 +206,8 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     
     <script>
+        
+
         $(document).ready(function () {
             HideLoad();
             
@@ -272,12 +347,186 @@
                     $('form a.btn-secondary')[0].click();
                 }
             });
+
+
+            function updatePricingPreview() {
+                var tiers = [];
+                var basePrice = parseFloat($('#price').val()) || 0;
+                
+                $('.tier-row').each(function() {
+                    var quantity = $(this).find('.tier-quantity').val();
+                    var price = $(this).find('.tier-price').val();
+                    
+                    if (quantity && price && quantity > 0 && price >= 0) {
+                        tiers.push({
+                            quantity: parseInt(quantity),
+                            price: parseFloat(price)
+                        });
+                    }
+                });
+                
+                if (tiers.length === 0) {
+                    $('#pricing-preview').hide();
+                    return;
+                }
+                
+                // Sort by quantity ascending
+                tiers.sort(function(a, b) {
+                    return a.quantity - b.quantity;
+                });
+                
+                var previewHtml = '<table class="table table-sm table-bordered mt-2">';
+                previewHtml += '<thead><tr><th>Quantity Range</th><th>Unit Price</th><th>Total Price</th></tr></thead>';
+                previewHtml += '<tbody>';
+                
+                // Add regular price range for quantities below first tier (this should be FIRST)
+                if (tiers.length > 0 && tiers[0].quantity > 1) {
+                    previewHtml += '<tr class="table-info">';
+                    previewHtml += '<td>1 - ' + (tiers[0].quantity - 1) + ' units</td>';
+                    previewHtml += '<td>' + formatCurrency(basePrice) + '</td>';
+                    previewHtml += '<td>' + formatCurrency(basePrice * (tiers[0].quantity - 1)) + ' (max for this range)</td>';
+                    previewHtml += '</tr>';
+                }
+                
+                // Then add all tiered pricing ranges
+                for (var i = 0; i < tiers.length; i++) {
+                    var tier = tiers[i];
+                    var rangeStart = tier.quantity;
+                    var rangeEnd = (i < tiers.length - 1) ? (tiers[i + 1].quantity - 1) : '+';
+                    var rangeText = rangeStart + (rangeEnd === '+' ? '+' : ' - ' + rangeEnd) + ' units';
+                    
+                    previewHtml += '<tr>';
+                    previewHtml += '<td>' + rangeText + '</td>';
+                    previewHtml += '<td>' + formatCurrency(tier.price) + '</td>';
+                    previewHtml += '<td>' + formatCurrency(tier.price * tier.quantity) + ' (for ' + tier.quantity + ' units)</td>';
+                    previewHtml += '</tr>';
+                }
+                
+                previewHtml += '</tbody></table>';
+                
+                $('#preview-content').html(previewHtml);
+                $('#pricing-preview').show();
+            }
+            
+            // Format currency
+            function formatCurrency(amount) {
+                return '{{ config('app.currency', 'RM') }} ' + amount.toFixed(2);
+            }
+            
+            // Add new tier row
+            $('#add-tier-row').click(function() {
+                var rowCount = $('.tier-row').length;
+                var newRow = `
+                    <tr class="tier-row">
+                        <td>
+                            <input type="number" 
+                                name="tiered_pricing[${rowCount}][quantity]" 
+                                class="form-control tier-quantity" 
+                                placeholder="" 
+                                min="1" step="1">
+                        </td>
+                        <td>
+                            <input type="number" 
+                                name="tiered_pricing[${rowCount}][price]" 
+                                class="form-control tier-price" 
+                                placeholder="" 
+                                min="0" step="0.01">
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-danger btn-sm remove-tier-row">
+                              Remove
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                $('#tiered-pricing-table tbody').append(newRow);
+                updatePricingPreview();
+                
+                // Enable all remove buttons if there are multiple rows
+                if ($('.tier-row').length > 1) {
+                    $('.remove-tier-row').prop('disabled', false);
+                }
+            });
+            
+            // Remove tier row
+            $(document).on('click', '.remove-tier-row', function() {
+                if ($('.tier-row').length > 1) {
+                    $(this).closest('tr').remove();
+                    // Rename indexes
+                    $('.tier-row').each(function(index) {
+                        $(this).find('.tier-quantity').attr('name', `tiered_pricing[${index}][quantity]`);
+                        $(this).find('.tier-price').attr('name', `tiered_pricing[${index}][price]`);
+                    });
+                    updatePricingPreview();
+                    
+                    // Disable remove button if only one row left
+                    if ($('.tier-row').length === 1) {
+                        $('.remove-tier-row').prop('disabled', true);
+                    }
+                }
+            });
+            
+            // Update preview when inputs change
+            $(document).on('change keyup', '.tier-quantity, .tier-price', function() {
+                updatePricingPreview();
+            });
+            
+            // Also update when base price changes
+            $('#price').on('change keyup', function() {
+                updatePricingPreview();
+            });
+            
+            // Initialize preview if there are values
+            updatePricingPreview();
+            
+            // Validation: Check for duplicate quantities before submit
+            $('form').on('submit', function(e) {
+                var quantities = [];
+                var hasError = false;
+                
+                $('.tier-quantity').each(function() {
+                    var qty = $(this).val();
+                    if (qty && qty !== '') {
+                        if (quantities.includes(qty)) {
+                            alert('Duplicate quantity values are not allowed. Please ensure each tier has a unique minimum quantity.');
+                            $(this).focus();
+                            hasError = true;
+                            return false;
+                        }
+                        quantities.push(qty);
+                    }
+                });
+                
+                if (hasError) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
         });
     </script>
 @endpush
 
 @push('css')
     <style>
+        #tiered-pricing-table .table {
+            margin-bottom: 0;
+        }
+        #tiered-pricing-table input {
+            font-size: 14px;
+        }
+        .remove-tier-row:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #pricing-preview {
+            margin-top: 15px;
+        }
+        #pricing-preview .table {
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+        
         .select2-container--default .select2-selection--single {
             height: 38px;
             padding: 5px;

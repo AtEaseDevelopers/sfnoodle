@@ -56,6 +56,52 @@
             </div>
         </div>
     </div>
+    <!-- Tiered Pricing Section -->
+    @if($product->tiered_pricing && count($product->tiered_pricing) > 0)
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line"></i> Volume Pricing</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr class="bg-light">
+                                    <th>Minimum Quantity</th>
+                                    <th>Price per Unit</th>
+                                    <th>Total for Minimum Quantity</th>
+                                    <th>Savings vs Regular Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($product->tiered_pricing as $tier)
+                                    @php
+                                        $regularTotal = $product->price * $tier['quantity'];
+                                        $tierTotal = $tier['price'] * $tier['quantity'];
+                                        $savings = $regularTotal - $tierTotal;
+                                        $savingsPercent = $regularTotal > 0 ? ($savings / $regularTotal) * 100 : 0;
+                                    @endphp
+                                    <tr>
+                                        <td><strong>≥ {{ number_format($tier['quantity']) }} units</strong></td>
+                                        <td>{{ number_format($tier['price'], 2) }}</td>
+                                        <td>{{ number_format($tierTotal, 2) }}</td>
+                                        <td class="text-success">
+                                            Save {{ number_format($savings, 2) }} ({{ number_format($savingsPercent, 1) }}%)
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
 </div>
 
 @push('scripts')

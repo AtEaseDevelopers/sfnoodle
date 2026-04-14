@@ -86,7 +86,10 @@ class ProductController extends AppBaseController
             'category' => 'required|string|max:255',
             'uom' => 'required|string|max:50',
             'status' => 'required|integer|in:0,1',
-            'image' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048'  // Changed to file
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048',  // Changed to file
+            'tiered_pricing' => 'nullable|array',
+            'tiered_pricing.*.quantity' => 'required_with:tiered_pricing.*.price|integer|min:1|distinct',
+            'tiered_pricing.*.price' => 'required_with:tiered_pricing.*.quantity|numeric|min:0',
         ];
 
         $messages = [
@@ -98,7 +101,12 @@ class ProductController extends AppBaseController
             'uom.required' => 'Unit of measurement is required',
             'image.file' => 'The uploaded file must be a valid file',
             'image.mimes' => 'The image must be a file of type: jpeg, png, jpg, gif',
-            'image.max' => 'The image size must not exceed 2MB'
+            'image.max' => 'The image size must not exceed 2MB',
+            'tiered_pricing.*.quantity.required_with' => 'Please enter quantity for each tier',
+            'tiered_pricing.*.price.required_with' => 'Please enter price for each tier',
+            'tiered_pricing.*.quantity.distinct' => 'Quantity values must be unique',
+            'tiered_pricing.*.quantity.min' => 'Quantity must be at least 1',
+            'tiered_pricing.*.price.min' => 'Price must be at least 0',
         ];
 
         $validator = Validator::make($request->all(), $rules, $messages);
