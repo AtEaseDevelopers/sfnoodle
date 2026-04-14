@@ -11,7 +11,7 @@
         body{
             font-size: 18px;
             margin: 0;
-            padding: 0 5px; /* Add overall body padding */
+            padding: 0 5px;
             font-family: 'Courier New', monospace;
             line-height: 1.2;
             box-sizing: border-box;
@@ -47,7 +47,7 @@
         }
         .section-separator {
             border-top: 1px dashed #000;
-            margin: 5px 0;
+            margin: 5px 0 25px 0;
         }
         .left-align {
             text-align: left;
@@ -65,10 +65,7 @@
         }
         .product-table {
             margin: 5px 0;
-            /* Add padding to the entire table */
-            width: calc(100% - 30px); /* Compensate for padding */
-            margin-left: auto;
-            margin-right: auto;
+            width: 100%;
         }
        
         .invoice-remark {
@@ -80,11 +77,11 @@
             width: 40%;
         }
         .col-qty {
-            width: 20%;
+            width: 18%;
             text-align: right;
         }
         .col-price {
-            width: 20%;
+            width: 22%;
             text-align: right;
         }
         .col-total {
@@ -101,12 +98,45 @@
             margin-top: 5px;
         }
         
+        /* Column spacing adjustments */
+        .product-table th,
+        .product-table td {
+            padding: 6px 4px;
+        }
+        
+        /* SKU column - keep left aligned with normal spacing */
+        .product-table th.col-sku,
+        .product-table td.col-sku {
+            padding-left: 0;
+            padding-right: 10px;
+        }
+        
+        /* Qty column - add space after it so it doesn't touch U.Price */
+        .product-table th.col-qty,
+        .product-table td.col-qty {
+            padding-right: 25px;
+            text-align: right;
+        }
+        
+        /* U.Price column - reduce space between Qty and U.Price, but add space between U.Price and Total */
+        .product-table th.col-price,
+        .product-table td.col-price {
+            padding-right: 10px;
+            text-align: right;
+        }
+        
+        /* Total column - no extra right padding needed */
+        .product-table th.col-total,
+        .product-table td.col-total {
+            padding-right: 0;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
     <div class="header-section">
         <div class="invoice-title">=============== INVOICES ===============</div>
-            <div class="section-separator"></div>
+            
 
         <div class="company-name">{{ config('invoice.name', $invoices['customer']['groupcompany']->name ?? 'SF NOODLES SON BHD') }}</div>
         <div class="company-details">(Formerly known as Soon Fatt Foods Sdn Bhd)</div>
@@ -116,7 +146,7 @@
         <div class="company-details">t: {{ config('invoice.phone', '03-8061 1490/ 012-311 1531') }}</div>
         <div class="company-details">email: {{ config('invoice.email', 'account@sfnoodles.com') }}</div>
     </div>
-    <div class="section-separator"></div>
+    
 
     <table>
         <tr>
@@ -129,7 +159,7 @@
         </tr>
     </table>
 
-    <div class="section-separator"></div>
+    
 
     <table>
         <tr>
@@ -142,20 +172,20 @@
         </tr>
     </table>
 
-    <div class="section-separator"></div>
+    
 
-    <!-- Items Table Section -->
     <div class="table-container">
         <table class="product-table">
-            <tr>
-                <th class="col-sku left-align">SKU</th>
-                <th class="col-qty" style="padding-right: 10px;">Qty</th>
-                <th class="col-price">U.Price</th>
-                <th class="col-total">Total</th>
-            </tr>
-            
+            <thead>
+                <tr>
+                    <th class="col-sku left-align">SKU</th>
+                    <th class="col-qty">Qty</th>
+                    <th class="col-price">U.Price</th>
+                    <th class="col-total">Total</th>
+                </tr>
+            </thead>
+            <tbody>
             @php
-                // Use the pre-calculated allItems array if available, otherwise calculate on the fly
                 if (!isset($allItems)) {
                     $purchasedItems = [];
                     foreach ($invoices['invoiceDetails'] as $invoiceDetail) {
@@ -195,11 +225,12 @@
                 <td class="col-sku left-align">
                     {{ $item['product_code'] }}@if($item['is_foc']) (FOC)@endif
                 </td>
-                <td class="col-qty" style="padding-right: 10px;">{{ $item['quantity'] }}</td>
+                <td class="col-qty">{{ $item['quantity'] }}</td>
                 <td class="col-price">{{ number_format($item['price'], 2) }}</td>
                 <td class="col-total">{{ number_format($item['totalprice'], 2) }}</td>
             </tr>
             @endforeach
+            </tbody>
         </table>
     </div>
 
@@ -213,7 +244,6 @@
             </td>
         </tr>
     </table>
-
 
     <div class="footer-line"></div>
     
