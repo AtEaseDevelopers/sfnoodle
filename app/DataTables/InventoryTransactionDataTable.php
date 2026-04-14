@@ -28,11 +28,13 @@ class InventoryTransactionDataTable extends DataTable
                 $colors = [
                     InventoryTransaction::TYPE_STOCK_IN => 'success', // Green
                     InventoryTransaction::TYPE_STOCK_RETURN => 'danger', // Orange
+                    InventoryTransaction::TYPE_STOCK_OUT => 'warning', // Yellow
                 ];
                 
                 $labels = [
                     InventoryTransaction::TYPE_STOCK_IN => 'Stock In',
                     InventoryTransaction::TYPE_STOCK_RETURN => 'Stock Return',
+                    InventoryTransaction::TYPE_STOCK_OUT => 'Stock Out',
                 ];
                 
                 $color = $colors[$model->type] ?? 'secondary';
@@ -44,7 +46,8 @@ class InventoryTransactionDataTable extends DataTable
             ->editColumn('quantity', function ($model) {
                 $colors = [
                     InventoryTransaction::TYPE_STOCK_IN => 'text-success font-weight-bold',
-                    InventoryTransaction::TYPE_STOCK_RETURN => 'text-warning font-weight-bold',
+                    InventoryTransaction::TYPE_STOCK_RETURN => 'text-danger font-weight-bold',
+                    InventoryTransaction::TYPE_STOCK_OUT => 'text-warning font-weight-bold',
                 ];
                 
                 $sign = $model->type == InventoryTransaction::TYPE_STOCK_IN ? '+' : '-';
