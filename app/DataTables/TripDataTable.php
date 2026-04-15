@@ -73,7 +73,8 @@ class TripDataTable extends DataTable
     {
         return $model->newQuery()
             ->with('driver:id,name')
-            ->select('trips.*');
+            ->select('trips.*')
+            ->orderBy('created_at', 'desc');
     }
 
     /**

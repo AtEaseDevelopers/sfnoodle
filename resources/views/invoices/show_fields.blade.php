@@ -39,12 +39,6 @@
     <p>{{ $invoice->status_text }}</p>
 </div>
 
-<!-- Total Amount -->
-<div class="form-group">
-    {!! Form::label('total', 'Total Amount') !!}:
-    <p>RM {{ $invoice->formatted_total ?? '0.00' }}</p>
-</div>
-
 <!-- Remark Field -->
 <div class="form-group">
     {!! Form::label('remark', 'Remark') !!}:
@@ -67,32 +61,170 @@
         <table class="table table-bordered">
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
                     <th>Total</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($invoicedetails as $detail)
-                <tr>
-                    <td>{{ $detail['product']['name'] ?? '' }} ({{ $detail['product']['code'] ?? '' }})</td>
-                    <td>{{ number_format($detail['quantity'] ?? 0, 2) }}</td>
-                    <td>RM {{ number_format($detail['price'] ?? 0, 2) }}</td>
-                    <td>RM {{ number_format($detail['totalprice'] ?? 0, 2) }}</td>
+                @php
+                    // Calculate tiered pricing and FOC items for display
+                    $purchasedItems = [];
+                    foreach ($invoicedetails as $detail) {
+                        $purchasedItems[] = [
+                            'product_id' => $detail['product_id'],
+                            'quantity' => $detail['quantity'],
+                            'price' => $detail['price']
+                        ];
+                    }
+                    
+                    $focItems = \App\Models\foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoice->date);
+                    
+                    $displayItems = [];
+                    $originalTotal = 0;
+                    $offerAmount = 0;
+                    
+                    // Process each purchased item with tiered pricing
+                    foreach ($invoicedetails as $detail) {
+                        $product = \App\Models\Product::find($detail['product_id']);
+                        $quantity = $detail['quantity'];
+                        $regularPrice = $product->price;
+                        
+                        // Check for special price
+                        $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                            ->where('customer_id', $invoice->customer_id)
+                            ->where('status', 1)
+                            ->first();
+                        
+                        $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+                        $tieredPricing = $product->tiered_pricing;
+                        
+                        if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                            // Sort tiers by quantity descending
+                            usort($tieredPricing, function($a, $b) {
+                                return $b['quantity'] - $a['quantity'];
+                            });
+                            
+                            $remainingQuantity = $quantity;
+                            
+                            foreach ($tieredPricing as $tier) {
+                                if ($remainingQuantity <= 0) break;
+                                
+                                $tierQuantity = $tier['quantity'];
+                                $tierPrice = $tier['price'];
+                                $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                                
+                                if ($numberOfPackages > 0) {
+                                    $quantityInTier = $numberOfPackages * $tierQuantity;
+                                    $itemTotal = $numberOfPackages * $tierPrice;
+                                    $regularTotalForThisTier = $quantityInTier * $basePrice;
+                                    
+                                    $originalTotal += $regularTotalForThisTier;
+                                    $offerAmount += ($regularTotalForThisTier - $itemTotal);
+                                    
+                                    $displayItems[] = [
+                                        'display_name' => $product->name . " ({$tierQuantity} units)",
+                                        'quantity' => $numberOfPackages,
+                                        'price' => $tierPrice,
+                                        'totalprice' => $itemTotal,
+                                        'is_foc' => false,
+                                        'has_offer' => true
+                                    ];
+                                    
+                                    $remainingQuantity -= $quantityInTier;
+                                }
+                            }
+                            
+                            // Handle remaining quantity
+                            if ($remainingQuantity > 0) {
+                                $itemTotal = $remainingQuantity * $basePrice;
+                                $originalTotal += $itemTotal;
+                                
+                                $displayItems[] = [
+                                    'display_name' => $product->name,
+                                    'quantity' => $remainingQuantity,
+                                    'price' => $basePrice,
+                                    'totalprice' => $itemTotal,
+                                    'is_foc' => false,
+                                    'has_offer' => false
+                                ];
+                            }
+                        } else {
+                            // No tiered pricing
+                            $itemTotal = $quantity * $basePrice;
+                            $originalTotal += $itemTotal;
+                            
+                            $displayItems[] = [
+                                'display_name' => $product->name,
+                                'quantity' => $quantity,
+                                'price' => $basePrice,
+                                'totalprice' => $itemTotal,
+                                'is_foc' => false,
+                                'has_offer' => false
+                            ];
+                        }
+                    }
+                    
+                    // Add FOC items
+                    foreach ($focItems as $focItem) {
+                        $displayItems[] = [
+                            'display_name' => $focItem['product_name'] . " (FOC)",
+                            'quantity' => $focItem['quantity'],
+                            'price' => 0,
+                            'totalprice' => 0,
+                            'is_foc' => true,
+                            'has_offer' => false
+                        ];
+                    }
+                    
+                    $finalTotal = $originalTotal - $offerAmount;
+                @endphp
+                
+                @forelse($displayItems as $item)
+                <tr @if($item['has_offer']) class="table-info" @endif>
+                    <td>
+                        {{ $item['display_name'] }}
+                        @if($item['has_offer'])
+                            <span class="badge badge-info">Volume Offer</span>
+                        @endif
+                        @if($item['is_foc'])
+                            <span class="badge badge-success">FOC</span>
+                        @endif
+                    </td>
+                    <td class="text-right">{{ number_format($item['quantity'], 2) }}</td>
+                    <td class="text-right">RM {{ number_format($item['price'], 2) }}</td>
+                    <td class="text-right">RM {{ number_format($item['totalprice'], 2) }}</td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="text-center">No items found</td>
+                    <td colspan="4" class="text-center">No items found</td>
                 </tr>
                 @endforelse
             </tbody>
+            @if($offerAmount > 0)
             <tfoot>
-                <tr>
+                <tr class="table-light">
+                    <td colspan="3" class="text-right"><strong>Original Total:</strong></td>
+                    <td class="text-right"><strong>RM {{ number_format($originalTotal, 2) }}</strong></td>
+                </tr>
+                <tr class="table-success">
+                    <td colspan="3" class="text-right"><strong>Volume Offer Discount:</strong></td>
+                    <td class="text-right"><strong>- RM {{ number_format($offerAmount, 2) }}</strong></td>
+                </tr>
+                <tr class="table-active">
                     <td colspan="3" class="text-right"><strong>Grand Total:</strong></td>
-                    <td colspan="2"><strong>RM {{ number_format($invoice->total, 2) }}</strong></td>
+                    <td class="text-right"><strong>RM {{ number_format($finalTotal, 2) }}</strong></td>
                 </tr>
             </tfoot>
+            @else
+            <tfoot>
+                <tr class="table-active">
+                    <td colspan="3" class="text-right"><strong>Grand Total:</strong></td>
+                    <td class="text-right"><strong>RM {{ number_format($finalTotal, 2) }}</strong></td>
+                </tr>
+            </tfoot>
+            @endif
         </table>
     </div>
 </div>
@@ -107,7 +239,6 @@
             @foreach($invoice->invoicePayments as $payment)
                 @if($payment->attachment)
                     @php
-                        // Generate full URL for the attachment
                         $fileUrl = asset('/' . $payment->attachment);
                         $fileExtension = pathinfo($payment->attachment, PATHINFO_EXTENSION);
                         $isImage = in_array(strtolower($fileExtension), ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']);
@@ -294,6 +425,28 @@
             max-width: 100%;
             max-height: 70vh;
             object-fit: contain;
+        }
+        
+        .table-info {
+            background-color: #e3f2fd;
+        }
+        
+        .badge-info {
+            background-color: #17a2b8;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 8px;
         }
     </style>
 @endpush

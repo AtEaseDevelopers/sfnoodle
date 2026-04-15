@@ -190,7 +190,6 @@
                             <th>Sales</th>
                             <th>Return</th>
                             <th>Variance</th>
-                            <th>StockOut</th>
                             <th>Close</th>
                         </tr>
                     </thead>
@@ -203,7 +202,6 @@
                             <td class="{{ $item['sales'] < 0 ? 'negative' : '' }}">{{ $item['sales'] }}</td>
                             <td>{{ $item['return'] }}</td>
                             <td>{{ $item['variance'] }}</td>
-                            <td>{{ $item['stock_out'] }}</td>
                             <td>{{ $item['close'] }}</td>
                         </tr>
                         @endforeach
@@ -214,7 +212,6 @@
                             <td class="{{ $total_sales < 0 ? 'negative' : '' }}"><strong>{{ $total_sales }}</strong></td>
                             <td><strong>{{ $total_return }}</strong></td>
                             <td><strong>{{ $total_variance }}</strong></td>
-                            <td><strong>{{ $total_stock_out }}</strong></td>
                             <td><strong>{{ $total_close }}</strong></td>
                         </tr>
                     </tbody>

@@ -131,7 +131,7 @@
                         <thead>
                             <tr>
                                 <th style="width: 40%">Quantity</th>
-                                <th style="width: 40%">Price per Unit ({{ config('app.currency', 'RM') }})</th>
+                                <th style="width: 40%">Total Amount (RM)</th>
                                 <th style="width: 20%">Action</th>
                             </tr>
                         </thead>
@@ -181,13 +181,7 @@
                         </tfoot>
                     </table>
                     
-                    <!-- Preview calculated pricing -->
-                    <div class="mt-3" id="pricing-preview" style="display: none;">
-                        <div class="alert alert-success">
-                            <strong><i class="fas fa-calculator"></i> Pricing Preview:</strong>
-                            <div id="preview-content"></div>
-                        </div>
-                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -352,15 +346,17 @@
             function updatePricingPreview() {
                 var tiers = [];
                 var basePrice = parseFloat($('#price').val()) || 0;
+                var baseUnitPrice = basePrice; // This is the unit price for regular items
                 
                 $('.tier-row').each(function() {
                     var quantity = $(this).find('.tier-quantity').val();
-                    var price = $(this).find('.tier-price').val();
+                    var totalAmount = $(this).find('.tier-price').val();
                     
-                    if (quantity && price && quantity > 0 && price >= 0) {
+                    if (quantity && totalAmount && quantity > 0 && totalAmount >= 0) {
                         tiers.push({
                             quantity: parseInt(quantity),
-                            price: parseFloat(price)
+                            totalAmount: parseFloat(totalAmount),
+                            unitPrice: parseFloat(totalAmount) / parseInt(quantity) // Calculate unit price
                         });
                     }
                 });
@@ -376,15 +372,17 @@
                 });
                 
                 var previewHtml = '<table class="table table-sm table-bordered mt-2">';
-                previewHtml += '<thead><tr><th>Quantity Range</th><th>Unit Price</th><th>Total Price</th></tr></thead>';
+                previewHtml += '<thead><tr><th>Quantity Range</th><th>Unit Price</th><th>Total Amount</th><th>Savings</th></tr></thead>';
                 previewHtml += '<tbody>';
                 
-                // Add regular price range for quantities below first tier (this should be FIRST)
+                // Add regular price range for quantities below first tier
                 if (tiers.length > 0 && tiers[0].quantity > 1) {
-                    previewHtml += '<tr class="table-info">';
+                    var regularTotalForRange = baseUnitPrice * (tiers[0].quantity - 1);
+                    previewHtml += '<tr class="table-secondary">';
                     previewHtml += '<td>1 - ' + (tiers[0].quantity - 1) + ' units</td>';
-                    previewHtml += '<td>' + formatCurrency(basePrice) + '</td>';
-                    previewHtml += '<td>' + formatCurrency(basePrice * (tiers[0].quantity - 1)) + ' (max for this range)</td>';
+                    previewHtml += '<td>' + formatCurrency(baseUnitPrice) + ' per unit</td>';
+                    previewHtml += '<td>' + formatCurrency(regularTotalForRange) + ' (max)</td>';
+                    previewHtml += '<td>-</td>';
                     previewHtml += '</tr>';
                 }
                 
@@ -395,17 +393,37 @@
                     var rangeEnd = (i < tiers.length - 1) ? (tiers[i + 1].quantity - 1) : '+';
                     var rangeText = rangeStart + (rangeEnd === '+' ? '+' : ' - ' + rangeEnd) + ' units';
                     
-                    previewHtml += '<tr>';
-                    previewHtml += '<td>' + rangeText + '</td>';
-                    previewHtml += '<td>' + formatCurrency(tier.price) + '</td>';
-                    previewHtml += '<td>' + formatCurrency(tier.price * tier.quantity) + ' (for ' + tier.quantity + ' units)</td>';
+                    // Calculate regular price for this quantity
+                    var regularTotal = baseUnitPrice * tier.quantity;
+                    var savings = regularTotal - tier.totalAmount;
+                    var savingsPercent = (savings / regularTotal) * 100;
+                    
+                    previewHtml += '<tr class="table-success">';
+                    previewHtml += '<td><strong>' + rangeText + '</strong></td>';
+                    previewHtml += '<td>' + formatCurrency(tier.unitPrice) + ' per unit</td>';
+                    previewHtml += '<td><strong>' + formatCurrency(tier.totalAmount) + '</strong> (lump sum)</td>';
+                    previewHtml += '<td><span class="text-success">Save ' + formatCurrency(savings) + ' (' + savingsPercent.toFixed(1) + '%)</span></td>';
                     previewHtml += '</tr>';
                 }
                 
                 previewHtml += '</tbody></table>';
                 
+                // Add summary note
+                previewHtml += '<div class="alert alert-info mt-2 mb-0">';
+                previewHtml += '<small><i class="fas fa-info-circle"></i> ';
+                previewHtml += '<strong>How it works:</strong> For example, if customer buys ' + (tiers[0] ? tiers[0].quantity : '10') + ' units, ';
+                previewHtml += 'they pay a special package price of ' + formatCurrency(tiers[0] ? tiers[0].totalAmount : 0) + ' ';
+                previewHtml += '(instead of ' + formatCurrency(baseUnitPrice * (tiers[0] ? tiers[0].quantity : 10)) + ' at regular price). ';
+                previewHtml += 'The system will automatically apply the best applicable tier based on quantity.</small>';
+                previewHtml += '</div>';
+                
                 $('#preview-content').html(previewHtml);
                 $('#pricing-preview').show();
+            }
+
+            // Format currency
+            function formatCurrency(amount) {
+                return '{{ config('app.currency', 'RM') }} ' + amount.toFixed(2);
             }
             
             // Format currency

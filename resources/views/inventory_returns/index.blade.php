@@ -791,7 +791,7 @@
                 var productName = $(this).data('name');
                 var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
                 
-                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode}) <span class="badge badge-info float-right mt-1">Available: ${quantity}</span>`);
+                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode})`);
                 $(this).data('quantity', quantity);
                 
                 if (quantity === 0) {
@@ -810,7 +810,7 @@
                 var productName = $(this).data('name');
                 var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
                 
-                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode}) <span class="badge badge-info float-right mt-1">Available: ${quantity}</span>`);
+                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode})`);
                 $(this).data('quantity', quantity);
                 
                 if (quantity === 0) {

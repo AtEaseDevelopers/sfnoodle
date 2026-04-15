@@ -236,21 +236,54 @@ class TripController extends AppBaseController
             throw new \Exception('Trip not found');
         }
 
-        // Opening stock (from JSON snapshot) - products the driver had at trip start
+        // Opening stock (from JSON snapshot)
         $opening = collect(json_decode($trip->stock_data, true));
         
-        $endtrip = Trip::where('driver_id', $trip->driver_id)->where('type',Trip::END_TRIP)->where('uuid', $trip->uuid)->first();
+        $endtrip = Trip::where('driver_id', $trip->driver_id)
+            ->where('type', Trip::END_TRIP)
+            ->where('uuid', $trip->uuid)
+            ->first();
+        
         $driver = Driver::where('id', $trip->driver_id)->first();
 
-        // Fix: Use proper date filtering
         $startTime = $trip->date;
         $endTime = $endtrip->date; 
         
         // StockIn: Approved stock requests during trip
-        $stockIn = InventoryRequest::where('driver_id', $trip->driver_id)
+        $stockRequests = InventoryRequest::where('driver_id', $trip->driver_id)
             ->where('status', InventoryRequest::STATUS_APPROVED)
-            ->where('trip_id', $trip_id) // Use trip_id directly
+            ->where('trip_id', $trip_id)
             ->get();
+        
+        // Process stock requests to get product quantities
+        $stockInByProduct = [];
+        $stockInItems = [];
+        foreach ($stockRequests as $request) {
+            $items = $request->items;
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    $productId = $item['product_id'] ?? null;
+                    $quantity = $item['quantity'] ?? 0;
+                    
+                    if ($productId) {
+                        if (!isset($stockInByProduct[$productId])) {
+                            $stockInByProduct[$productId] = 0;
+                        }
+                        $stockInByProduct[$productId] += (float)$quantity;
+                        
+                        // Store product info
+                        if (!isset($stockInItems[$productId])) {
+                            $stockInItems[$productId] = [
+                                'product_id' => $productId,
+                                'product_name' => $item['product_name'] ?? null,
+                                'product_code' => $item['product_code'] ?? null,
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+        $stockInItems = collect($stockInItems);
         
         // Sales: From invoices during trip
         $sales = InvoiceDetail::whereHas('invoice', function($q) use ($trip_id) {
@@ -260,11 +293,60 @@ class TripController extends AppBaseController
             ->select('product_id', DB::raw('SUM(quantity) as total_sales'))
             ->get();
         
-        // Return: Approved stock returns during trip
+        // ================================================
+        // FIX: Process Inventory Returns properly
+        // ================================================
         $returns = InventoryReturn::where('driver_id', $trip->driver_id)
             ->where('status', InventoryReturn::STATUS_APPROVED)
-            ->where('trip_id', $trip_id) // Use trip_id directly
+            ->where('trip_id', $trip_id)
             ->get();
+        
+        // Debug: Check what's in the returns
+        \Log::info('Returns count: ' . $returns->count());
+        foreach ($returns as $return) {
+            \Log::info('Return item: ' . json_encode($return->toArray()));
+        }
+        
+        // Process returns to get product quantities (assuming JSON items field)
+        $returnsByProduct = [];
+        $returnItems = [];
+        foreach ($returns as $return) {
+            // Check if the return has an 'items' field (JSON array)
+            if (isset($return->items) && is_array($return->items)) {
+                foreach ($return->items as $item) {
+                    $productId = $item['product_id'] ?? null;
+                    $quantity = $item['quantity'] ?? 0;
+                    
+                    if ($productId) {
+                        if (!isset($returnsByProduct[$productId])) {
+                            $returnsByProduct[$productId] = 0;
+                        }
+                        $returnsByProduct[$productId] += (float)$quantity;
+                        
+                        // Store product info from return if available
+                        if (!isset($returnItems[$productId])) {
+                            $returnItems[$productId] = [
+                                'product_id' => $productId,
+                                'product_name' => $item['product_name'] ?? null,
+                                'product_code' => $item['product_code'] ?? null,
+                            ];
+                        }
+                    }
+                }
+            } 
+            // Alternative: If return has direct product_id and quantity fields
+            elseif (isset($return->product_id) && isset($return->quantity)) {
+                $productId = $return->product_id;
+                $quantity = $return->quantity;
+                
+                if (!isset($returnsByProduct[$productId])) {
+                    $returnsByProduct[$productId] = 0;
+                }
+                $returnsByProduct[$productId] += (float)$quantity;
+            }
+        }
+        
+        \Log::info('Processed Returns By Product: ' . json_encode($returnsByProduct));
         
         // Stock Count: Get counted_quantity from approved counts
         $stockCountsData = InventoryCount::where('driver_id', $trip->driver_id)
@@ -272,7 +354,7 @@ class TripController extends AppBaseController
             ->where('trip_id', $trip_id)
             ->get();
 
-        // Process stock counts to get total counted quantity per product
+        // Process stock counts
         $stockCounts = [];
         foreach ($stockCountsData as $count) {
             $items = $count->items ?? [];
@@ -290,79 +372,98 @@ class TripController extends AppBaseController
         }
         
         // ================================================
-        // FIXED: Get ALL products involved in the trip
+        // Get ALL products from ALL sources
         // ================================================
         
-        // Get all product IDs from:
-        // 1. Opening stock
-        $allProductIds = $opening->pluck('product_id')->toArray();
+        // Get product IDs from opening stock
+        $productIdsFromOpening = $opening->pluck('product_id')->filter()->toArray();
         
-        // 2. Stock in during trip
-        $stockInProductIds = $stockIn->pluck('product_id')->toArray();
+        // Get product IDs from stock requests
+        $productIdsFromStockIn = array_keys($stockInByProduct);
         
-        // 3. Sales during trip  
-        $salesProductIds = $sales->pluck('product_id')->toArray();
+        // Get product IDs from sales
+        $productIdsFromSales = $sales->pluck('product_id')->filter()->toArray();
         
-        // 4. Returns during trip
-        $returnProductIds = $returns->pluck('product_id')->toArray();
+        // Get product IDs from returns (using processed returns)
+        $productIdsFromReturns = array_keys($returnsByProduct);
         
-        // 5. Stock counts
-        $stockCountProductIds = array_keys($stockCounts);
+        // Get product IDs from stock counts
+        $productIdsFromCounts = array_keys($stockCounts);
         
         // Merge all product IDs
         $allProductIds = array_unique(array_merge(
-            $allProductIds,
-            $stockInProductIds,
-            $salesProductIds,
-            $returnProductIds,
-            $stockCountProductIds
+            $productIdsFromOpening,
+            $productIdsFromStockIn,
+            $productIdsFromSales,
+            $productIdsFromReturns,
+            $productIdsFromCounts
         ));
         
-        // Fetch product details for all products
+        // Remove any null or empty values
+        $allProductIds = array_filter($allProductIds);
+        
+        \Log::info('All Product IDs: ' . json_encode($allProductIds));
+        
+        // Fetch product details from database for ALL products
         $products = Product::whereIn('id', $allProductIds)
             ->select('id', 'name', 'code')
             ->get()
             ->keyBy('id');
         
-        // Get sales orders and invoices for this trip
+        // Get sales orders and invoices
         $salesOrder = SalesInvoice::where('trip_id', $trip_id)->get();
-        $invoice = Invoice::where('trip_id', $trip_id)->where('status',0)->get();
+        $invoice = Invoice::where('trip_id', $trip_id)->where('status', 0)->get();
         
         // Prepare stock summary array
         $stockSummary = [];
         
-        $credit_invoice = Invoice::where('trip_id', $trip_id)->where('status',0)->where('paymentterm','=', 'Credit')->get();
-        $cash_invoice = Invoice::where('trip_id', $trip_id)->where('status',0)->where('paymentterm','=', 'Cash')->get();
+        $credit_invoice = Invoice::where('trip_id', $trip_id)
+            ->where('status', 0)
+            ->where('paymentterm', 'Credit')
+            ->get();
+            
+        $cash_invoice = Invoice::where('trip_id', $trip_id)
+            ->where('status', 0)
+            ->where('paymentterm', 'Cash')
+            ->get();
 
-        // Process ALL products involved in the trip
+        // Process EACH product individually
         foreach($allProductIds as $productId) {
-            // Get product details
+            // Get product from opening stock (if exists)
+            $openingProduct = $opening->firstWhere('product_id', $productId);
+            
+            // Get product details from database
             $product = $products[$productId] ?? null;
             
-            // Find opening quantity for this product (0 if not in opening stock)
-            $openingProduct = $opening->firstWhere('product_id', $productId);
-            $openingQty = $openingProduct['quantity'] ?? 0;
-            $productCode = $openingProduct['product_code'] ?? ($product ? $product->code : '');
-            $productName = $openingProduct['product_name'] ?? ($product ? $product->name : 'unknown');
+            // Get product from stock request items (if exists)
+            $stockRequestItem = $stockInItems->firstWhere('product_id', $productId);
             
-            // Get stockIn for this product
-            $stockInQty = $stockIn->where('product_id', $productId)->sum('quantity');
+            // Get product from return items (if exists)
+            $returnItem = $returnItems[$productId] ?? null;
             
-            // Get sales for this product  
-            $salesQty = $sales->where('product_id', $productId)->first()->total_sales ?? 0;
-            
-            // Get returns for this product
-            $returnQty = $returns->where('product_id', $productId)->sum('quantity');
+            // Calculate quantities
+            $openingQty = (float)($openingProduct['quantity'] ?? 0);
+            $stockInQty = (float)($stockInByProduct[$productId] ?? 0);
+            $salesQty = (float)($sales->where('product_id', $productId)->first()->total_sales ?? 0);
+            $returnQty = (float)($returnsByProduct[$productId] ?? 0); // Now using processed returns
+            $actual = (float)($stockCounts[$productId] ?? 0);
             
             // Calculate closing (expected)
             $closing = $openingQty + $stockInQty - $salesQty - $returnQty;
-            
-            // Get actual from stock count - use counted_quantity
-            $actual = $stockCounts[$productId] ?? 0;
-            
-            // Calculate variance
             $variance = $actual - $closing;
             
+            // Get product name and code with proper fallbacks
+            $productCode = $openingProduct['product_code'] ?? 
+                        ($stockRequestItem['product_code'] ?? 
+                        ($returnItem['product_code'] ??
+                        ($product ? $product->code : 'N/A')));
+            
+            $productName = $openingProduct['product_name'] ?? 
+                        ($stockRequestItem['product_name'] ?? 
+                        ($returnItem['product_name'] ??
+                        ($product ? $product->name : 'Unknown Product (ID: ' . $productId . ')')));
+            
+            // Include ALL products
             $stockSummary[] = [
                 'product_id' => $productId,
                 'product_code' => $productCode,
@@ -370,14 +471,14 @@ class TripController extends AppBaseController
                 'open' => $openingQty,
                 'stock_in' => $stockInQty,
                 'sales' => $salesQty,
-                'return' => $returnQty,
+                'return' => $returnQty, // This will now show the correct value
                 'closing' => $closing,
                 'stock_count' => $actual,
                 'variance' => $variance
             ];
         }
         
-        // Sort stock summary by product name for better readability
+        // Sort stock summary by product name
         usort($stockSummary, function($a, $b) {
             return strcmp($a['product_name'], $b['product_name']);
         });

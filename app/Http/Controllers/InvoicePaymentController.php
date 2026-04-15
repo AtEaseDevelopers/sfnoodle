@@ -330,18 +330,52 @@ class InvoicePaymentController extends AppBaseController
     public function getinvoice(Request $request)
     {
         $invoice_ids = $request->input('invoice_ids');
+        
         if (is_array($invoice_ids)) {
-            $invoices = Invoice::with('invoiceDetails')->whereIn('id', $invoice_ids)->get();
+            $invoices = Invoice::with([
+                'invoiceDetails.product', // Load product with tiered_pricing
+                'customer' // Load customer for special price check
+            ])->whereIn('id', $invoice_ids)->get();
         } else {
-            $invoices = Invoice::with('invoiceDetails')->where('id', $invoice_ids)->get();
+            $invoices = Invoice::with([
+                'invoiceDetails.product',
+                'customer'
+            ])->where('id', $invoice_ids)->get();
         }
-    
+
         if ($invoices->isEmpty()) {
             return response()->json(['status' => false, 'message' => 'Invoice not found!']);
         }
 
-        return response()->json(['status' => true, 'message' => 'Invoice found!', 'data' => $invoices]);
-    
+        // Transform invoices to include discounted total
+        $transformedInvoices = $invoices->map(function ($invoice) {
+            // Calculate discounted total using the same logic
+            $discountedTotal = $this->calculateDiscountedTotal($invoice);
+            
+            // Get invoice details with discounted prices
+            $discountedDetails = $this->getInvoiceDetailsWithDiscount($invoice);
+            
+            return [
+                'id' => $invoice->id,
+                'invoiceno' => $invoice->invoiceno,
+                'date' => $invoice->date,
+                'customer_id' => $invoice->customer_id,
+                'paymentterm' => $invoice->paymentterm,
+                'status' => $invoice->status,
+                'remark' => $invoice->remark,
+                'total_amount' => $discountedTotal, // This is the key field for payment total
+                'original_total' => $invoice->invoiceDetails->sum('totalprice'),
+                'invoice_details' => $discountedDetails,
+                'created_at' => $invoice->created_at,
+                'updated_at' => $invoice->updated_at
+            ];
+        });
+
+        return response()->json([
+            'status' => true, 
+            'message' => 'Invoice found!', 
+            'data' => $transformedInvoices
+        ]);
     }
 
     public function print()
@@ -521,11 +555,14 @@ class InvoicePaymentController extends AppBaseController
 
     public function getcustomerinvoice($id)
     {
-        $invoices = Invoice::with(['invoiceDetails', 'invoicePayments' => function ($query) {
+        $invoices = Invoice::with([
+            'invoiceDetails.product', // Load product with tiered_pricing
+            'invoicePayments' => function ($query) {
                 $query->where('status', 1);
-        }])
+            }
+        ])
         ->where('customer_id', $id)
-        ->get(['id', 'invoiceno', 'date']); // Include id, invoiceno, and date
+        ->get();
 
         if ($invoices->isEmpty()) {
             return response()->json(['status' => false, 'message' => 'Invoices not found!']);
@@ -533,15 +570,173 @@ class InvoicePaymentController extends AppBaseController
 
         $invoiceData = $invoices->map(function ($invoice) {
             $totalPayments = $invoice->invoicePayments->sum('amount');
-
+            
+            // Calculate discounted total using the same logic as PDF generation
+            $discountedTotal = $this->calculateDiscountedTotal($invoice);
+            
             return [
                 'id' => $invoice->id,
                 'invoiceno' => $invoice->invoiceno,
-                'date' =>  date_format(date_create($invoice->date), 'd M Y'), // Format the date as needed
-                'total_amount' => $totalPayments // Total amount of approved payments
+                'date' => date_format(date_create($invoice->date), 'd M Y'),
+                'total_amount' => $discountedTotal, // Send discounted total
+                'payments_received' => $totalPayments,
+                'outstanding_balance' => $discountedTotal - $totalPayments,
+                'invoice_details' => $this->getInvoiceDetailsWithDiscount($invoice) // Optional: send discounted details
             ];
         });
+        
         return response()->json(['status' => true, 'message' => 'Invoices found!', 'data' => $invoiceData]);
+    }
+
+    /**
+     * Calculate discounted total with tiered pricing and special prices
+     *
+     * @param Invoice $invoice
+     * @return float
+     */
+    private function calculateDiscountedTotal($invoice)
+    {
+        $total = 0;
+        
+        foreach ($invoice->invoiceDetails as $detail) {
+            $product = $detail->product;
+            $quantity = $detail->quantity;
+            $regularPrice = $product->price;
+            
+            // Check for special price for this customer
+            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $invoice->customer_id)
+                ->where('status', 1)
+                ->first();
+            
+            $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+            
+            // Get tiered pricing
+            $tieredPricing = $product->tiered_pricing;
+            
+            if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                // Sort tiers by quantity descending (largest first for best value)
+                usort($tieredPricing, function($a, $b) {
+                    return $b['quantity'] - $a['quantity'];
+                });
+                
+                $remainingQuantity = $quantity;
+                
+                // Apply tiered pricing for each tier
+                foreach ($tieredPricing as $tier) {
+                    if ($remainingQuantity <= 0) {
+                        break;
+                    }
+                    
+                    $tierQuantity = $tier['quantity'];
+                    $tierPrice = $tier['price'];
+                    
+                    // Calculate how many full tier packages fit into remaining quantity
+                    $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                    
+                    if ($numberOfPackages > 0) {
+                        $itemTotal = $numberOfPackages * $tierPrice;
+                        $total += $itemTotal;
+                        $remainingQuantity -= ($numberOfPackages * $tierQuantity);
+                    }
+                }
+                
+                // Handle remaining quantity with base price (special or regular)
+                if ($remainingQuantity > 0) {
+                    $total += $remainingQuantity * $basePrice;
+                }
+            } else {
+                // No tiered pricing, use base price
+                $total += $quantity * $basePrice;
+            }
+        }
+        
+        return round($total, 2);
+    }
+
+    /**
+     * Get invoice details with discounted prices (optional - for detailed breakdown)
+     *
+     * @param Invoice $invoice
+     * @return array
+     */
+    private function getInvoiceDetailsWithDiscount($invoice)
+    {
+        $details = [];
+        
+        foreach ($invoice->invoiceDetails as $detail) {
+            $product = $detail->product;
+            $quantity = $detail->quantity;
+            $regularPrice = $product->price;
+            
+            // Check for special price
+            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $invoice->customer_id)
+                ->where('status', 1)
+                ->first();
+            
+            $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+            $originalTotal = $quantity * $basePrice;
+            $discountedTotal = $originalTotal;
+            $hasOffer = false;
+            $tierBreakdown = [];
+            
+            // Get tiered pricing
+            $tieredPricing = $product->tiered_pricing;
+            
+            if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                usort($tieredPricing, function($a, $b) {
+                    return $b['quantity'] - $a['quantity'];
+                });
+                
+                $remainingQuantity = $quantity;
+                $discountedTotal = 0;
+                
+                foreach ($tieredPricing as $tier) {
+                    if ($remainingQuantity <= 0) break;
+                    
+                    $tierQuantity = $tier['quantity'];
+                    $tierPrice = $tier['price'];
+                    $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                    
+                    if ($numberOfPackages > 0) {
+                        $quantityInTier = $numberOfPackages * $tierQuantity;
+                        $tierTotal = $numberOfPackages * $tierPrice;
+                        $discountedTotal += $tierTotal;
+                        $remainingQuantity -= $quantityInTier;
+                        $hasOffer = true;
+                        
+                        $tierBreakdown[] = [
+                            'packages' => $numberOfPackages,
+                            'quantity_per_package' => $tierQuantity,
+                            'total_quantity' => $quantityInTier,
+                            'price_per_package' => $tierPrice,
+                            'subtotal' => $tierTotal
+                        ];
+                    }
+                }
+                
+                if ($remainingQuantity > 0) {
+                    $remainingTotal = $remainingQuantity * $basePrice;
+                    $discountedTotal += $remainingTotal;
+                }
+            }
+            
+            $details[] = [
+                'product_id' => $product->id,
+                'product_code' => $product->code,
+                'product_name' => $product->name,
+                'quantity' => $quantity,
+                'base_price' => $basePrice,
+                'original_total' => $originalTotal,
+                'discounted_total' => $discountedTotal,
+                'has_offer' => $hasOffer,
+                'tier_breakdown' => $tierBreakdown,
+                'savings' => $originalTotal - $discountedTotal
+            ];
+        }
+        
+        return $details;
     }
 
 }

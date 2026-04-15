@@ -258,21 +258,15 @@
             var invoice_ids = $('#invoice_id').val();
             if(invoice_ids && invoice_ids.length > 0){
                 ShowLoad();
-                var url = '{{ config("app.url") }}/invoicePayments/getinvoice';
+                var url = '{{ config("app.url") }}/invoicePayments/getinvoices';
                 var params = $.param({invoice_ids: invoice_ids});
                 $.get(url + '?' + params, function(data, status){
                     if(status == 'success'){
                         if(data.status){
                             var totalAmount = 0;
                             data.data.forEach((invoice) => {
-                                // Sum up the total amount from invoice details
-                                if(invoice.invoice_details  && invoice.invoice_details .length > 0) {
-                                    invoice.invoice_details .forEach((detail) => {
-                                        totalAmount += parseFloat(detail.totalprice);
-                                    });
-                                } else if(invoice.total_amount) {
-                                    totalAmount += parseFloat(invoice.total_amount);
-                                }
+                                // Use the pre-calculated discounted total from backend
+                                totalAmount += parseFloat(invoice.total_amount);
                             });
                             $('#amount').val(totalAmount.toFixed(2));
                         }else{
