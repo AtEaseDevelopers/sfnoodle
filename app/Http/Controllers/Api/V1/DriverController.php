@@ -6089,50 +6089,62 @@ class DriverController extends Controller
                 'data' => null
             ], 200);
         }
+        $inventoryCountRecord = InventoryCount::where('driver_id', $driver->id)
+            ->where('trip_id', $driver->trip_id)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->first();
 
-            $rules = [
-                'items' => 'required|array|min:1',
-                'items.*.product_id' => 'required|exists:products,id',
-                'items.*.quantity' => 'required|integer|min:1',
-                'remarks' => 'nullable|string|max:500'
-            ];
+        if($inventoryCountRecord){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have completed inventory count, cannot request stock, You may request stock in new trip.',
+                'data' => null
+            ], 200);
+        }
+
+        $rules = [
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'remarks' => 'nullable|string|max:500'
+        ];
+        
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+                'data' => null
+            ], 200);
+        }
+
+        try {
+            // Get items from request
+            $items = $request->items;
             
-            $validator = Validator::make($request->all(), $rules);
-
-            if ($validator->fails()) {
+            // Check for duplicate products
+            $productIds = array_column($items, 'product_id');
+            if (count($productIds) !== count(array_unique($productIds))) {
                 return response()->json([
                     'result' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors(),
+                    'message' => 'Duplicate products are not allowed in the same request',
                     'data' => null
                 ], 200);
             }
 
-            try {
-                // Get items from request
-                $items = $request->items;
-                
-                // Check for duplicate products
-                $productIds = array_column($items, 'product_id');
-                if (count($productIds) !== count(array_unique($productIds))) {
-                    return response()->json([
-                        'result' => false,
-                        'message' => 'Duplicate products are not allowed in the same request',
-                        'data' => null
-                    ], 200);
-                }
+            // Create inventory request with items array
+            $inventoryRequest = InventoryRequest::create([
+                'driver_id' => $driver->id,
+                'items' => $items, // Store as JSON array
+                'status' => InventoryRequest::STATUS_PENDING,
+                'trip_id' => $driver->trip_id,
+                'remarks' => $request->remarks ?? null,
+            ]);
 
-                // Create inventory request with items array
-                $inventoryRequest = InventoryRequest::create([
-                    'driver_id' => $driver->id,
-                    'items' => $items, // Store as JSON array
-                    'status' => InventoryRequest::STATUS_PENDING,
-                    'trip_id' => $driver->trip_id,
-                    'remarks' => $request->remarks ?? null,
-                ]);
-
-                $notificationService = app(NotificationService::class);
-                $notificationService->createStockRequestNotification($driver, $inventoryRequest);
+            $notificationService = app(NotificationService::class);
+            $notificationService->createStockRequestNotification($driver, $inventoryRequest);
 
             return response()->json([
                 'success' => true,
