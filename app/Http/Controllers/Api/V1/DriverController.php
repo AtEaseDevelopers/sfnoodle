@@ -4060,6 +4060,7 @@ class DriverController extends Controller
             // Merge original items with FOC items for display
             $allItems = [];
             $originalTotal = 0;
+            $offerAmount = 0; // Add offer amount variable
             
             // Process each purchased item with tiered pricing
             foreach ($salesInvoice->salesInvoiceDetails as $detail) {
@@ -4079,9 +4080,9 @@ class DriverController extends Controller
                 $tieredPricing = $product->tiered_pricing;
                 
                 if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                    // Sort tiers by quantity ascending
+                    // Sort tiers by quantity descending (largest first for best value)
                     usort($tieredPricing, function($a, $b) {
-                        return $a['quantity'] - $b['quantity'];
+                        return $b['quantity'] - $a['quantity'];
                     });
                     
                     $remainingQuantity = $quantity;
@@ -4104,6 +4105,7 @@ class DriverController extends Controller
                             $regularTotalForThisTier = $quantityInThisTier * $basePrice;
                             
                             $originalTotal += $regularTotalForThisTier;
+                            $offerAmount += ($regularTotalForThisTier - $itemTotal); // Calculate offer amount
                             
                             // Add as a single line item with quantity = number of packages
                             $allItems[] = [
@@ -4114,7 +4116,8 @@ class DriverController extends Controller
                                 'totalprice' => $itemTotal,
                                 'is_foc' => false,
                                 'display_name' => $product->name . " ({$tierQuantity} units)",
-                                'tier_quantity' => $tierQuantity
+                                'tier_quantity' => $tierQuantity,
+                                'has_offer' => true
                             ];
                             
                             $remainingQuantity -= $quantityInThisTier;
@@ -4134,6 +4137,7 @@ class DriverController extends Controller
                             'totalprice' => $itemTotal,
                             'is_foc' => false,
                             'display_name' => $product->name,
+                            'has_offer' => false
                         ];
                     }
                 } else {
@@ -4149,6 +4153,7 @@ class DriverController extends Controller
                         'totalprice' => $itemTotal,
                         'is_foc' => false,
                         'display_name' => $product->name,
+                        'has_offer' => false
                     ];
                 }
             }
@@ -4163,11 +4168,12 @@ class DriverController extends Controller
                     'totalprice' => 0,
                     'is_foc' => true,
                     'display_name' => $focItem['product_name'] . " (FOC)",
+                    'has_offer' => false
                 ];
             }
             
-            // Calculate total amount
-            $totalAmount = $originalTotal;
+            // Calculate final total after discount
+            $finalTotal = $originalTotal - $offerAmount;
             
             $min = 450;
             $each = 23;
@@ -4178,8 +4184,9 @@ class DriverController extends Controller
                 'salesInvoice' => $salesInvoice,
                 'creatorName' => $creator->name ?? 'System',
                 'allItems' => $allItems,
-                'totalAmount' => $totalAmount,
                 'originalTotal' => $originalTotal,
+                'offerAmount' => $offerAmount,
+                'finalTotal' => $finalTotal,
                 'focItems' => $focItems
             ));
             
