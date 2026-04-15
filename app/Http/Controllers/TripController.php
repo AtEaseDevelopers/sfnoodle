@@ -607,7 +607,7 @@ class TripController extends AppBaseController
                     'name' => $product->name,
                     'quantity' => $salesItem['total_sales'],
                     'uom' => $product->category ?? '',
-                    'amount' => 'RM ' . number_format($totalAmount, 2)
+                    'amount' =>number_format($totalAmount, 2)
                 ];
             }
         }
@@ -693,7 +693,7 @@ class TripController extends AppBaseController
             // Sales Summary
             'sales_summary' => $productDetails,
             'total_quantity' => array_sum(array_column($productDetails, 'quantity')),
-            'total_amount' => number_format(array_sum(array_map(function($item) {
+            'total_amount' => 'RM ' .number_format(array_sum(array_map(function($item) {
                 return floatval(str_replace('RM ', '', $item['amount']));
             }, $productDetails)), 2),
             
