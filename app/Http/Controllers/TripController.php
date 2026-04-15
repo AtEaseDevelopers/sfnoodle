@@ -630,23 +630,23 @@ class TripController extends AppBaseController
         }
         // Format invoices list
         $invoicesList = [];
+        $totalInvoicesDiscountedAmount = 0;
+        
         foreach ($report['sales_summary']['invoices'] as $invoice) {
             // Get customer name
             $customer = Customer::find($invoice->customer_id);
             $customerName = $customer ? $customer->company : 'N/A';
             
-            // Get invoice total
-            $invoiceTotal = 0;
-            foreach ($invoice->invoiceDetails as $detail) {
-                $invoiceTotal += $detail->totalprice;
-            }
+            // Get DISCOUNTED invoice total from the report (not the stored total)
+            $invoiceDiscountedTotal = $report['sales_summary']['invoice_totals'][$invoice->id] ?? 0;
+            $totalInvoicesDiscountedAmount += $invoiceDiscountedTotal;
             
             $invoicesList[] = [
                 'doc_no' => $invoice->invoiceno,
-                'status' => 'Invoice', // You can customize based on your status
+                'status' => 'Invoice',
                 'company_name' => $customerName,
                 'paymentterm' => $invoice->paymentterm ?? '-',
-                'amount' => 'RM ' . number_format($invoiceTotal, 2)
+                'amount' => 'RM ' . number_format($invoiceDiscountedTotal, 2)
             ];
         }
         
@@ -693,7 +693,7 @@ class TripController extends AppBaseController
             // Sales Summary
             'sales_summary' => $productDetails,
             'total_quantity' => array_sum(array_column($productDetails, 'quantity')),
-            'total_amount' => 'RM ' . number_format(array_sum(array_map(function($item) {
+            'total_amount' => number_format(array_sum(array_map(function($item) {
                 return floatval(str_replace('RM ', '', $item['amount']));
             }, $productDetails)), 2),
             
