@@ -23,6 +23,7 @@ use App\Models\Invoice;
 use App\Models\Driver;
 use App\Models\Product;
 use App\Models\Notification;
+use App\Models\SpecialPrice;
 use App\Models\Customer;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -271,7 +272,6 @@ class TripController extends AppBaseController
                         }
                         $stockInByProduct[$productId] += (float)$quantity;
                         
-                        // Store product info
                         if (!isset($stockInItems[$productId])) {
                             $stockInItems[$productId] = [
                                 'product_id' => $productId,
@@ -285,33 +285,106 @@ class TripController extends AppBaseController
         }
         $stockInItems = collect($stockInItems);
         
-        // Sales: From invoices during trip
-        $sales = InvoiceDetail::whereHas('invoice', function($q) use ($trip_id) {
-                $q->where('trip_id', $trip_id);
-            })
-            ->groupBy('product_id')
-            ->select('product_id', DB::raw('SUM(quantity) as total_sales'))
+        // Sales: From invoices during trip with DISCOUNTED quantities
+        $invoices = Invoice::where('trip_id', $trip_id)
+            ->with(['invoiceDetails.product', 'customer'])
             ->get();
         
+        // Calculate discounted sales per product
+        $salesByProduct = [];
+        $invoiceTotals = [];
+        $totalDiscountedAmount = 0;
+        $totalCashAmount = 0;
+        $totalCreditAmount = 0;
+        
+        foreach ($invoices as $invoice) {
+            $invoiceDiscountedTotal = 0;
+            
+            foreach ($invoice->invoiceDetails as $detail) {
+                $product = $detail->product;
+                $quantity = $detail->quantity;
+                $regularPrice = $product->price;
+                
+                // Check for special price
+                $specialPrice = SpecialPrice::where('product_id', $product->id)
+                    ->where('customer_id', $invoice->customer_id)
+                    ->where('status', 1)
+                    ->first();
+                
+                $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+                $tieredPricing = $product->tiered_pricing;
+                
+                $itemDiscountedTotal = 0;
+                
+                if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                    // Sort tiers by quantity descending
+                    usort($tieredPricing, function($a, $b) {
+                        return $b['quantity'] - $a['quantity'];
+                    });
+                    
+                    $remainingQuantity = $quantity;
+                    
+                    foreach ($tieredPricing as $tier) {
+                        if ($remainingQuantity <= 0) break;
+                        
+                        $tierQuantity = $tier['quantity'];
+                        $tierPrice = $tier['price'];
+                        $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                        
+                        if ($numberOfPackages > 0) {
+                            $quantityInTier = $numberOfPackages * $tierQuantity;
+                            $itemDiscountedTotal += $numberOfPackages * $tierPrice;
+                            $remainingQuantity -= $quantityInTier;
+                        }
+                    }
+                    
+                    if ($remainingQuantity > 0) {
+                        $itemDiscountedTotal += $remainingQuantity * $basePrice;
+                    }
+                } else {
+                    $itemDiscountedTotal = $quantity * $basePrice;
+                }
+                
+                $invoiceDiscountedTotal += $itemDiscountedTotal;
+                
+                // Accumulate sales by product (quantity only, not amount)
+                if (!isset($salesByProduct[$detail->product_id])) {
+                    $salesByProduct[$detail->product_id] = 0;
+                }
+                $salesByProduct[$detail->product_id] += $quantity;
+            }
+            
+            $invoiceTotals[$invoice->id] = $invoiceDiscountedTotal;
+            $totalDiscountedAmount += $invoiceDiscountedTotal;
+            
+            // Track cash vs credit
+            if ($invoice->paymentterm == 'Cash') {
+                $totalCashAmount += $invoiceDiscountedTotal;
+            } elseif ($invoice->paymentterm == 'Credit') {
+                $totalCreditAmount += $invoiceDiscountedTotal;
+            }
+        }
+        
+        // Convert sales by product to collection
+        $sales = collect();
+        foreach ($salesByProduct as $productId => $totalSales) {
+            $sales->push((object)[
+                'product_id' => $productId,
+                'total_sales' => $totalSales
+            ]);
+        }
+        
         // ================================================
-        // FIX: Process Inventory Returns properly
+        // Process Inventory Returns
         // ================================================
         $returns = InventoryReturn::where('driver_id', $trip->driver_id)
             ->where('status', InventoryReturn::STATUS_APPROVED)
             ->where('trip_id', $trip_id)
             ->get();
         
-        // Debug: Check what's in the returns
-        \Log::info('Returns count: ' . $returns->count());
-        foreach ($returns as $return) {
-            \Log::info('Return item: ' . json_encode($return->toArray()));
-        }
-        
-        // Process returns to get product quantities (assuming JSON items field)
         $returnsByProduct = [];
         $returnItems = [];
         foreach ($returns as $return) {
-            // Check if the return has an 'items' field (JSON array)
             if (isset($return->items) && is_array($return->items)) {
                 foreach ($return->items as $item) {
                     $productId = $item['product_id'] ?? null;
@@ -323,7 +396,6 @@ class TripController extends AppBaseController
                         }
                         $returnsByProduct[$productId] += (float)$quantity;
                         
-                        // Store product info from return if available
                         if (!isset($returnItems[$productId])) {
                             $returnItems[$productId] = [
                                 'product_id' => $productId,
@@ -333,9 +405,7 @@ class TripController extends AppBaseController
                         }
                     }
                 }
-            } 
-            // Alternative: If return has direct product_id and quantity fields
-            elseif (isset($return->product_id) && isset($return->quantity)) {
+            } elseif (isset($return->product_id) && isset($return->quantity)) {
                 $productId = $return->product_id;
                 $quantity = $return->quantity;
                 
@@ -346,15 +416,12 @@ class TripController extends AppBaseController
             }
         }
         
-        \Log::info('Processed Returns By Product: ' . json_encode($returnsByProduct));
-        
         // Stock Count: Get counted_quantity from approved counts
         $stockCountsData = InventoryCount::where('driver_id', $trip->driver_id)
             ->where('status', InventoryCount::STATUS_APPROVED)
             ->where('trip_id', $trip_id)
             ->get();
 
-        // Process stock counts
         $stockCounts = [];
         foreach ($stockCountsData as $count) {
             $items = $count->items ?? [];
@@ -374,23 +441,12 @@ class TripController extends AppBaseController
         // ================================================
         // Get ALL products from ALL sources
         // ================================================
-        
-        // Get product IDs from opening stock
         $productIdsFromOpening = $opening->pluck('product_id')->filter()->toArray();
-        
-        // Get product IDs from stock requests
         $productIdsFromStockIn = array_keys($stockInByProduct);
-        
-        // Get product IDs from sales
         $productIdsFromSales = $sales->pluck('product_id')->filter()->toArray();
-        
-        // Get product IDs from returns (using processed returns)
         $productIdsFromReturns = array_keys($returnsByProduct);
-        
-        // Get product IDs from stock counts
         $productIdsFromCounts = array_keys($stockCounts);
         
-        // Merge all product IDs
         $allProductIds = array_unique(array_merge(
             $productIdsFromOpening,
             $productIdsFromStockIn,
@@ -399,60 +455,36 @@ class TripController extends AppBaseController
             $productIdsFromCounts
         ));
         
-        // Remove any null or empty values
         $allProductIds = array_filter($allProductIds);
         
-        \Log::info('All Product IDs: ' . json_encode($allProductIds));
-        
-        // Fetch product details from database for ALL products
+        // Fetch product details
         $products = Product::whereIn('id', $allProductIds)
             ->select('id', 'name', 'code')
             ->get()
             ->keyBy('id');
         
-        // Get sales orders and invoices
+        // Get sales orders
         $salesOrder = SalesInvoice::where('trip_id', $trip_id)->get();
-        $invoice = Invoice::where('trip_id', $trip_id)->where('status', 0)->get();
         
         // Prepare stock summary array
         $stockSummary = [];
         
-        $credit_invoice = Invoice::where('trip_id', $trip_id)
-            ->where('status', 0)
-            ->where('paymentterm', 'Credit')
-            ->get();
-            
-        $cash_invoice = Invoice::where('trip_id', $trip_id)
-            ->where('status', 0)
-            ->where('paymentterm', 'Cash')
-            ->get();
-
         // Process EACH product individually
         foreach($allProductIds as $productId) {
-            // Get product from opening stock (if exists)
             $openingProduct = $opening->firstWhere('product_id', $productId);
-            
-            // Get product details from database
             $product = $products[$productId] ?? null;
-            
-            // Get product from stock request items (if exists)
             $stockRequestItem = $stockInItems->firstWhere('product_id', $productId);
-            
-            // Get product from return items (if exists)
             $returnItem = $returnItems[$productId] ?? null;
             
-            // Calculate quantities
             $openingQty = (float)($openingProduct['quantity'] ?? 0);
             $stockInQty = (float)($stockInByProduct[$productId] ?? 0);
             $salesQty = (float)($sales->where('product_id', $productId)->first()->total_sales ?? 0);
-            $returnQty = (float)($returnsByProduct[$productId] ?? 0); // Now using processed returns
+            $returnQty = (float)($returnsByProduct[$productId] ?? 0);
             $actual = (float)($stockCounts[$productId] ?? 0);
             
-            // Calculate closing (expected)
             $closing = $openingQty + $stockInQty - $salesQty - $returnQty;
             $variance = $actual - $closing;
             
-            // Get product name and code with proper fallbacks
             $productCode = $openingProduct['product_code'] ?? 
                         ($stockRequestItem['product_code'] ?? 
                         ($returnItem['product_code'] ??
@@ -461,9 +493,8 @@ class TripController extends AppBaseController
             $productName = $openingProduct['product_name'] ?? 
                         ($stockRequestItem['product_name'] ?? 
                         ($returnItem['product_name'] ??
-                        ($product ? $product->name : 'Unknown Product (ID: ' . $productId . ')')));
+                        ($product ? $product->name : 'Unknown Product')));
             
-            // Include ALL products
             $stockSummary[] = [
                 'product_id' => $productId,
                 'product_code' => $productCode,
@@ -471,7 +502,7 @@ class TripController extends AppBaseController
                 'open' => $openingQty,
                 'stock_in' => $stockInQty,
                 'sales' => $salesQty,
-                'return' => $returnQty, // This will now show the correct value
+                'return' => $returnQty,
                 'closing' => $closing,
                 'stock_count' => $actual,
                 'variance' => $variance
@@ -493,13 +524,14 @@ class TripController extends AppBaseController
             ],
             'stock_summary' => $stockSummary,
             'sales_summary' => [
-                'total_invoices' => $invoice->count(),
+                'total_invoices' => $invoices->count(),
                 'total_sales_orders' => $salesOrder->count(),
-                'total_amount' => $invoice->sum('total') ?? 0,
-                'total_credit' => $credit_invoice->sum('total') ?? 0,
-                'total_cash' => $cash_invoice->sum('total') ?? 0,
-                'invoices' => $invoice,
-                'sales_orders' => $salesOrder
+                'total_amount' => $totalDiscountedAmount, // Use discounted total
+                'total_credit' => $totalCreditAmount, // Use discounted total for credit
+                'total_cash' => $totalCashAmount, // Use discounted total for cash
+                'invoices' => $invoices,
+                'sales_orders' => $salesOrder,
+                'invoice_totals' => $invoiceTotals // Pass individual invoice totals
             ],
             'sales_by_product' => $sales->map(function($item) {
                 return [
@@ -537,29 +569,49 @@ class TripController extends AppBaseController
         
         // Get product names for sales summary
         $productDetails = [];
+        $totalDiscountedSales = 0;
 
         foreach ($report['sales_by_product'] as $salesItem) {
             $product = Product::find($salesItem['product_id']);
             if ($product) {
-                // Get total amount for this product from invoices
+                // Get total discounted amount for this product from invoices
                 $totalAmount = 0;
                 foreach ($report['sales_summary']['invoices'] as $invoice) {
+                    $invoiceId = $invoice->id;
+                    $invoiceDiscountedTotal = $report['sales_summary']['invoice_totals'][$invoiceId] ?? 0;
+                    
+                    // Calculate proportion for this product
+                    $invoiceTotal = 0;
+                    $productTotal = 0;
+                    
                     foreach ($invoice->invoiceDetails as $detail) {
+                        $detailTotal = $detail->quantity * $detail->price;
+                        $invoiceTotal += $detailTotal;
+                        
                         if ($detail->product_id == $salesItem['product_id']) {
-                            $totalAmount += $detail->totalprice;
+                            // Calculate discounted amount for this specific product
+                            $productTotal += $this->calculateProductDiscountedTotal($product, $detail->quantity, $invoice->customer_id, $detail->price);
                         }
                     }
+                    
+                    // If we have invoice totals, calculate proportion
+                    if ($invoiceTotal > 0) {
+                        $totalAmount += ($productTotal > 0) ? $productTotal : ($invoiceDiscountedTotal * ($detail->totalprice / $invoiceTotal));
+                    }
                 }
+                
+                $totalDiscountedSales += $totalAmount;
                 
                 $productDetails[] = [
                     'code' => $product->code,
                     'name' => $product->name,
                     'quantity' => $salesItem['total_sales'],
-                    'uom' => $product->category->name?? '', // Use product unit or default to PACK
-                    'amount' => number_format($totalAmount, 2)
+                    'uom' => $product->category ?? '',
+                    'amount' => 'RM ' . number_format($totalAmount, 2)
                 ];
             }
         }
+
         
         // Format stock summary
         $stockSummaryData = [];
@@ -689,4 +741,48 @@ class TripController extends AppBaseController
 
     }
     
+    private function calculateProductDiscountedTotal($product, $quantity, $customerId, $storedPrice)
+    {
+        $regularPrice = $product->price;
+        
+        // Check for special price
+        $specialPrice = SpecialPrice::where('product_id', $product->id)
+            ->where('customer_id', $customerId)
+            ->where('status', 1)
+            ->first();
+        
+        $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+        $tieredPricing = $product->tiered_pricing;
+        
+        if (!empty($tieredPricing) && is_array($tieredPricing)) {
+            usort($tieredPricing, function($a, $b) {
+                return $b['quantity'] - $a['quantity'];
+            });
+            
+            $remainingQuantity = $quantity;
+            $total = 0;
+            
+            foreach ($tieredPricing as $tier) {
+                if ($remainingQuantity <= 0) break;
+                
+                $tierQuantity = $tier['quantity'];
+                $tierPrice = $tier['price'];
+                $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                
+                if ($numberOfPackages > 0) {
+                    $total += $numberOfPackages * $tierPrice;
+                    $remainingQuantity -= ($numberOfPackages * $tierQuantity);
+                }
+            }
+            
+            if ($remainingQuantity > 0) {
+                $total += $remainingQuantity * $basePrice;
+            }
+            
+            return $total;
+        }
+        
+        return $quantity * $basePrice;
+    }
+
 }   
