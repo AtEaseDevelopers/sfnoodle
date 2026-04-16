@@ -629,7 +629,7 @@ class InvoiceController extends AppBaseController
                             'price' => $tierPrice, // Package price
                             'totalprice' => $itemTotal,
                             'is_foc' => false,
-                            'display_name' => $product->name . " ({$tierQuantity} units)",
+                            'display_name' => $product->code . " ({$tierQuantity} units)",
                             'has_offer' => true,
                             'tier_quantity' => $tierQuantity
                         ];
@@ -650,7 +650,7 @@ class InvoiceController extends AppBaseController
                         'price' => $basePrice,
                         'totalprice' => $itemTotal,
                         'is_foc' => false,
-                        'display_name' => $product->name,
+                        'display_name' => $product->code,
                         'has_offer' => false
                     ];
                 }
@@ -666,7 +666,7 @@ class InvoiceController extends AppBaseController
                     'price' => $basePrice,
                     'totalprice' => $itemTotal,
                     'is_foc' => false,
-                    'display_name' => $product->name,
+                    'display_name' => $product->code,
                     'has_offer' => false
                 ];
             }
@@ -681,7 +681,7 @@ class InvoiceController extends AppBaseController
                 'price' => 0,
                 'totalprice' => 0,
                 'is_foc' => true,
-                'display_name' => $focItem['product_name'] . " (FOC)",
+                'display_name' => $focItem['product_code'] . " (FOC)",
                 'has_offer' => false
             ];
         }
