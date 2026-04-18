@@ -4306,10 +4306,13 @@ class DriverController extends Controller
 
             // If there are insufficient products, return error
             if (!empty($insufficientProducts)) {
+                $productNames = array_column($insufficientProducts, 'product_name');
+                $errorMessage = 'Insufficient inventory balance for products: ' . implode(', ', $productNames);
+                
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__ . $this->message_separator . 'Insufficient inventory balance :'.$insufficientProducts,
-                    'data' => null
+                    'message' => __LINE__ . $this->message_separator . $errorMessage,
+                    'data' => $null
                 ], 200);
             }
 
