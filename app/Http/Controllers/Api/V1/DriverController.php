@@ -6195,6 +6195,7 @@ class DriverController extends Controller
                             $product = Product::find($item['product_id'] ?? null);
                             $itemsWithProductNames[] = [
                                 'product_id' => $item['product_id'] ?? null,
+                                'product_code' => $product ? $product->code : 'Unknown Code',
                                 'product_name' => $product ? $product->name : 'Unknown Product',
                                 'quantity' => $item['quantity'] ?? 0
                             ];
