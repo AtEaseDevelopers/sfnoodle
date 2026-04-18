@@ -4308,11 +4308,7 @@ class DriverController extends Controller
             if (!empty($insufficientProducts)) {
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__ . $this->message_separator . 'Insufficient inventory balance',
-                    'errors' => [
-                        'inventory' => ['Some products have insufficient inventory']
-                    ],
-                    'insufficient_products' => $insufficientProducts,
+                    'message' => __LINE__ . $this->message_separator . 'Insufficient inventory balance :'.$insufficientProducts,
                     'data' => null
                 ], 200);
             }
