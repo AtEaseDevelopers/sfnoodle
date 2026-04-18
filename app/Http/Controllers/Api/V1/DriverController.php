@@ -4309,7 +4309,7 @@ class DriverController extends Controller
                 $errorMessage = "Insufficient inventory balance:\n";
                 foreach ($insufficientProducts as $product) {
                     $errorMessage .= sprintf(
-                        "• %s: Need %d, Available %d (%s)\n",
+                        "• %s: Need %d, Available %d\n",
                         $product['product_name'],
                         $product['required_quantity'],
                         $product['available_quantity'],
