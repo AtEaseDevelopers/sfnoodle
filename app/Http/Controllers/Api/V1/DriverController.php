@@ -4313,7 +4313,6 @@ class DriverController extends Controller
                         $product['product_name'],
                         $product['required_quantity'],
                         $product['available_quantity'],
-                        $product['error']
                     );
                 }
                 
