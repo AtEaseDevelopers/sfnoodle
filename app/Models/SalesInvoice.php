@@ -154,24 +154,50 @@ class SalesInvoice extends Model
 
         $userCode = $user->invoice_code ?? ''; // Default to R00 if not set
 
-        // Get the latest invoice number for current month and user code
+        // Get the prefix
         $prefix = "SO/{$year}{$month}/{$userCode}/";
         
-        // Find the latest invoice with this prefix
-        $latestInvoice = self::orderBy('id', 'desc')
+        // Get the maximum invoice number from non-cancelled invoices
+        // This uses SQL to get the max numeric value directly
+        $maxInvoice = self::where('invoiceno', 'LIKE', $prefix . '%')
+            ->where('status', '!=', self::STATUS_CANCELLED)
+            ->orderByRaw('CAST(SUBSTRING_INDEX(invoiceno, "/", -1) AS UNSIGNED) DESC')
             ->first();
         
-        if ($latestInvoice) {
-            // Extract the numeric part
-            $invoiceNumber = $latestInvoice->invoiceno;
-            $numericPart = (int) substr($invoiceNumber, strlen($prefix));
+        $nextNumber = 1;
+        
+        if ($maxInvoice) {
+            // Extract the numeric part from the max invoice number
+            $numericPart = (int) substr($maxInvoice->invoiceno, strlen($prefix));
             $nextNumber = $numericPart + 1;
-        } else {
-            // Start from 1 for new month/user combination
-            $nextNumber = 1;
         }
         
-        // Format the number with leading zeros (minimum 4 digits, but can grow)
+        // Verify the generated number doesn't belong to a cancelled invoice
+        // (This handles gaps where cancelled invoices might have the next number)
+        $isNumberTaken = true;
+        $maxAttempts = 100; // Prevent infinite loop
+        $attempts = 0;
+        
+        while ($isNumberTaken && $attempts < $maxAttempts) {
+            $formattedNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            $potentialInvoiceNo = $prefix . $formattedNumber;
+            
+            // Check if this invoice number exists and is cancelled
+            $cancelledInvoice = self::where('invoiceno', $potentialInvoiceNo)
+                ->where('status', 1)
+                ->exists();
+            
+            if ($cancelledInvoice) {
+                // This number is taken by a cancelled invoice, try next number
+                $nextNumber++;
+                $attempts++;
+            } else {
+                // This number is available
+                $isNumberTaken = false;
+            }
+        }
+        
+        // Format the number with leading zeros
         $formattedNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
         
         return $prefix . $formattedNumber;
