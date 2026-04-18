@@ -4312,7 +4312,7 @@ class DriverController extends Controller
                 return response()->json([
                     'result' => false,
                     'message' => __LINE__ . $this->message_separator . $errorMessage,
-                    'data' => $null
+                    'data' => null
                 ], 200);
             }
 
