@@ -3989,7 +3989,7 @@ class DriverController extends Controller
                     'paymentterm' => strtolower($salesInvoice->customer->paymentterm ?? ''),
                     'phone' => $salesInvoice->customer->phone ?? '',
                 ],
-                'paymentterm' => $salesInvoice->paymentterm,
+                'paymentterm' => strtolower($salesInvoice->paymentterm),
                 'status' => $salesInvoice->getStatusTextAttribute(),
                 'remark' => $salesInvoice->remark,
                 'total' => number_format($salesInvoice->total, 2),
