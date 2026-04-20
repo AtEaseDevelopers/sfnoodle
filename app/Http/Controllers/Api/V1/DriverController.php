@@ -4421,7 +4421,7 @@ class DriverController extends Controller
                             $driver->id,
                             $productId,
                             $quantity,
-                            InventoryTransaction::TYPE_STOCK_OUT,
+                            InventoryTransaction::TYPE_INVOICE,
                            'Sales order converted to invoice: ' . $invoice->invoiceno,
                             $invoice->id,
                         ]);
@@ -4525,7 +4525,7 @@ class DriverController extends Controller
                             $driver->id,
                             $productId,
                             $quantity,
-                            InventoryTransaction::TYPE_STOCK_OUT,
+                            InventoryTransaction::TYPE_INVOICE,
                             'Sales order converted to invoice: ' . $invoice->invoiceno,
                             $invoice->id,
                         ]);
@@ -5058,7 +5058,7 @@ class DriverController extends Controller
                             $driver->id,
                             $detail['product_id'], // ✅ Use product_id from invoice detail
                             $detail['quantity'],    // ✅ Use quantity from invoice detail
-                            InventoryTransaction::TYPE_STOCK_OUT,
+                            InventoryTransaction::TYPE_INVOICE,
                             'Create Invoice with ID: ' . $invoice->invoiceno,
                             $invoice->id
                         );
@@ -6822,9 +6822,8 @@ class DriverController extends Controller
         }
     }
 
-     public function getInventoryTransaction(Request $request)
+    public function getInventoryTransaction(Request $request)
     {
-
         // Validate session
         $driver = Driver::where('session', $request->header('session'))->first();
         if(empty($driver)){
@@ -6835,10 +6834,20 @@ class DriverController extends Controller
             ], 401);
         }
         
+        $data = $request->all();
+        $date = $data['date'] ?? null; // Expecting date in 'Y-m-d' format
+        
         try {
-           $inventoryTransactions = InventoryTransaction::with(['product:id,code'])
-                ->where('driver_id', $driver->id)
-                ->orderBy('created_at', 'desc')
+            // Build query
+            $query = InventoryTransaction::with(['product:id,code'])
+                ->where('driver_id', $driver->id);
+            
+            // Apply date filter if provided
+            if ($date) {
+                $query->whereDate('created_at', $date);
+            }
+            
+            $inventoryTransactions = $query->orderBy('created_at', 'desc')
                 ->get()
                 ->toArray();
 
@@ -6867,7 +6876,8 @@ class DriverController extends Controller
                 'success' => true,
                 'message' => 'Driver Inventory Transactions retrieved successfully.',
                 'data' => $inventoryTransactions
-            ],200);
+            ], 200);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -8282,6 +8292,82 @@ class DriverController extends Controller
                 'result' => false,
                 'message' => '' . __LINE__ . $this->message_separator . 'Stock Return Failed: ' . $e->getMessage(),
                 'data' => null
+            ], 200);
+        }
+    }
+
+    public function getStockReturnList(Request $request)
+    {
+        // Validate session
+        $user = User::where('session', $request->header('session'))->first();
+        if(empty($user)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+        
+        try {
+            // Helper function to convert UTC to UTC+8 (Malaysia Time)
+            $convertToUTC8 = function($datetime) {
+                if (empty($datetime)) {
+                    return null;
+                }
+                return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+            };
+            
+            $inventoryReturns = InventoryReturn::orderBy('created_at', 'desc')  // Order by created_at, latest first
+                ->get()
+                ->map(function ($inventoryReturn) use ($convertToUTC8) {
+                    // Get approver and rejector names
+                    $approver = $inventoryReturn->approved_by ? User::find($inventoryReturn->approved_by) : null;
+                    $rejector = $inventoryReturn->rejected_by ? User::find($inventoryReturn->rejected_by) : null;
+                    
+                    // Process items array to add product names
+                    $itemsWithProductNames = [];
+                    if ($inventoryReturn->items && is_array($inventoryReturn->items)) {
+                        foreach ($inventoryReturn->items as $item) {
+                            $product = Product::find($item['product_id'] ?? null);
+                            $itemsWithProductNames[] = [
+                                'product_id' => $item['product_id'] ?? null,
+                                'product_name' => $product ? $product->name : 'Unknown Product',
+                                'quantity' => $item['quantity'] ?? 0
+                            ];
+                        }
+                    }
+                    
+                    // Return formatted data with converted dates
+                    return [
+                        'id' => $inventoryReturn->id,
+                        'driver_id' => $inventoryReturn->driver_id,
+                        'trip_id' => $inventoryReturn->trip_id,
+                        'items' => $itemsWithProductNames,
+                        'status' => $inventoryReturn->status,
+                        'remarks' => $inventoryReturn->remarks,
+                        'rejection_reason' => $inventoryReturn->rejection_reason,
+                        'approved_by' => $inventoryReturn->approved_by,
+                        'approved_by_name' => $approver ? $approver->name : null,
+                        'rejected_by' => $inventoryReturn->rejected_by,
+                        'rejected_by_name' => $rejector ? $rejector->name : null,
+                        'approved_at' => $convertToUTC8($inventoryReturn->approved_at),
+                        'rejected_at' => $convertToUTC8($inventoryReturn->rejected_at),
+                        'created_at' => $convertToUTC8($inventoryReturn->created_at),
+                        'updated_at' => $convertToUTC8($inventoryReturn->updated_at),
+                        'item_count' => $inventoryReturn->item_count,
+                        'total_quantity' => $inventoryReturn->total_quantity,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock Return Record retrieved successfully.',
+                'data' => $inventoryReturns
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get stock return record: ' . $e->getMessage()
             ], 200);
         }
     }

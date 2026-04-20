@@ -122,7 +122,7 @@ class InventoryReturnController extends Controller
                     $inventoryReturn->driver_id,
                     $item['product_id'],
                     $item['quantity'],
-                    InventoryTransaction::TYPE_STOCK_OUT,
+                    InventoryTransaction::TYPE_STOCK_RETURN,
                     'Stock Return - Approved by: ' . $user->name,
                 );
             }

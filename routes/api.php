@@ -130,6 +130,11 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/manager-login', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogin']);
     Route::post('/driver/manager-logout', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogout']);
 
+    Route::get('/driver/get-return-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockReturnList']);
+
+    //transaction
+    //invoice and stock return only
+
     // AutoCount sync: system provides API only; no web UI. Plugin polls every 5 mins and creates IV/ARPayment in AutoCount.
     Route::post('/autocount/sync-customers', [AutoCountSyncController::class, 'syncCustomers']);
     Route::post('/autocount/sync-products', [AutoCountSyncController::class, 'syncProducts']);
