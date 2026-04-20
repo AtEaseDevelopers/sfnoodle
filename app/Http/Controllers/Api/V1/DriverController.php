@@ -6088,7 +6088,7 @@ class DriverController extends Controller
         }
     }
 
-    public function StockRequest(Request $request)
+    	public function StockRequest(Request $request)
     {
 
         // Validate session
@@ -6124,10 +6124,10 @@ class DriverController extends Controller
         $rules = [
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|integer|min:0', // Allow quantity 0
             'remarks' => 'nullable|string|max:500'
         ];
-        
+
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
@@ -6140,36 +6140,52 @@ class DriverController extends Controller
         }
 
         try {
-            // Get items from request
+            // Get items from request and filter out items with quantity 0
             $items = $request->items;
-            
-            // Check for duplicate products
-            $productIds = array_column($items, 'product_id');
-            if (count($productIds) !== count(array_unique($productIds))) {
+            $filteredItems = array_filter($items, function($item) {
+                return $item['quantity'] > 0;
+            });
+
+            // Reindex the array to avoid gaps in keys
+            $filteredItems = array_values($filteredItems);
+
+            // Only create request if there are items with quantity > 0
+            if (!empty($filteredItems)) {
+                // Check for duplicate products in filtered items
+                $productIds = array_column($filteredItems, 'product_id');
+                if (count($productIds) !== count(array_unique($productIds))) {
+                    return response()->json([
+                        'result' => false,
+                        'message' => 'Duplicate products are not allowed in the same request',
+                        'data' => null
+                    ], 200);
+                }
+
+                // Create inventory request with filtered items array
+                $inventoryRequest = InventoryRequest::create([
+                    'driver_id' => $driver->id,
+                    'items' => $filteredItems, // Store only items with quantity > 0
+                    'status' => InventoryRequest::STATUS_PENDING,
+                    'trip_id' => $driver->trip_id,
+                    'remarks' => $request->remarks ?? null,
+                ]);
+
+                $notificationService = app(NotificationService::class);
+                $notificationService->createStockRequestNotification($driver, $inventoryRequest);
+
                 return response()->json([
-                    'result' => false,
-                    'message' => 'Duplicate products are not allowed in the same request',
+                    'success' => true,
+                    'message' => 'Inventory request created successfully.',
+                    'data' => $inventoryRequest
+                ]);
+            } else {
+                // No valid items with quantity > 0, just return success without creating request
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No items with valid quantity to request. Request not created.',
                     'data' => null
                 ], 200);
             }
-
-            // Create inventory request with items array
-            $inventoryRequest = InventoryRequest::create([
-                'driver_id' => $driver->id,
-                'items' => $items, // Store as JSON array
-                'status' => InventoryRequest::STATUS_PENDING,
-                'trip_id' => $driver->trip_id,
-                'remarks' => $request->remarks ?? null,
-            ]);
-
-            $notificationService = app(NotificationService::class);
-            $notificationService->createStockRequestNotification($driver, $inventoryRequest);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Inventory request created successfully.',
-                'data' => $inventoryRequest
-            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
