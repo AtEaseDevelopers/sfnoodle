@@ -2,113 +2,123 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{{config('app.name')}}</title>
+    <title>{{ config('app.name') }}</title>
     <style>
-        @page {
+        * {
             margin: 0;
             padding: 0;
-        }
-        body{
-            font-size: 18px;
-            margin: 0;
-            padding: 0 5px; /* Add overall body padding */
-            font-family: 'Courier New', monospace;
-            line-height: 1.2;
             box-sizing: border-box;
         }
-        table{
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-        table th, table td{
-            padding: 2px 0;
+        
+        body {
             font-size: 18px;
-            vertical-align: top;
+            font-family: 'Courier New', monospace;
+            line-height: 1.2;
+            padding: 10px;
         }
+        
         .header-section {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
+        
         .company-name {
             font-weight: bold;
             font-size: 16px;
-            margin-bottom: 3px;
+            margin-bottom: 5px;
         }
+        
         .company-details {
             font-size: 14px;
             margin-bottom: 2px;
         }
+        
         .invoice-title {
             font-size: 16px;
             font-weight: bold;
             text-align: center;
             margin: 5px 0;
         }
+        
         .section-separator {
             border-top: 1px dashed #000;
-            margin: 5px 0;
+            margin: 15px 0;
         }
+        
         .left-align {
             text-align: left;
         }
+        
         .right-align {
             text-align: right;
         }
-        .center-align {
-            text-align: center;
+        
+        .info-table {
+            width: 100%;
+            margin-bottom: 15px;
+            border-collapse: collapse;
         }
-        .total-section {
-            margin-top: 10px;
-            border-top: 1px solid #000;
-            padding-top: 5px;
+        
+        .info-table td {
+            padding: 4px 0;
+            font-size: 18px;
         }
+        
         .product-table {
-            margin: 5px 0;
-            /* Add padding to the entire table */
-            width: calc(100% - 30px); /* Compensate for padding */
-            margin-left: auto;
-            margin-right: auto;
+            width: 100%;
+            margin: 10px 0;
+            border-collapse: collapse;
         }
-       
-        .invoice-remark {
-            font-size: 13px;
-            text-align: start;
-            margin: 5px 0;
+        
+        .product-table th,
+        .product-table td {
+            padding: 6px 4px;
+            font-size: 18px;
+            vertical-align: top;
         }
+        
         .col-sku {
             width: 40%;
+            text-align: left;
         }
+        
         .col-qty {
-            width: 20%;
+            width: 18%;
             text-align: right;
         }
+        
         .col-price {
-            width: 20%;
+            width: 22%;
             text-align: right;
         }
+        
         .col-total {
             width: 20%;
             text-align: right;
         }
+        
+        .invoice-remark {
+            font-size: 13px;
+            margin: 10px 0;
+        }
+        
         .footer-line {
             border-top: 1px dashed #000;
-            margin: 10px 0 5px 0;
+            margin: 15px 0 10px 0;
         }
-        .thank-you {
-            text-align: center;
+        
+        .total-row {
             font-weight: bold;
-            margin-top: 5px;
+            font-size: 30px;
+            margin-top: 10px;
         }
         
     </style>
 </head>
 <body>
     <div class="header-section">
-    <div class="invoice-title">============== SALES ORDER ============</div>
-            <div class="section-separator"></div>
-
-        <div class="company-name">{{ config('invoice.name', $salesInvoice['customer']['groupcompany']->name ?? 'SF NOODLES SON BHD') }}</div>
+        <div class="invoice-title">============== SALES ORDER ============</div>
+        <div class="company-name">{{ config('invoice.name', $salesInvoice->customer->groupcompany->name ?? 'SF NOODLES SON BHD') }}</div>
         <div class="company-details">(Formerly known as Soon Fatt Foods Sdn Bhd)</div>
         <div class="company-details">ROC.: {{ config('invoice.roc', '201001017887 (901592-A)') }}</div>
         <div class="company-details">{{ config('invoice.address1', '48, Jin TPP 1/18, Tim Industri Puchong,') }}</div>
@@ -116,71 +126,66 @@
         <div class="company-details">t: {{ config('invoice.phone', '03-8061 1490/ 012-311 1531') }}</div>
         <div class="company-details">email: {{ config('invoice.email', 'account@sfnoodles.com') }}</div>
     </div>
-    <div class="section-separator"></div>
-
-    <table>
+    
+    <table class="info-table">
         <tr>
             <td class="left-align">Invoice Date</td>
-            <td class="right-align">{{ date_format(date_create($salesInvoice['date']),'d M Y') ?? '' }}</td>
+            <td class="right-align">{{ $salesInvoice->date ? date_format(date_create($salesInvoice->date), 'd M Y') : '' }}</td>
         </tr>
         <tr>
             <td class="left-align">Invoice No:</td>
-            <td class="right-align">{{ $salesInvoice['invoiceno'] ?? '' }}</td>
+            <td class="right-align">{{ $salesInvoice->invoiceno ?? '' }}</td>
         </tr>
-    </table>
-
-    <div class="section-separator"></div>
-
-    <table>
         <tr>
             <td class="left-align">Customer:</td>
-            <td class="right-align">{{ $salesInvoice['customer']['company'] ?? '' }}</td>
+            <td class="right-align">{{ $salesInvoice->customer->company ?? '' }}</td>
         </tr>
         <tr>
             <td class="left-align">Created By:</td>
-            <td class="right-align">{{ $creatorName ?? ''}}</td>
+            <td class="right-align">{{ $creatorName ?? '' }}</td>
         </tr>
     </table>
 
-    <div class="section-separator"></div>
-
-    <!-- OPTION 1: Wrap table in a div container -->
-    <div class="table-container">
-        <table class="product-table">
+    <table class="product-table">
+        <thead>
             <tr>
-                <th class="col-sku left-align">SKU</th>
+                <th class="col-sku">SKU</th>
                 <th class="col-qty">Qty</th>
                 <th class="col-price">U.Price</th>
                 <th class="col-total">Total</th>
             </tr>
-            @php
-                $totalamount = 0;
-            @endphp
-            @foreach ($salesInvoice['salesInvoiceDetails'] as $salesInvoiceDetail)
-                @php
-                    $totalamount = ($totalamount ?? 0) + $salesInvoiceDetail['totalprice'];
-                @endphp
-                <tr>
-                    <td class="col-sku left-align">{{ $salesInvoiceDetail['product']['code'] }}</td>
-                    <td class="col-qty">{{ $salesInvoiceDetail['quantity'] }}</td>
-                    <td class="col-price">{{ number_format($salesInvoiceDetail['price'], 2) }}</td>
-                    <td class="col-total">{{ number_format($salesInvoiceDetail['totalprice'], 2) }}</td>
-                </tr>
+        </thead>
+        <tbody>
+            @foreach ($allItems as $item)
+            <tr>
+                <td class="col-sku">
+                    {{ $item['display_name'] }}
+                </td>
+                <td class="col-qty">{{ $item['quantity'] }}</td>
+                <td class="col-price">{{ number_format($item['price'], 2) }}</td>
+                <td class="col-total">{{ number_format($item['totalprice'], 2) }}</td>
+            </tr>
             @endforeach
-        </table>
-    </div>
+        </tbody>
+    </table>
 
     <div class="section-separator"></div>
 
-    <table>
-        <tr>
-            <td class="left-align" style="font-weight: bold; font-size: 30px;">Total</td>
-            <td class="right-align" style="font-weight: bold; font-size: 30px;">RM {{ number_format($totalamount, 2) }}</td>
-        </tr>
-    </table>
+    <div class="total-row">
+        <table class="info-table">
+            <tr>
+                <td class="left-align" style="font-weight: bold; font-size: 30px;">Total</td>
+                <td class="right-align" style="font-weight: bold; font-size: 30px;">
+                    RM {{ number_format($finalTotal, 2) }}
+                </td>
+            </tr>
+        </table>
+    </div>
 
     <div class="footer-line"></div>
-    <div class="invoice-remark">@if($salesInvoice->remark)REMARK : {{$salesInvoice->remark}}@endif</div>
-
+    
+    @if($salesInvoice->remark)
+    <div class="invoice-remark">REMARK : {{ $salesInvoice->remark }}</div>
+    @endif
 </body>
 </html>

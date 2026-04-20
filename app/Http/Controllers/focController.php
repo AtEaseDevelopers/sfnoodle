@@ -15,6 +15,7 @@ use App\Models\foc;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class focController extends AppBaseController
 {
@@ -45,26 +46,89 @@ class focController extends AppBaseController
      */
     public function create()
     {
-        return view('focs.create');
+        // Get all customers for the multi-select dropdown
+        $customerItems = \App\Models\Customer::pluck('company', 'id')->toArray();
+        $productData = \App\Models\Product::all(); // Assuming you have this
+        
+        return view('focs.create', compact('customerItems', 'productData'));
     }
 
     /**
      * Store a newly created foc in storage.
      *
-     * @param CreatefocRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function store(CreatefocRequest $request)
+    public function store(Request $request)
     {
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|exists:products,id',
+            'customer_ids' => 'required|array|min:1',
+            'customer_ids.*' => 'exists:customers,id',
+            'quantity' => 'required|numeric|min:0',
+            'free_product_id' => 'required|exists:products,id',
+            'free_quantity' => 'required|numeric|min:0',
+            'startdate' => 'required|date',
+            'enddate' => 'required|date|after_or_equal:startdate',
+            'status' => 'nullable|in:0,1'
+        ], [
+            'customer_ids.required' => 'Please select at least one customer.',
+            'customer_ids.min' => 'Please select at least one customer.',
+            'product_id.required' => 'Please select a product.',
+            'free_product_id.required' => 'Please select a free product.',
+            'enddate.after_or_equal' => 'End date must be after or equal to start date.'
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                        ->withErrors($validator)
+                        ->withInput();
+        }
+
         $input = $request->all();
-
-        $input['startdate'] = date_create($input['startdate']);
-        $input['enddate'] = date_create($input['enddate'] . '23:59:59');
-
-        $foc = $this->focRepository->create($input);
-
-        Flash::success(__('focs.foc_saved_successfully'));
+        
+        // Handle multiple customers
+        $customerIds = $input['customer_ids'] ?? [];
+        
+        // If only one customer is selected (backward compatibility)
+        if (isset($input['customer_id']) && empty($customerIds)) {
+            $customerIds = [$input['customer_id']];
+        }
+        
+        // Remove customer_ids from input to avoid issues with repository
+        unset($input['customer_ids']);
+        
+        $createdCount = 0;
+        $errors = [];
+        
+        foreach ($customerIds as $customerId) {
+            try {
+                $focData = $input;
+                $focData['customer_id'] = $customerId;
+                $focData['startdate'] = date_create($focData['startdate']);
+                $focData['enddate'] = date_create($focData['enddate'] . ' 23:59:59');
+                
+                $foc = $this->focRepository->create($focData);
+                $createdCount++;
+            } catch (\Exception $e) {
+                $errors[] = "Failed to create FOC for customer ID: $customerId";
+                \Log::error("FOC creation failed for customer $customerId: " . $e->getMessage());
+            }
+        }
+        
+        if ($createdCount > 0) {
+            if ($createdCount > 1) {
+                Flash::success("$createdCount FOC entries saved successfully.");
+            } else {
+                Flash::success(__('focs.foc_saved_successfully'));
+            }
+        }
+        
+        if (!empty($errors)) {
+            Flash::warning("Some entries failed: " . implode(", ", $errors));
+        }
 
         return redirect(route('focs.index'));
     }
@@ -101,25 +165,28 @@ class focController extends AppBaseController
     {
         $id = Crypt::decrypt($id);
         $foc = $this->focRepository->find($id);
+        
+        // Get all customers for the dropdown (single select for edit)
+        $customerItems = \App\Models\Customer::pluck('company', 'id')->toArray();
+        $productData = \App\Models\Product::all(); // Assuming you have this
 
         if (empty($foc)) {
             Flash::error(__('focs.foc_not_found'));
-
             return redirect(route('focs.index'));
         }
 
-        return view('focs.edit')->with('foc', $foc);
+        return view('focs.edit', compact('foc', 'customerItems', 'productData'));
     }
 
     /**
      * Update the specified foc in storage.
      *
      * @param int $id
-     * @param UpdatefocRequest $request
+     * @param Request $request
      *
      * @return Response
      */
-    public function update($id, UpdatefocRequest $request)
+    public function update($id, Request $request)
     {
         $id = Crypt::decrypt($id);
         $foc = $this->focRepository->find($id);
@@ -130,10 +197,34 @@ class focController extends AppBaseController
             return redirect(route('focs.index'));
         }
 
-        $input = $request->all();
+        // Validate the request
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|exists:products,id',
+            'customer_id' => 'required|exists:customers,id',
+            'quantity' => 'required|numeric|min:0',
+            'free_product_id' => 'required|exists:products,id',
+            'free_quantity' => 'required|numeric|min:0',
+            'startdate' => 'required|date',
+            'enddate' => 'required|date|after_or_equal:startdate',
+            'status' => 'nullable|in:0,1'
+        ], [
+            'customer_id.required' => 'Please select a customer.',
+            'product_id.required' => 'Please select a product.',
+            'free_product_id.required' => 'Please select a free product.',
+            'enddate.after_or_equal' => 'End date must be after or equal to start date.'
+        ]);
 
+        if ($validator->fails()) {
+            return redirect()->back()
+                        ->withErrors($validator)
+                        ->withInput();
+        }
+
+        $input = $request->all();
+        
+        // For update, we only handle single customer (maintain existing functionality)
         $input['startdate'] = date_create($input['startdate']);
-        $input['enddate'] = date_create($input['enddate'] . '23:59:59');
+        $input['enddate'] = date_create($input['enddate'] . ' 23:59:59');
 
         $foc = $this->focRepository->update($input, $id);
 

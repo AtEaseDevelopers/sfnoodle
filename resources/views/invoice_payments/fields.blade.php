@@ -7,24 +7,25 @@
 <!-- Invoice Id Field - MULTIPLE SELECTION -->
 <div class="form-group col-sm-6">
     {!! Form::label('invoice_id', __('invoice_payments.invoice_no')) !!}<span class="asterisk"> *</span>
-    <select name="invoice_id[]" id="invoice_id" class="form-control select2-invoice" multiple data-live-search="true">
+    <select name="invoice_id[]" id="invoice_id" class="form-control select2-invoice" multiple data-live-search="true" {{ isset($invoicePayment) ? 'disabled' : '' }}>
         <option disabled>Pick Invoices...</option>
-        @if(isset($invoices) && !isset($invoicePayment))
+        @if(isset($invoices))
             @foreach($invoices as $invoice)
-                <option value="{{ $invoice->id }}" {{ isset($selectedInvoices) && in_array($invoice->id, $selectedInvoices) ? 'selected' : '' }}>
-                    {{ $invoice->invoiceno }} - RM {{ number_format($invoice->total_amount, 2) }} - {{ $invoice->date }}
+                <option value="{{ $invoice->id }}" 
+                    {{ (isset($selectedInvoices) && in_array($invoice->id, $selectedInvoices)) ? 'selected' : '' }}>
+                    {{ $invoice->invoiceno }} - RM {{ number_format($invoice->total_amount ?? 0, 2) }} - {{ $invoice->date }}
                 </option>
             @endforeach
         @endif
     </select>
     
+    <!-- Hidden fields for selected invoices in edit mode -->
     @if(isset($invoicePayment) && isset($selectedInvoices))
         @foreach($selectedInvoices as $selectedInvoice)
             <input type="hidden" name="invoice_id[]" value="{{ $selectedInvoice }}">
         @endforeach
     @endif
 </div>
-
 <!-- Type Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('type', __('invoice_payments.type')) !!}<span class="asterisk"> *</span>
@@ -257,21 +258,15 @@
             var invoice_ids = $('#invoice_id').val();
             if(invoice_ids && invoice_ids.length > 0){
                 ShowLoad();
-                var url = '{{ config("app.url") }}/invoicePayments/getinvoice';
+                var url = '{{ config("app.url") }}/invoicePayments/getinvoices';
                 var params = $.param({invoice_ids: invoice_ids});
                 $.get(url + '?' + params, function(data, status){
                     if(status == 'success'){
                         if(data.status){
                             var totalAmount = 0;
                             data.data.forEach((invoice) => {
-                                // Sum up the total amount from invoice details
-                                if(invoice.invoice_details  && invoice.invoice_details .length > 0) {
-                                    invoice.invoice_details .forEach((detail) => {
-                                        totalAmount += parseFloat(detail.totalprice);
-                                    });
-                                } else if(invoice.total_amount) {
-                                    totalAmount += parseFloat(invoice.total_amount);
-                                }
+                                // Use the pre-calculated discounted total from backend
+                                totalAmount += parseFloat(invoice.total_amount);
                             });
                             $('#amount').val(totalAmount.toFixed(2));
                         }else{

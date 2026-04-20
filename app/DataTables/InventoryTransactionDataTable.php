@@ -28,11 +28,13 @@ class InventoryTransactionDataTable extends DataTable
                 $colors = [
                     InventoryTransaction::TYPE_STOCK_IN => 'success', // Green
                     InventoryTransaction::TYPE_STOCK_RETURN => 'danger', // Orange
+                    InventoryTransaction::TYPE_INVOICE => 'warning', // Yellow
                 ];
                 
                 $labels = [
                     InventoryTransaction::TYPE_STOCK_IN => 'Stock In',
                     InventoryTransaction::TYPE_STOCK_RETURN => 'Stock Return',
+                    InventoryTransaction::TYPE_INVOICE => 'invoice',
                 ];
                 
                 $color = $colors[$model->type] ?? 'secondary';
@@ -44,7 +46,8 @@ class InventoryTransactionDataTable extends DataTable
             ->editColumn('quantity', function ($model) {
                 $colors = [
                     InventoryTransaction::TYPE_STOCK_IN => 'text-success font-weight-bold',
-                    InventoryTransaction::TYPE_STOCK_RETURN => 'text-warning font-weight-bold',
+                    InventoryTransaction::TYPE_STOCK_RETURN => 'text-danger font-weight-bold',
+                    InventoryTransaction::TYPE_INVOICE => 'text-warning font-weight-bold',
                 ];
                 
                 $sign = $model->type == InventoryTransaction::TYPE_STOCK_IN ? '+' : '-';
@@ -146,7 +149,7 @@ class InventoryTransactionDataTable extends DataTable
                         var column = this;
                         if(columns[index].searchable){
                             if(columns[index].title == \'Type\'){
-                                var input = \'<select class="border-0" id="typeStock" style="width: 100%;"><option value=""></option><option value="1">Stock In</option><option value="2">Stock Return</option></select>\';
+                                var input = \'<select class="border-0" id="typeStock" style="width: 100%;"><option value=""></option><option value="1">Stock In</option><option value="2">Invoice</option><option value="3">Stock Return</option></select>\';
                             }else if(columns[index].title == \'Date\'){
                                 var input = \'<input type="text" id="\'+index+\'Date" onclick="searchDateColumn(this);" placeholder="Search ">\';
                             }else{

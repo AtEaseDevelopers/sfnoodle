@@ -1733,7 +1733,7 @@ class DriverController extends Controller
                     $invoicedetail->remark = "FOC"; // Mark as FOC but do NOT count towards achievequantity
                 } else {
                     // Only update FOC achievequantity if the product is NOT FOC
-                    $foc = Foc::where('customer_id', $customer->id)
+                    $foc = foc::where('customer_id', $customer->id)
                         ->where('product_id', $id['product_id'])
                         ->where('startdate', '<=', date('Y-m-d H:i:s'))
                         ->where('enddate', '>', date('Y-m-d H:i:s'))
@@ -3989,7 +3989,7 @@ class DriverController extends Controller
                     'paymentterm' => strtolower($salesInvoice->customer->paymentterm ?? ''),
                     'phone' => $salesInvoice->customer->phone ?? '',
                 ],
-                'paymentterm' => $salesInvoice->paymentterm,
+                'paymentterm' => strtolower($salesInvoice->paymentterm),
                 'status' => $salesInvoice->getStatusTextAttribute(),
                 'remark' => $salesInvoice->remark,
                 'total' => number_format($salesInvoice->total, 2),
@@ -4031,7 +4031,6 @@ class DriverController extends Controller
     public function getSalesInvoicepdf($invoice_id)
     {
         try {
-
             $salesInvoice = SalesInvoice::where('id', $invoice_id)
                 ->with(['customer', 'salesInvoiceDetails.product', 'createdByUser', 'createdByDriver'])
                 ->first();
@@ -4044,14 +4043,151 @@ class DriverController extends Controller
                 ], 200);
             }
 
+            // Prepare purchased items for FOC calculation
+            $purchasedItems = [];
+            foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+                $purchasedItems[] = [
+                    'product_id' => $detail->product_id,
+                    'quantity' => $detail->quantity,
+                    'price' => $detail->price
+                ];
+            }
+            
+            // Calculate FOC items using the sales invoice date
+            $invoiceDate = $salesInvoice->date;
+            $focItems = \App\Models\foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
+            
+            // Merge original items with FOC items for display
+            $allItems = [];
+            $originalTotal = 0;
+            $offerAmount = 0; // Add offer amount variable
+            
+            // Process each purchased item with tiered pricing
+            foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+                $product = $detail->product;
+                $quantity = $detail->quantity;
+                $regularPrice = $product->price;
+                
+                // Check for special price for this customer
+                $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                    ->where('customer_id', $salesInvoice->customer_id)
+                    ->where('status', 1)
+                    ->first();
+                
+                $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+                
+                // Get tiered pricing
+                $tieredPricing = $product->tiered_pricing;
+                
+                if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                    // Sort tiers by quantity descending (largest first for best value)
+                    usort($tieredPricing, function($a, $b) {
+                        return $b['quantity'] - $a['quantity'];
+                    });
+                    
+                    $remainingQuantity = $quantity;
+                    
+                    // Apply tiered pricing for each tier
+                    foreach ($tieredPricing as $tier) {
+                        if ($remainingQuantity <= 0) {
+                            break;
+                        }
+                        
+                        $tierQuantity = $tier['quantity'];
+                        $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
+                        
+                        // Calculate how many full tier packages fit into remaining quantity
+                        $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                        
+                        if ($numberOfPackages > 0) {
+                            $quantityInThisTier = $numberOfPackages * $tierQuantity;
+                            $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                            $regularTotalForThisTier = $quantityInThisTier * $basePrice;
+                            
+                            $originalTotal += $regularTotalForThisTier;
+                            $offerAmount += ($regularTotalForThisTier - $itemTotal); // Calculate offer amount
+                            
+                            // Add as a single line item with quantity = number of packages
+                            $allItems[] = [
+                                'product_code' => $product->code,
+                                'product_name' => $product->name,
+                                'quantity' => $numberOfPackages, // Number of packages
+                                'price' => $tierPrice, // Package price
+                                'totalprice' => $itemTotal,
+                                'is_foc' => false,
+                                'display_name' => $product->code . " ({$tierQuantity} units)",
+                                'tier_quantity' => $tierQuantity,
+                                'has_offer' => true
+                            ];
+                            
+                            $remainingQuantity -= $quantityInThisTier;
+                        }
+                    }
+                    
+                    // Handle remaining quantity with base price (special or regular)
+                    if ($remainingQuantity > 0) {
+                        $itemTotal = $remainingQuantity * $basePrice;
+                        $originalTotal += $itemTotal;
+                        
+                        $allItems[] = [
+                            'product_code' => $product->code,
+                            'product_name' => $product->name,
+                            'quantity' => $remainingQuantity,
+                            'price' => $basePrice,
+                            'totalprice' => $itemTotal,
+                            'is_foc' => false,
+                            'display_name' => $product->code,
+                            'has_offer' => false
+                        ];
+                    }
+                } else {
+                    // No tiered pricing, use base price (special or regular)
+                    $itemTotal = $quantity * $basePrice;
+                    $originalTotal += $itemTotal;
+                    
+                    $allItems[] = [
+                        'product_code' => $product->code,
+                        'product_name' => $product->name,
+                        'quantity' => $quantity,
+                        'price' => $basePrice,
+                        'totalprice' => $itemTotal,
+                        'is_foc' => false,
+                        'display_name' => $product->code,
+                        'has_offer' => false
+                    ];
+                }
+            }
+            
+            // Add FOC items
+            foreach ($focItems as $focItem) {
+                $allItems[] = [
+                    'product_code' => $focItem['product_code'],
+                    'product_name' => $focItem['product_name'],
+                    'quantity' => $focItem['quantity'],
+                    'price' => 0,
+                    'totalprice' => 0,
+                    'is_foc' => true,
+                    'display_name' => $focItem['product_code'] . " (FOC)",
+                    'has_offer' => false
+                ];
+            }
+            
+            // Calculate final total after discount
+            $finalTotal = $originalTotal - $offerAmount;
+            
             $min = 450;
             $each = 23;
-            $height = (count($salesInvoice['salesInvoiceDetails']) * $each) + $min;
+            $height = (count($allItems) * $each) + $min;
             $creator = $salesInvoice->creator;
             
             $pdf = Pdf::loadView('sales_invoices.print', array(
                 'salesInvoice' => $salesInvoice,
-                'creatorName' => $creator->name
+                'creatorName' => $creator->name ?? 'System',
+                'allItems' => $allItems,
+                'originalTotal' => $originalTotal,
+                'offerAmount' => $offerAmount,
+                'finalTotal' => $finalTotal,
+                'focItems' => $focItems
             ));
             
             $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
@@ -4067,6 +4203,7 @@ class DriverController extends Controller
             ], 200);
         }
     }
+
 
     public function convertSalesInvoice(Request $request, $id)
     {
@@ -4169,13 +4306,19 @@ class DriverController extends Controller
 
             // If there are insufficient products, return error
             if (!empty($insufficientProducts)) {
+                $errorMessage = "Insufficient inventory balance:\n";
+                foreach ($insufficientProducts as $product) {
+                    $errorMessage .= sprintf(
+                        "• %s: Need %d, Available %d\n",
+                        $product['product_name'],
+                        $product['required_quantity'],
+                        $product['available_quantity'],
+                    );
+                }
+                
                 return response()->json([
                     'result' => false,
-                    'message' => __LINE__ . $this->message_separator . 'Insufficient inventory balance',
-                    'errors' => [
-                        'inventory' => ['Some products have insufficient inventory']
-                    ],
-                    'insufficient_products' => $insufficientProducts,
+                    'message' => __LINE__ . $this->message_separator . $errorMessage,
                     'data' => null
                 ], 200);
             }
@@ -4278,7 +4421,7 @@ class DriverController extends Controller
                             $driver->id,
                             $productId,
                             $quantity,
-                            InventoryTransaction::TYPE_STOCK_OUT,
+                            InventoryTransaction::TYPE_INVOICE,
                            'Sales order converted to invoice: ' . $invoice->invoiceno,
                             $invoice->id,
                         ]);
@@ -4382,7 +4525,7 @@ class DriverController extends Controller
                             $driver->id,
                             $productId,
                             $quantity,
-                            InventoryTransaction::TYPE_STOCK_OUT,
+                            InventoryTransaction::TYPE_INVOICE,
                             'Sales order converted to invoice: ' . $invoice->invoiceno,
                             $invoice->id,
                         ]);
@@ -4708,6 +4851,19 @@ class DriverController extends Controller
             ], 200);
         }
 
+        $inventoryCountRecord = InventoryCount::where('driver_id', $driver->id)
+            ->where('trip_id', $driver->trip_id)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->first();
+
+        if($inventoryCountRecord){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have completed inventory count, cannot add new invoice, You may continue in next new trip.',
+                'data' => null
+            ], 200);
+        }
+        
         // Get customer payment term
         $customer = Customer::find($request->customer_id);
         if (!$customer) {
@@ -4902,7 +5058,7 @@ class DriverController extends Controller
                             $driver->id,
                             $detail['product_id'], // ✅ Use product_id from invoice detail
                             $detail['quantity'],    // ✅ Use quantity from invoice detail
-                            InventoryTransaction::TYPE_STOCK_OUT,
+                            InventoryTransaction::TYPE_INVOICE,
                             'Create Invoice with ID: ' . $invoice->invoiceno,
                             $invoice->id
                         );
@@ -5213,9 +5369,8 @@ class DriverController extends Controller
 	public function getinvoicepdf($invoice_id)
     {
         try {
-
             $invoice = Invoice::where('id', $invoice_id)
-                ->with(['customer', 'InvoiceDetails.product', 'createdByUser', 'createdByDriver'])
+                ->with(['customer', 'invoiceDetails.product', 'createdByUser', 'createdByDriver'])
                 ->first();
 
             if (empty($invoice)) {
@@ -5226,14 +5381,151 @@ class DriverController extends Controller
                 ], 200);
             }
             
+            // Prepare purchased items for FOC calculation
+            $purchasedItems = [];
+            foreach ($invoice->invoiceDetails as $detail) {
+                $purchasedItems[] = [
+                    'product_id' => $detail->product_id,
+                    'quantity' => $detail->quantity,
+                    'price' => $detail->price
+                ];
+            }
+            
+            // Calculate FOC items using the invoice date
+            $invoiceDate = $invoice->date;
+            $focItems = \App\Models\foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
+            
+            // Merge original items with tiered pricing breakdown
+            $allItems = [];
+            $originalTotal = 0;
+            $offerAmount = 0;
+            
+            // Process each purchased item with tiered pricing
+            foreach ($invoice->invoiceDetails as $detail) {
+                $product = $detail->product;
+                $quantity = $detail->quantity;
+                $regularPrice = $product->price;
+                
+                // Check for special price for this customer
+                $specialPrice = SpecialPrice::where('product_id', $product->id)
+                    ->where('customer_id', $invoice->customer_id)
+                    ->where('status', 1)
+                    ->first();
+                
+                $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+                
+                // Get tiered pricing
+                $tieredPricing = $product->tiered_pricing;
+                
+                if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                    // Sort tiers by quantity ascending
+                    usort($tieredPricing, function($a, $b) {
+                        return $a['quantity'] - $b['quantity'];
+                    });
+                    
+                    $remainingQuantity = $quantity;
+                    
+                    // Apply tiered pricing for each tier
+                    foreach ($tieredPricing as $tier) {
+                        if ($remainingQuantity <= 0) {
+                            break;
+                        }
+                        
+                        $tierQuantity = $tier['quantity'];
+                        $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
+                        
+                        // Calculate how many full tier packages fit into remaining quantity
+                        $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                        
+                        if ($numberOfPackages > 0) {
+                            $quantityInThisTier = $numberOfPackages * $tierQuantity;
+                            $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                            $regularTotalForThisTier = $quantityInThisTier * $basePrice;
+                            
+                            $originalTotal += $regularTotalForThisTier;
+                            $offerAmount += ($regularTotalForThisTier - $itemTotal);
+                            
+                            // Add as a single line item with quantity = number of packages
+                            $allItems[] = [
+                                'product_code' => $product->code,
+                                'product_name' => $product->name,
+                                'quantity' => $numberOfPackages, // Number of packages
+                                'price' => $tierPrice, // Package price
+                                'totalprice' => $itemTotal,
+                                'is_foc' => false,
+                                'display_name' => $product->code . " ({$tierQuantity} units)",
+                                'has_offer' => true,
+                                'tier_quantity' => $tierQuantity
+                            ];
+                            
+                            $remainingQuantity -= $quantityInThisTier;
+                        }
+                    }
+                    
+                    // Handle remaining quantity with base price (special or regular)
+                    if ($remainingQuantity > 0) {
+                        $itemTotal = $remainingQuantity * $basePrice;
+                        $originalTotal += $itemTotal;
+                        
+                        $allItems[] = [
+                            'product_code' => $product->code,
+                            'product_name' => $product->name,
+                            'quantity' => $remainingQuantity,
+                            'price' => $basePrice,
+                            'totalprice' => $itemTotal,
+                            'is_foc' => false,
+                            'display_name' => $product->code,
+                            'has_offer' => false
+                        ];
+                    }
+                } else {
+                    // No tiered pricing, use base price (special or regular)
+                    $itemTotal = $quantity * $basePrice;
+                    $originalTotal += $itemTotal;
+                    
+                    $allItems[] = [
+                        'product_code' => $product->code,
+                        'product_name' => $product->name,
+                        'quantity' => $quantity,
+                        'price' => $basePrice,
+                        'totalprice' => $itemTotal,
+                        'is_foc' => false,
+                        'display_name' => $product->code,
+                        'has_offer' => false
+                    ];
+                }
+            }
+            
+            // Add FOC items
+            foreach ($focItems as $focItem) {
+                $allItems[] = [
+                    'product_code' => $focItem['product_code'],
+                    'product_name' => $focItem['product_name'],
+                    'quantity' => $focItem['quantity'],
+                    'price' => 0,
+                    'totalprice' => 0,
+                    'is_foc' => true,
+                    'display_name' => $focItem['product_code'] . " (FOC)",
+                    'has_offer' => false
+                ];
+            }
+            
+            // Calculate final total
+            $finalTotal = $originalTotal - $offerAmount;
+            
             $min = 450;
             $each = 23;
-            $height = (count($invoice['invoiceDetails']) * $each) + $min;
+            $height = (count($allItems) * $each) + $min;
             $creator = $invoice->creator;
             
             $pdf = Pdf::loadView('invoices.print', [
                 'invoices' => $invoice,
-                'creatorName' => $creator->name
+                'creatorName' => $creator->name ?? 'System',
+                'allItems' => $allItems,
+                'originalTotal' => $originalTotal,
+                'offerAmount' => $offerAmount,
+                'finalTotal' => $finalTotal,
+                'focItems' => $focItems
             ]);
             
             $pdf->setPaper(array(0, 0, 300, $height), 'portrait')
@@ -5472,6 +5764,176 @@ class DriverController extends Controller
         }
     }
 
+    public function getRecentProducts(Request $request, $customer_id = null, $days = 7)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        try {
+            // Get driver's inventory balances
+            $driverInventory = InventoryBalance::where('driver_id', $driver->id)
+                ->pluck('quantity', 'product_id')
+                ->toArray();
+            
+            // Get special prices if customer_id is provided
+            $specialPrices = [];
+            if ($customer_id) {
+                $specialPrices = SpecialPrice::where('customer_id', $customer_id)
+                    ->where('status', 1)
+                    ->pluck('price', 'product_id')
+                    ->toArray();
+            }
+            
+            // Get recent invoices from last X days
+            $recentDate = Carbon::now()->subDays($days);
+            
+            // Get product IDs from recent invoices (including both driver and admin invoices)
+            // But exclude cancelled invoices
+            $recentProductIds = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
+                $query->where('date', '>=', $recentDate)
+                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
+            })
+            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(invoice_details.created_at) as last_used'))
+            ->groupBy('product_id')
+            ->orderBy('last_used', 'desc')
+            ->orderBy('usage_count', 'desc')
+            ->pluck('product_id')
+            ->toArray();
+            
+            if (empty($recentProductIds)) {
+                return response()->json([
+                    'result' => true,
+                    'message' => __LINE__ . $this->message_separator . 'No recent products found',
+                    'data' => []
+                ], 200);
+            }
+            
+            // Get all products that were in recent invoices
+            $products = Product::where('status', 1)
+                ->whereIn('id', $recentProductIds)
+                ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
+                ->get();
+            
+            // Maintain order based on recent usage (last used first)
+            $products = $products->sortBy(function($product) use ($recentProductIds) {
+                return array_search($product->id, $recentProductIds);
+            });
+            
+            // Helper function to get full image URL
+            $getImageUrl = function($imagePath) {
+                if (empty($imagePath)) {
+                    return null;
+                }
+                return url($imagePath);
+            };
+            
+            // Group products by category string
+            $groupedProducts = [];
+            
+            foreach ($products as $product) {
+                $categoryName = $product->category ?: 'Uncategorized';
+                
+                if (!isset($groupedProducts[$categoryName])) {
+                    $groupedProducts[$categoryName] = [
+                        'category_id' => null,
+                        'category_name' => $categoryName,
+                        'products' => []
+                    ];
+                }
+                
+                // Get quantity from driver's inventory, default to 0 if not found
+                $quantity = $driverInventory[$product->id] ?? 0;
+                
+                // Get price: use special price if available, otherwise default price
+                $price = $specialPrices[$product->id] ?? $product->price;
+                
+                $groupedProducts[$categoryName]['products'][] = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code,
+                    'price' => $price,
+                    'quantity' => $quantity,
+                    'status' => $product->getStatusTextAttribute(),
+                    'image_url' => $getImageUrl($product->image_path),
+                    'usage_count' => null, // Will be filled below
+                    'last_used' => null
+                ];
+            }
+            
+            // Get usage statistics for each product
+            $usageStats = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
+                $query->where('date', '>=', $recentDate)
+                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
+            })
+            ->whereIn('product_id', $recentProductIds)
+            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(created_at) as last_used'))
+            ->groupBy('product_id')
+            ->get()
+            ->keyBy('product_id');
+            
+            // Add usage statistics to products
+            foreach ($groupedProducts as &$category) {
+                foreach ($category['products'] as &$product) {
+                    if (isset($usageStats[$product['id']])) {
+                        $product['usage_count'] = $usageStats[$product['id']]->usage_count;
+                        $product['last_used'] = Carbon::parse($usageStats[$product['id']]->last_used)->toDateTimeString();
+                    } else {
+                        $product['usage_count'] = 0;
+                        $product['last_used'] = null;
+                    }
+                }
+            }
+            
+            // Convert to array and sort categories alphabetically
+            $output = array_values($groupedProducts);
+            
+            // Sort products within each category by last_used (most recent first)
+            foreach ($output as &$category) {
+                usort($category['products'], function($a, $b) {
+                    if ($a['last_used'] === $b['last_used']) {
+                        return $b['usage_count'] - $a['usage_count'];
+                    }
+                    return strcmp($b['last_used'] ?? '', $a['last_used'] ?? '');
+                });
+            }
+            
+            // Sort categories by name
+            usort($output, function($a, $b) {
+                return strcmp($a['category_name'], $b['category_name']);
+            });
+            
+            return response()->json([
+                'result' => true,
+                'message' => __LINE__ . $this->message_separator . 'Recent products retrieved successfully',
+                'data' => [
+                    'products' => $output,
+                    'summary' => [
+                        'days' => $days,
+                        'total_products' => count($recentProductIds),
+                        'date_range' => [
+                            'from' => $recentDate->toDateString(),
+                            'to' => Carbon::now()->toDateString()
+                        ]
+                    ]
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Error getting recent products: ' . $e->getMessage(),
+                'data' => null
+            ], 200);
+        }
+    }
+
     public function getAllProduct(Request $request, $customer_id = null)
     {
         // Validate session
@@ -5499,10 +5961,18 @@ class DriverController extends Controller
                     ->toArray();
             }
             
+            // Helper function to get full image URL
+            $getImageUrl = function($imagePath) {
+                if (empty($imagePath)) {
+                    return null;
+                }
+                return url($imagePath);
+            };
+            
             if($driverInventory){
                 // HAS INVENTORY - Get all products with their categories as string
                 $products = Product::where('status', 1)
-                    ->select('id', 'name', 'category', 'price', 'status', 'code')
+                    ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
                     ->orderBy('name')
                     ->get();
                 
@@ -5532,7 +6002,8 @@ class DriverController extends Controller
                         'code' => $product->code,
                         'price' => $price,
                         'quantity' => $quantity,
-                        'status' => $product->getStatusTextAttribute()
+                        'status' => $product->getStatusTextAttribute(),
+                        'image_url' => $getImageUrl($product->image_path)
                     ];
                 }
                 
@@ -5554,7 +6025,7 @@ class DriverController extends Controller
             } else {
                 // NO INVENTORY - Get all products directly
                 $products = Product::where('status', 1)
-                    ->select('id', 'name', 'category', 'code', 'price', 'status')
+                    ->select('id', 'name', 'category', 'code', 'price', 'status', 'image_path')
                     ->orderBy('name')
                     ->get();
                 
@@ -5581,7 +6052,8 @@ class DriverController extends Controller
                         'code' => $product->code,
                         'price' => $price,
                         'quantity' => 0, // Always 0 when no inventory
-                        'status' => $product->getStatusTextAttribute()
+                        'status' => $product->getStatusTextAttribute(),
+                        'image_url' => $getImageUrl($product->image_path)
                     ];
                 }
                 
@@ -5616,7 +6088,7 @@ class DriverController extends Controller
         }
     }
 
-    public function StockRequest(Request $request)
+    	public function StockRequest(Request $request)
     {
 
         // Validate session
@@ -5636,31 +6108,51 @@ class DriverController extends Controller
                 'data' => null
             ], 200);
         }
+        $inventoryCountRecord = InventoryCount::where('driver_id', $driver->id)
+            ->where('trip_id', $driver->trip_id)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->first();
 
-            $rules = [
-                'items' => 'required|array|min:1',
-                'items.*.product_id' => 'required|exists:products,id',
-                'items.*.quantity' => 'required|integer|min:1',
-                'remarks' => 'nullable|string|max:500'
-            ];
-            
-            $validator = Validator::make($request->all(), $rules);
+        if($inventoryCountRecord){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have completed inventory count, cannot request stock, You may request stock in new trip.',
+                'data' => null
+            ], 200);
+        }
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'result' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors(),
-                    'data' => null
-                ], 200);
-            }
+        $rules = [
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:0', // Allow quantity 0
+            'remarks' => 'nullable|string|max:500'
+        ];
 
-            try {
-                // Get items from request
-                $items = $request->items;
-                
-                // Check for duplicate products
-                $productIds = array_column($items, 'product_id');
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+                'data' => null
+            ], 200);
+        }
+
+        try {
+            // Get items from request and filter out items with quantity 0
+            $items = $request->items;
+            $filteredItems = array_filter($items, function($item) {
+                return $item['quantity'] > 0;
+            });
+
+            // Reindex the array to avoid gaps in keys
+            $filteredItems = array_values($filteredItems);
+
+            // Only create request if there are items with quantity > 0
+            if (!empty($filteredItems)) {
+                // Check for duplicate products in filtered items
+                $productIds = array_column($filteredItems, 'product_id');
                 if (count($productIds) !== count(array_unique($productIds))) {
                     return response()->json([
                         'result' => false,
@@ -5669,10 +6161,10 @@ class DriverController extends Controller
                     ], 200);
                 }
 
-                // Create inventory request with items array
+                // Create inventory request with filtered items array
                 $inventoryRequest = InventoryRequest::create([
                     'driver_id' => $driver->id,
-                    'items' => $items, // Store as JSON array
+                    'items' => $filteredItems, // Store only items with quantity > 0
                     'status' => InventoryRequest::STATUS_PENDING,
                     'trip_id' => $driver->trip_id,
                     'remarks' => $request->remarks ?? null,
@@ -5681,11 +6173,19 @@ class DriverController extends Controller
                 $notificationService = app(NotificationService::class);
                 $notificationService->createStockRequestNotification($driver, $inventoryRequest);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Inventory request created successfully.',
-                'data' => $inventoryRequest
-            ]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Inventory request created successfully.',
+                    'data' => $inventoryRequest
+                ]);
+            } else {
+                // No valid items with quantity > 0, just return success without creating request
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No items with valid quantity to request. Request not created.',
+                    'data' => null
+                ], 200);
+            }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -5730,6 +6230,7 @@ class DriverController extends Controller
                             $product = Product::find($item['product_id'] ?? null);
                             $itemsWithProductNames[] = [
                                 'product_id' => $item['product_id'] ?? null,
+                                'product_code' => $product ? $product->code : 'Unknown Code',
                                 'product_name' => $product ? $product->name : 'Unknown Product',
                                 'quantity' => $item['quantity'] ?? 0
                             ];
@@ -5783,18 +6284,15 @@ class DriverController extends Controller
                 'data' => null
             ], 401);
         }
-
-        if($driver->trip_id == NULL){
-            return response()->json([
-                'result' => false,
-                'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
-                'data' => null
-            ], 200);
-        }
         
         try {
+            // Get records from last 7 days
+            $sevenDaysAgo = Carbon::now()->subDays(7);
+            
             $inventoryReturns = InventoryReturn::where('driver_id', $driver->id)
                 ->where('trip_id', $driver->trip_id)
+                ->where('created_at', '>=', $sevenDaysAgo)
+                ->orderBy('created_at', 'desc') // Optional: order by most recent first
                 ->get()
                 ->map(function ($inventoryReturn) {
                     // Get approver and rejector names
@@ -5838,8 +6336,8 @@ class DriverController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Stock Return Record retrieved successfully.',
-                'data' => $inventoryReturns
+                'message' => 'Stock Return Record retrieved successfully for last 7 days.',
+                'data' => $inventoryReturns,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -5848,6 +6346,7 @@ class DriverController extends Controller
             ], 200);
         }
     }
+
     public function getStockReturn(Request $request)
     {
         // Validate session
@@ -5869,10 +6368,19 @@ class DriverController extends Controller
         }
         
         try {
+            // Helper function to convert UTC to UTC+8 (Malaysia Time)
+            $convertToUTC8 = function($datetime) {
+                if (empty($datetime)) {
+                    return null;
+                }
+                return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+            };
+            
             $inventoryReturns = InventoryReturn::where('driver_id', $driver->id)
                 ->where('trip_id', $driver->trip_id)
+                ->orderBy('created_at', 'desc')  // Order by created_at, latest first
                 ->get()
-                ->map(function ($inventoryReturn) {
+                ->map(function ($inventoryReturn) use ($convertToUTC8) {
                     // Get approver and rejector names
                     $approver = $inventoryReturn->approved_by ? User::find($inventoryReturn->approved_by) : null;
                     $rejector = $inventoryReturn->rejected_by ? User::find($inventoryReturn->rejected_by) : null;
@@ -5890,7 +6398,7 @@ class DriverController extends Controller
                         }
                     }
                     
-                    // Return formatted data
+                    // Return formatted data with converted dates
                     return [
                         'id' => $inventoryReturn->id,
                         'driver_id' => $inventoryReturn->driver_id,
@@ -5903,10 +6411,10 @@ class DriverController extends Controller
                         'approved_by_name' => $approver ? $approver->name : null,
                         'rejected_by' => $inventoryReturn->rejected_by,
                         'rejected_by_name' => $rejector ? $rejector->name : null,
-                        'approved_at' => $inventoryReturn->approved_at,
-                        'rejected_at' => $inventoryReturn->rejected_at,
-                        'created_at' => $inventoryReturn->created_at,
-                        'updated_at' => $inventoryReturn->updated_at,
+                        'approved_at' => $convertToUTC8($inventoryReturn->approved_at),
+                        'rejected_at' => $convertToUTC8($inventoryReturn->rejected_at),
+                        'created_at' => $convertToUTC8($inventoryReturn->created_at),
+                        'updated_at' => $convertToUTC8($inventoryReturn->updated_at),
                         'item_count' => $inventoryReturn->item_count,
                         'total_quantity' => $inventoryReturn->total_quantity,
                     ];
@@ -6006,6 +6514,122 @@ class DriverController extends Controller
                 'message' => 'Failed to create request: ' . $e->getMessage()
             ], 200);
         }
+    }
+
+    public function getStockCountList(Request $request)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+        
+        // Get inventory counts from last 7 days only, ordered by created_at descending (latest first)
+        $inventoryCounts = InventoryCount::where('created_at', '>=', Carbon::now()->subDays(7))
+            ->where('driver_id', $driver->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Get all unique product IDs from all inventory counts
+        $allProductIds = [];
+        foreach ($inventoryCounts as $count) {
+            $items = $count->items;
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    if (isset($item['product_id'])) {
+                        $allProductIds[] = $item['product_id'];
+                    }
+                }
+            }
+        }
+        
+        // Fetch all products in one query
+        $allProductIds = array_unique($allProductIds);
+        $products = Product::whereIn('id', $allProductIds)
+            ->get()
+            ->keyBy('id');
+        
+        $tripIds = $inventoryCounts->pluck('trip_id')->unique()->filter()->toArray();
+        $trips = Trip::whereIn('id', $tripIds)
+            ->get()
+            ->keyBy('id');
+            
+        // Helper function to convert UTC to UTC+8 (Malaysia Time)
+        $convertToUTC8 = function($datetime) {
+            if (empty($datetime)) {
+                return null;
+            }
+            return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+        };
+        
+        // Format the response
+        $formattedCounts = $inventoryCounts->map(function ($count) use ($products, $convertToUTC8) {
+            $items = $count->items;
+            $formattedItems = [];
+            
+            if (is_array($items)) {
+                $formattedItems = array_map(function ($item) use ($products) {
+                    $productId = $item['product_id'];
+                    $product = $products[$productId] ?? null;
+                    
+                    return [
+                        'product_id' => $item['product_id'],
+                        'product_name' => $product ? $product->name : null,
+                        'product_code' => $product ? $product->code : null,
+                        'counted_quantity' => $item['counted_quantity'],
+                        'current_quantity' => $item['current_quantity']
+                    ];
+                }, $items);
+            }
+            
+            $tripUuid = null;
+            $trip = $trips[$count->trip_id] ?? null;
+            if ($trip) {
+                $tripUuid = $trip->uuid;
+            }
+            
+            // Generate PDF URL using trip UUID instead of trip_id
+            $pdf_url = null;
+            if ($tripUuid) {
+                $pdf_url = $this->generateStockCountReport($driver->id, $tripUuid);
+            }
+            
+            // Include driver info if you have driver relationship
+            $driver = null;
+            if ($count->driver_id) {
+                $driver = Driver::find($count->driver_id);
+            }
+            
+            $pdf_url = $this->generateStockCountReport($driver->id, $driver->trip_id);
+
+            return [
+                'id' => $count->id,
+                'driver_id' => $count->driver_id,
+                'driver_name' => $driver ? $driver->name : null,
+                'items' => $formattedItems,
+                'status' => $count->status,
+                'remarks' => $count->remarks,
+                'rejection_reason' => $count->rejection_reason,
+                'approved_by' => User::find($count->approved_by)->name ?? null,
+                'trip_id' => $count->trip_id,
+                'rejected_by' => User::find($count->rejected_by)->name ?? null,
+                'approved_at' => $convertToUTC8($count->approved_at),
+                'rejected_at' => $convertToUTC8($count->rejected_at),
+                'created_at' => $convertToUTC8($count->created_at),
+                'updated_at' => $convertToUTC8($count->updated_at),
+                'pdf_url' => $pdf_url
+            ];
+        });
+
+        return response()->json([
+            'result' => true,
+            'message' => __LINE__ . $this->message_separator . 'Stock Count list retrieved successfully',
+            'data' => $formattedCounts
+        ], 200);
     }
 
     public function StockCountStatus(Request $request)
@@ -6330,9 +6954,8 @@ class DriverController extends Controller
         }
     }
 
-     public function getInventoryTransaction(Request $request)
+    public function getInventoryTransaction(Request $request)
     {
-
         // Validate session
         $driver = Driver::where('session', $request->header('session'))->first();
         if(empty($driver)){
@@ -6343,10 +6966,20 @@ class DriverController extends Controller
             ], 401);
         }
         
+        $data = $request->all();
+        $date = $data['date'] ?? null; // Expecting date in 'Y-m-d' format
+        
         try {
-           $inventoryTransactions = InventoryTransaction::with(['product:id,code'])
-                ->where('driver_id', $driver->id)
-                ->orderBy('created_at', 'desc')
+            // Build query
+            $query = InventoryTransaction::with(['product:id,code'])
+                ->where('driver_id', $driver->id);
+            
+            // Apply date filter if provided
+            if ($date) {
+                $query->whereDate('created_at', $date);
+            }
+            
+            $inventoryTransactions = $query->orderBy('created_at', 'desc')
                 ->get()
                 ->toArray();
 
@@ -6375,7 +7008,8 @@ class DriverController extends Controller
                 'success' => true,
                 'message' => 'Driver Inventory Transactions retrieved successfully.',
                 'data' => $inventoryTransactions
-            ],200);
+            ], 200);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -6500,7 +7134,31 @@ class DriverController extends Controller
                     ];
                 }
             }
-            
+            $customerSummary = $invoices
+                ->groupBy('customer_id')
+                ->map(function($customerInvoices, $customerId) {
+                    $firstInvoice = $customerInvoices->first();
+                    $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : 'Unknown Customer';
+                    
+                    // Calculate total amount for this customer
+                    $totalAmount = $customerInvoices->sum(function($invoice) {
+                        return $invoice->total; // Using the total accessor
+                    });
+                    
+                    // Count number of invoices for this customer
+                    $invoiceCount = $customerInvoices->count();
+                    
+                    return [
+                        'customer_id' => $customerId,
+                        'customer_name' => $customerName,
+                        'total_amount' => (float) $totalAmount,
+                        'formatted_amount' => number_format($totalAmount, 2),
+                        'invoice_count' => $invoiceCount
+                    ];
+                })
+                ->values() // Reset array keys
+                ->sortByDesc('total_amount') // Sort by total amount descending
+                ->toArray();
             
             $result = [
                 'sales' => round($totalAmount,2),
@@ -6510,6 +7168,9 @@ class DriverController extends Controller
 
                 'inventory_balance'=> $inventoryBalances,
                 'trip' => $tripArray,
+                'customer_summary' => $customerSummary,
+
+
             ];
             return response()->json([
                 'result' => true,
@@ -6591,6 +7252,32 @@ class DriverController extends Controller
                 ->values()
                 ->toArray();
 
+            $customerSummary = $invoices
+                ->groupBy('customer_id')
+                ->map(function($customerInvoices, $customerId) {
+                    $firstInvoice = $customerInvoices->first();
+                    $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : '-';
+                    
+                    // Calculate total amount for this customer
+                    $totalAmount = $customerInvoices->sum(function($invoice) {
+                        return $invoice->total; // Using the total accessor
+                    });
+                    
+                    // Count number of invoices for this customer
+                    $invoiceCount = $customerInvoices->count();
+                    
+                    return [
+                        'customer_id' => $customerId,
+                        'customer_name' => $customerName,
+                        'total_amount' => (float) $totalAmount,
+                        'formatted_amount' => number_format($totalAmount, 2),
+                        'invoice_count' => $invoiceCount
+                    ];
+                })
+                ->values() // Reset array keys
+                ->sortByDesc('total_amount') // Sort by total amount descending
+                ->toArray();
+                
             $summaryData = [
                 'trip_summary' => [
                     'trip_id' => $tripSummary['trip_info']['trip_id'] ?? 'T-' . $driver->trip_id,
@@ -6610,6 +7297,8 @@ class DriverController extends Controller
                 ],
                 'stock_summary' => $inventoryBalances, // Directly use the array
                 'products_sold' => $productsSold,
+                'customer_summary' => $customerSummary, 
+
             ];
             
              return response()->json([
@@ -7014,15 +7703,26 @@ class DriverController extends Controller
         }
         
         try {
+            // Get inventory requests from last 7 days only, ordered by created_at descending (latest first)
             $inventoryRequests = InventoryRequest::with([
                 'driver:id,name',
                 'approver:id,name',    // User who approved
                 'rejector:id,name',    // User who rejected
-                // Removed single product relationship since we now have multiple products
-            ])->get();
+            ])
+            ->where('created_at', '>=', Carbon::now()->subDays(7))
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+            // Helper function to convert UTC to UTC+8 (Malaysia Time)
+            $convertToUTC8 = function($datetime) {
+                if (empty($datetime)) {
+                    return null;
+                }
+                return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+            };
             
             // Transform the data to include product names in items array
-            $inventoryRequests->transform(function($request) {
+            $inventoryRequests->transform(function($request) use ($convertToUTC8) {
                 // Get approver and rejector names from relationships
                 $approverName = $request->approver ? $request->approver->name : null;
                 $rejectorName = $request->rejector ? $request->rejector->name : null;
@@ -7045,6 +7745,14 @@ class DriverController extends Controller
                 
                 // Convert to array and add the processed data
                 $requestArray = $request->toArray();
+                
+                // Convert datetime fields to UTC+8
+                $dateFields = ['created_at', 'updated_at', 'approved_at', 'rejected_at'];
+                foreach ($dateFields as $field) {
+                    if (isset($requestArray[$field])) {
+                        $requestArray[$field] = $convertToUTC8($requestArray[$field]);
+                    }
+                }
                 
                 // Add processed items with product names
                 $requestArray['items'] = $itemsWithProductNames;
@@ -7353,7 +8061,10 @@ class DriverController extends Controller
             ], 401);
         }
         
-        $inventoryCounts = InventoryCount::all();
+        // Get inventory counts from last 7 days only, ordered by created_at descending (latest first)
+        $inventoryCounts = InventoryCount::where('created_at', '>=', Carbon::now()->subDays(7))
+            ->orderBy('created_at', 'desc')
+            ->get();
         
         // Get all unique product IDs from all inventory counts
         $allProductIds = [];
@@ -7374,8 +8085,16 @@ class DriverController extends Controller
             ->get()
             ->keyBy('id');
         
+        // Helper function to convert UTC to UTC+8 (Malaysia Time)
+        $convertToUTC8 = function($datetime) {
+            if (empty($datetime)) {
+                return null;
+            }
+            return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+        };
+        
         // Format the response
-        $formattedCounts = $inventoryCounts->map(function ($count) use ($products) {
+        $formattedCounts = $inventoryCounts->map(function ($count) use ($products, $convertToUTC8) {
             $items = $count->items;
             $formattedItems = [];
             
@@ -7387,7 +8106,7 @@ class DriverController extends Controller
                     return [
                         'product_id' => $item['product_id'],
                         'product_name' => $product ? $product->name : null,
-                        'product_code' => $product ? $product->code : null, // Add other product fields if needed
+                        'product_code' => $product ? $product->code : null,
                         'counted_quantity' => $item['counted_quantity'],
                         'current_quantity' => $item['current_quantity']
                     ];
@@ -7411,10 +8130,10 @@ class DriverController extends Controller
                 'approved_by' => $count->approved_by,
                 'trip_id' => $count->trip_id,
                 'rejected_by' => $count->rejected_by,
-                'approved_at' => $count->approved_at,
-                'rejected_at' => $count->rejected_at,
-                'created_at' => $count->created_at,
-                'updated_at' => $count->updated_at
+                'approved_at' => $convertToUTC8($count->approved_at),
+                'rejected_at' => $convertToUTC8($count->rejected_at),
+                'created_at' => $convertToUTC8($count->created_at),
+                'updated_at' => $convertToUTC8($count->updated_at)
             ];
         });
 
@@ -7608,19 +8327,19 @@ class DriverController extends Controller
             }
 
             // Check if driver has enough stock for all items
-            $errors = [];
-            foreach ($items as $item) {
-                $inventoryBalance = InventoryBalance::where([
-                    'driver_id' => $request->driver_id,
-                    'product_id' => $item['product_id']
-                ])->first();
+            // $errors = [];
+            // foreach ($items as $item) {
+            //     $inventoryBalance = InventoryBalance::where([
+            //         'driver_id' => $request->driver_id,
+            //         'product_id' => $item['product_id']
+            //     ])->first();
 
-                $currentBalance = $inventoryBalance->quantity ?? 0;
-                if ($currentBalance < $item['quantity']) {
-                    $product = Product::find($item['product_id']);
-                    $errors[] = $product->name . ': Available stock: ' . $currentBalance . ', Requested: ' . $item['quantity'];
-                }
-            }
+            //     $currentBalance = $inventoryBalance->quantity ?? 0;
+            //     if ($currentBalance < $item['quantity']) {
+            //         $product = Product::find($item['product_id']);
+            //         $errors[] = $product->name . ': Available stock: ' . $currentBalance . ', Requested: ' . $item['quantity'];
+            //     }
+            // }
 
             if (!empty($errors)) {
                 return response()->json([
@@ -7658,7 +8377,7 @@ class DriverController extends Controller
                     $inventoryReturn->driver_id,
                     $item['product_id'],
                     $item['quantity'],
-                    InventoryTransaction::TYPE_STOCK_OUT,
+                    InventoryTransaction::TYPE_STOCK_RETURN,
                     'Stock Return - Return ID: ' . $inventoryReturn->id . ' - Approved by: ' . $user->name,
                 );
             }
@@ -7709,6 +8428,87 @@ class DriverController extends Controller
         }
     }
 
+    public function getStockReturnList(Request $request)
+    {
+        // Validate session
+        $user = User::where('session', $request->header('session'))->first();
+        if(empty($user)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+        
+        try {
+            // Helper function to convert UTC to UTC+8 (Malaysia Time)
+            $convertToUTC8 = function($datetime) {
+                if (empty($datetime)) {
+                    return null;
+                }
+                return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+            };
+            
+            $inventoryReturns = InventoryReturn::orderBy('created_at', 'desc')  // Order by created_at, latest first
+                ->get()
+                ->map(function ($inventoryReturn) use ($convertToUTC8) {
+                    // Get approver and rejector names
+                    $approver = $inventoryReturn->approved_by ? User::find($inventoryReturn->approved_by) : null;
+                    $rejector = $inventoryReturn->rejected_by ? User::find($inventoryReturn->rejected_by) : null;
+                    
+                    // Process items array to add product names
+                    $itemsWithProductNames = [];
+                    if ($inventoryReturn->items && is_array($inventoryReturn->items)) {
+                        foreach ($inventoryReturn->items as $item) {
+
+                            $product = Product::find($item['product_id'] ?? null);
+                            $itemsWithProductNames[] = [
+                                'product_id' => $item['product_id'] ?? null,
+                                'product_code' => $product ? $product->code : null, 
+                                'product_name' => $product ? $product->name : 'Unknown Product',
+                                'quantity' => $item['quantity'] ?? 0,
+                                'image_url' => $product->image_path ? url($product->image_path) : ""
+
+                            ];
+                        }
+                    }
+                    
+                
+                    // Return formatted data with converted dates
+                    return [
+                        'id' => $inventoryReturn->id,
+                        'driver_id' => $inventoryReturn->driver,
+                        'trip_id' => $inventoryReturn->trip_id,
+                        'items' => $itemsWithProductNames,
+                        'status' => $inventoryReturn->status,
+                        'remarks' => $inventoryReturn->remarks,
+                        'rejection_reason' => $inventoryReturn->rejection_reason,
+                        'approved_by' => $inventoryReturn->approved_by,
+                        'approved_by_name' => $approver ? $approver->name : null,
+                        'rejected_by' => $inventoryReturn->rejected_by,
+                        'rejected_by_name' => $rejector ? $rejector->name : null,
+                        'approved_at' => $convertToUTC8($inventoryReturn->approved_at),
+                        'rejected_at' => $convertToUTC8($inventoryReturn->rejected_at),
+                        'created_at' => $convertToUTC8($inventoryReturn->created_at),
+                        'updated_at' => $convertToUTC8($inventoryReturn->updated_at),
+                        'item_count' => $inventoryReturn->item_count,
+                        'total_quantity' => $inventoryReturn->total_quantity,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock Return Record retrieved successfully.',
+                'data' => $inventoryReturns
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get stock return record: ' . $e->getMessage()
+            ], 200);
+        }
+    }
+
     public function getDriverProduct(Request $request)
     {
         // Validate session
@@ -7744,9 +8544,17 @@ class DriverController extends Controller
                 })
                 ->toArray();
 
-            // Get all active products with category string
+            // Helper function to get full image URL
+            $getImageUrl = function($imagePath) {
+                if (empty($imagePath)) {
+                    return null;
+                }
+                return url($imagePath);
+            };
+
+            // Get all active products with category string and image
             $products = Product::where('status', 1)
-                ->select('id', 'name', 'category', 'code', 'price', 'status')
+                ->select('id', 'name', 'category', 'code', 'price', 'status', 'image_path')
                 ->orderBy('name')
                 ->get();
             
@@ -7768,7 +8576,8 @@ class DriverController extends Controller
                     'name' => $product->name,
                     'code' => $product->code,
                     'price' => $product->price,
-                    'status' => $product->getStatusTextAttribute()
+                    'status' => $product->getStatusTextAttribute(),
+                    'image_url' => $getImageUrl($product->image_path)
                 ];
             }
             
@@ -7797,7 +8606,8 @@ class DriverController extends Controller
                             'code' => $product['code'],
                             'price' => $product['price'],
                             'quantity' => $driverInventory[$product['id']] ?? 0,
-                            'status' => $product['status']
+                            'status' => $product['status'],
+                            'image_url' => $product['image_url']
                         ];
                     }, $category['products']);
                     
@@ -7937,7 +8747,6 @@ class DriverController extends Controller
             ->where('is_read', false)
             ->update([
                 'is_read' => true,
-                'read_at' => now()
             ]);
 
             return response()->json([
@@ -7949,7 +8758,7 @@ class DriverController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'result' => false,
-                'message' => 'Error marking notification as read',
+                'message' => $e->getMessage(),
                 'data' => null
             ], 500);
         }

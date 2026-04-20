@@ -142,16 +142,13 @@
         <table class="trip-info">
             <tr>
                 <td><strong>Agent :</strong> {{ $salesman }}</td>
-                <td><strong>Trip ID :</strong> {{ $trip_id }}</td>
-            </tr>
-            <tr>
-                <td><strong>Printed Time :</strong> {{ $printed_time }}</td>
                 <td><strong>Start Time :</strong> {{ $start_time }}</td>
             </tr>
             <tr>
-                <td></td>
+                <td><strong>Printed Time :</strong> {{ $printed_time }}</td>
                 <td colspan="2"><strong>End Time :</strong> {{ $end_time }}</td>
             </tr>
+           
         </table>
         <!-- Sales Summary -->
         <div class="section-title">Sales Summary</div>
@@ -161,7 +158,6 @@
                     <tr>
                         <th>Product</th>
                         <th>Quantity</th>
-                        <th>UOM</th>
                         <th>Amount</th>
                     </tr>
                 </thead>
@@ -170,14 +166,12 @@
                     <tr>
                         <td>{{ $item['code'] }}</td>
                         <td>{{ $item['quantity'] }}</td>
-                        <td>{{ $item['uom'] }}</td>
                         <td>RM {{ $item['amount'] }}</td>
                     </tr>
                     @endforeach
                     <tr class="total-row">
                         <td><strong>Total</strong></td>
                         <td><strong>{{ $total_quantity }}</strong></td>
-                        <td></td>
                         <td><strong>{{ $total_amount }}</strong></td>
                     </tr>
                 </tbody>
@@ -190,13 +184,12 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Brand</th>
+                            <th>Code</th>
                             <th>Open</th>
                             <th>StockIn</th>
                             <th>Sales</th>
                             <th>Return</th>
                             <th>Variance</th>
-                            <th>StockOut</th>
                             <th>Close</th>
                         </tr>
                     </thead>
@@ -209,7 +202,6 @@
                             <td class="{{ $item['sales'] < 0 ? 'negative' : '' }}">{{ $item['sales'] }}</td>
                             <td>{{ $item['return'] }}</td>
                             <td>{{ $item['variance'] }}</td>
-                            <td>{{ $item['stock_out'] }}</td>
                             <td>{{ $item['close'] }}</td>
                         </tr>
                         @endforeach
@@ -220,7 +212,6 @@
                             <td class="{{ $total_sales < 0 ? 'negative' : '' }}"><strong>{{ $total_sales }}</strong></td>
                             <td><strong>{{ $total_return }}</strong></td>
                             <td><strong>{{ $total_variance }}</strong></td>
-                            <td><strong>{{ $total_stock_out }}</strong></td>
                             <td><strong>{{ $total_close }}</strong></td>
                         </tr>
                     </tbody>

@@ -13,7 +13,7 @@
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
                              {{ __('invoices.invoices') }}
-                             <a class="pull-right" href="{{ route('invoices.create') }}"><i class="fa fa-plus-square fa-lg"></i></a>
+                             <!-- <a class="pull-right" href="{{ route('invoices.create') }}"><i class="fa fa-plus-square fa-lg"></i></a> -->
                              <!-- <a class="pull-right text-danger pr-2" id="massdelete" href="#" alt="Mass delete"><i class="fa fa-trash fa-lg"></i></a>
                              <a class="pull-right text-success pr-2" id="massactive" href="#" alt="Mass active"><i class="fa fa-check fa-lg"></i></a>
                              <a class="pull-right pr-2" id="masssyncxero" href="#" alt="Mass Sync to Xero"><i class="fa fa-refresh fa-lg"></i></a> -->

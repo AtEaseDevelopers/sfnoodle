@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Models\Driver;
 use App\Models\Task;
 use App\Models\Code;
+use App\Models\foc;
 use App\Models\SpecialPrice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Session;
@@ -655,36 +656,192 @@ class SalesInvoiceController extends AppBaseController
         }
     }
 
-    public function getSalesInvoiceViewPDF($id,$function)
+    public function getSalesInvoiceViewPDF($id, $function)
     {
         $id = Crypt::decrypt($id);
-        $salesInvoice = SalesInvoice::where('id',$id)
-        ->with(['customer', 'salesInvoiceDetails.product', 'createdByUser', 'createdByDriver'])
-        ->first();
+        $salesInvoice = SalesInvoice::where('id', $id)
+            ->with(['customer', 'salesInvoiceDetails.product', 'createdByUser', 'createdByDriver'])
+            ->first();
         
-        $min = 450;
-        $each = 23;
-        $height = (count($salesInvoice['salesInvoiceDetails']) * $each) + $min;
-
-        $creator = $salesInvoice->creator; // Returns User or Driver model
+        if (!$salesInvoice) {
+            abort(404, 'Sales Invoice not found');
+        }
+        
+        // Prepare purchased items for FOC calculation
+        $purchasedItems = [];
+        foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+            $purchasedItems[] = [
+                'product_id' => $detail->product_id,
+                'quantity' => $detail->quantity,
+                'price' => $detail->price
+            ];
+        }
+        
+        // Calculate FOC items using the sales invoice date (not current date)
+        $invoiceDate = $salesInvoice->date;
+        $focItems = foc::calculateFocItems($salesInvoice->customer_id, $purchasedItems, $invoiceDate);
+        
+        // Merge original items with FOC items for display
+        $allItems = [];
+        $originalTotal = 0;
+        $offerAmount = 0;
+        
+        // Process each purchased item with tiered pricing
+        foreach ($salesInvoice->salesInvoiceDetails as $detail) {
+            $product = $detail->product;
+            $quantity = $detail->quantity;
+            $regularPrice = $product->price;
+            
+            // Check for special price for this customer
+            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $salesInvoice->customer_id)
+                ->where('status', 1)
+                ->first();
+            
+            $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+            
+            // Get tiered pricing
+            $tieredPricing = $product->tiered_pricing;
+            
+            if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                // Sort tiers by quantity ascending
+                usort($tieredPricing, function($a, $b) {
+                    return $a['quantity'] - $b['quantity'];
+                });
+                
+                $remainingQuantity = $quantity;
+                
+                // Apply tiered pricing for each tier
+                foreach ($tieredPricing as $tier) {
+                    if ($remainingQuantity <= 0) {
+                        break;
+                    }
+                    
+                    $tierQuantity = $tier['quantity'];
+                    $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
+                    
+                    // Calculate how many full tier packages fit into remaining quantity
+                    $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                    
+                    if ($numberOfPackages > 0) {
+                        $quantityInThisTier = $numberOfPackages * $tierQuantity;
+                        $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                        $regularTotalForThisTier = $quantityInThisTier * $basePrice;
                         
-        try{
-            $pdf = Pdf::loadView('sales_invoices.print', array(
-                'salesInvoice' => $salesInvoice,
-                'creatorName' => $creator->name
-            ));
-
-            if($function == 'download'){
-                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])->download('download.pdf');
-            }elseif($function == 'view'){
-                return $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true])->stream('view.pdf');
+                        $originalTotal += $regularTotalForThisTier;
+                        $offerAmount += ($regularTotalForThisTier - $itemTotal);
+                        
+                        // Add as a single line item with quantity = number of packages
+                        $allItems[] = [
+                            'product_code' => $product->code,
+                            'product_name' => $product->name,
+                            'quantity' => $numberOfPackages, // Number of packages
+                            'price' => $tierPrice, // Package price
+                            'totalprice' => $itemTotal,
+                            'is_foc' => false,
+                            'display_name' => $product->code . " ({$tierQuantity} units)",
+                            'tier_quantity' => $tierQuantity,
+                            'has_offer' => true
+                        ];
+                        
+                        $remainingQuantity -= $quantityInThisTier;
+                    }
+                }
+                
+                // Handle remaining quantity with base price (special or regular)
+                if ($remainingQuantity > 0) {
+                    $itemTotal = $remainingQuantity * $basePrice;
+                    $originalTotal += $itemTotal;
+                    
+                    $allItems[] = [
+                        'product_code' => $product->code,
+                        'product_name' => $product->name,
+                        'quantity' => $remainingQuantity,
+                        'price' => $basePrice,
+                        'totalprice' => $itemTotal,
+                        'is_foc' => false,
+                        'display_name' => $product->code,
+                        'has_offer' => false
+                    ];
+                }
+            } else {
+                // No tiered pricing, use base price (special or regular)
+                $itemTotal = $quantity * $basePrice;
+                $originalTotal += $itemTotal;
+                
+                $allItems[] = [
+                    'product_code' => $product->code,
+                    'product_name' => $product->name,
+                    'quantity' => $quantity,
+                    'price' => $basePrice,
+                    'totalprice' => $itemTotal,
+                    'is_foc' => false,
+                    'display_name' => $product->code,
+                    'has_offer' => false
+                ];
             }
         }
-        catch(Exception $e){
-            dd($e->getMessage());
-            abort(404);
+        
+        // Add FOC items
+        foreach ($focItems as $focItem) {
+            $allItems[] = [
+                'product_code' => $focItem['product_code'],
+                'product_name' => $focItem['product_name'],
+                'quantity' => $focItem['quantity'],
+                'price' => 0,
+                'totalprice' => 0,
+                'is_foc' => true,
+                'display_name' => $focItem['product_code'] . " (FOC)",
+                'has_offer' => false
+            ];
         }
-
+        
+        // Calculate final total after discount
+        $finalTotal = $originalTotal - $offerAmount;
+        
+        // Better height calculation
+        $baseHeight = 400; // Base height for header and footer
+        $itemHeight = 25; // Height per item row
+        $totalItems = count($allItems);
+        $height = $baseHeight + ($totalItems * $itemHeight);
+        
+        // Ensure minimum height
+        if ($height < 500) {
+            $height = 500;
+        }
+        
+        $creator = $salesInvoice->creator; // Returns User or Driver model
+        
+        try {
+            $pdf = Pdf::loadView('sales_invoices.print', array(
+                'salesInvoice' => $salesInvoice,
+                'creatorName' => $creator->name ?? 'System',
+                'allItems' => $allItems,
+                'originalTotal' => $originalTotal,
+                'offerAmount' => $offerAmount,
+                'finalTotal' => $finalTotal,
+                'focItems' => $focItems,
+                'invoiceDate' => $invoiceDate
+            ));
+            
+            // Set paper size and options
+            $pdf->setPaper(array(0, 0, 300, $height), 'portrait');
+            $pdf->setOptions([
+                'isPhpEnabled' => true, 
+                'isRemoteEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'defaultFont' => 'Courier'
+            ]);
+            
+            if ($function == 'download') {
+                return $pdf->download('sales_invoice_' . ($salesInvoice->invoice_no ?? $salesInvoice->id) . '.pdf');
+            } elseif ($function == 'view') {
+                return $pdf->stream('sales_invoice_' . ($salesInvoice->invoice_no ?? $salesInvoice->id) . '.pdf');
+            }
+        } catch (Exception $e) {
+            \Log::error('PDF Generation Error: ' . $e->getMessage());
+            abort(500, 'Error generating PDF: ' . $e->getMessage());
+        }
     }
     
     /** 
@@ -845,7 +1002,6 @@ class SalesInvoiceController extends AppBaseController
             try {
                 // Convert to invoice (creates the invoice only)
                 $invoice = $salesInvoice->convertToInvoice();
-                
                 if (!$invoice) {
                     DB::rollBack();
                     return response()->json([

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Http\Request;
 use App\Models\Product;
-use App\Models\ProductCategory; // Keep if still used elsewhere, but not needed for products
+use App\Models\ProductCategory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Invoice;
@@ -23,6 +23,8 @@ use App\Models\Foc;
 use Illuminate\Support\Facades\Session;
 use Exception;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductController extends AppBaseController
 {
@@ -73,21 +75,67 @@ class ProductController extends AppBaseController
      *
      * @return Response
      */
-    public function store(CreateProductRequest $request)
+    public function store(Request $request)
     {
         $input = $request->all();
 
-        if(str_contains($input['name'],'"')){
+        $rules = [
+            'code' => 'required|string|max:255|unique:products,code', 
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'category' => 'required|string|max:255',
+            'uom' => 'required|string|max:50',
+            'status' => 'required|integer|in:0,1',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048',  // Changed to file
+            'tiered_pricing' => 'nullable|array',
+            'tiered_pricing.*.quantity' => 'required_with:tiered_pricing.*.price|integer|min:1|distinct',
+            'tiered_pricing.*.price' => 'required_with:tiered_pricing.*.quantity|numeric|min:0',
+        ];
+
+        $messages = [
+            'code.required' => 'Product code is required',
+            'code.unique' => 'This product code already exists',
+            'name.required' => 'Product name is required',
+            'price.required' => 'Product price is required',
+            'category.required' => 'Category is required',
+            'uom.required' => 'Unit of measurement is required',
+            'image.file' => 'The uploaded file must be a valid file',
+            'image.mimes' => 'The image must be a file of type: jpeg, png, jpg, gif',
+            'image.max' => 'The image size must not exceed 2MB',
+            'tiered_pricing.*.quantity.required_with' => 'Please enter quantity for each tier',
+            'tiered_pricing.*.price.required_with' => 'Please enter price for each tier',
+            'tiered_pricing.*.quantity.distinct' => 'Quantity values must be unique',
+            'tiered_pricing.*.quantity.min' => 'Quantity must be at least 1',
+            'tiered_pricing.*.price.min' => 'Price must be at least 0',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        if(str_contains($input['name'], '"')){
             return Redirect::back()->withInput($input)->withErrors('The name cannot contain double quote');
         }
 
-        if(str_contains($input['name'],'\'')){
+        if(str_contains($input['name'], "'")){
             return Redirect::back()->withInput($input)->withErrors('The name cannot contain single quote');
+        }
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '_' . Str::slug($input['code']) . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('product-images', $imageName, 'public');
+            $input['image_path'] = '/' . $imagePath;
         }
 
         $product = $this->productRepository->create($input);
 
-        Flash::success($input['code'].__('products.saved_successfully'));
+        Flash::success($input['code'] . __('products.saved_successfully'));
 
         return redirect(route('products.index'));
     }
@@ -110,7 +158,6 @@ class ProductController extends AppBaseController
             return redirect(route('products.index'));
         }
 
-        // Remove load category relationship
         return view('products.show')->with('product', $product);
     }
 
@@ -163,50 +210,90 @@ class ProductController extends AppBaseController
             return redirect(route('products.index'));
         }
 
-        // Define validation rules - updated to use 'category' instead of 'category_id'
         $rules = [
             'code' => 'required|string|max:255|unique:products,code,' . $id, 
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
-            'category' => 'required|string|max:255', // Changed validation
+            'category' => 'required|string|max:255',
             'uom' => 'required|string|max:50',
             'status' => 'required|integer|in:0,1',
+            'image' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048'  // Changed to file
         ];
 
-        // Validate the request
-        $validator = Validator::make($request->all(), $rules, [
+        $messages = [
             'code.required' => 'Product code is required',
             'code.unique' => 'This product code already exists',
             'name.required' => 'Product name is required',
             'price.required' => 'Product price is required',
-            'price.numeric' => 'Price must be a number',
-            'price.min' => 'Price cannot be negative',
-            'category.string' => 'Category must be text', // Updated message
-            'status.required' => 'Status is required',
-            'status.in' => 'Invalid status value',
-        ]);
+            'category.required' => 'Category is required',
+            'uom.required' => 'Unit of measurement is required',
+            'image.file' => 'The uploaded file must be a valid file',
+            'image.mimes' => 'The image must be a file of type: jpeg, png, jpg, gif',
+            'image.max' => 'The image size must not exceed 2MB'
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
-            return Redirect::back()
+            return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
         $input = $request->all();
 
-        if(str_contains($input['name'],'"')){
+        if(str_contains($input['name'], '"')){
             return Redirect::back()->withInput($input)->withErrors('The name cannot contain double quote');
         }
 
-        if(str_contains($input['name'],'\'')){
+        if(str_contains($input['name'], "'")){
             return Redirect::back()->withInput($input)->withErrors('The name cannot contain single quote');
         }
 
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($product->image_path && file_exists(public_path($product->image_path))) {
+                $oldImagePath = str_replace('/', '', $product->image_path);
+                Storage::disk('public')->delete($oldImagePath);
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '_' . Str::slug($input['code']) . '.' . $image->getClientOriginalExtension();
+            $imagePath = $image->storeAs('product-images', $imageName, 'public');
+            $input['image_path'] = '/' . $imagePath;
+        }
+        
         $product = $this->productRepository->update($input, $id);
 
-        Flash::success($product->code.__('products.updated_successfully'));
+        Flash::success($product->code . __('products.updated_successfully'));
 
         return redirect(route('products.index'));
+    }
+    
+    /**
+     * Remove image from product
+     */
+    public function removeImage($id)
+    {
+        $id = Crypt::decrypt($id);
+        $product = $this->productRepository->find($id);
+        
+        if (empty($product)) {
+            return response()->json(['success' => false, 'message' => 'Product not found']);
+        }
+        
+        // Delete image file
+        if ($product->image_path && file_exists(public_path($product->image_path))) {
+            $oldImagePath = str_replace('storage/', '', $product->image_path);
+            Storage::disk('public')->delete($oldImagePath);
+        }
+        
+        // Update database
+        $product->image_path = null;
+        $product->save();
+        
+        return response()->json(['success' => true, 'message' => 'Image removed successfully']);
     }
     
     /**
@@ -225,6 +312,12 @@ class ProductController extends AppBaseController
             Flash::error(__('products.product_not_found'));
 
             return redirect(route('products.index'));
+        }
+        
+        // Delete product image if exists
+        if ($product->image_path && file_exists(public_path($product->image_path))) {
+            $imagePath = str_replace('storage/', '', $product->image_path);
+            Storage::disk('public')->delete($imagePath);
         }
 
         $SpecialPrice = SpecialPrice::where('product_id',$id)->get()->toArray();
@@ -267,6 +360,13 @@ class ProductController extends AppBaseController
             $foc = Foc::where('product_id',$id)->get()->toArray();
             if(count($foc)>0){
                 continue;
+            }
+            
+            // Delete product image if exists
+            $product = Product::find($id);
+            if ($product && $product->image_path && file_exists(public_path($product->image_path))) {
+                $imagePath = str_replace('storage/', '', $product->image_path);
+                Storage::disk('public')->delete($imagePath);
             }
 
             $count = $count + Product::destroy($id);

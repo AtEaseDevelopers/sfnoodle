@@ -42,7 +42,6 @@ class Invoice extends Model
     ];
     
     protected $casts = [
-        'date' => 'datetime',
         'is_driver' => 'boolean',
         'created_by' => 'integer',
     ];
@@ -317,16 +316,6 @@ class Invoice extends Model
     public function getFormattedTotalAttribute()
     {
         return number_format($this->total, 2);
-    }
-
-    /**
-     * Get formatted date
-     *
-     * @return string
-     */
-    public function getFormattedDateAttribute()
-    {
-        return $this->date ? $this->date->format('d-m-Y H:i:s') : '';
     }
 
     /**

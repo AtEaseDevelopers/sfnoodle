@@ -21,7 +21,7 @@ class InventoryTransaction extends Model
 
     // Transaction type constants
     public const TYPE_STOCK_IN = 1;
-    public const TYPE_STOCK_OUT = 2;
+    public const TYPE_INVOICE = 2;
     public const TYPE_STOCK_RETURN = 3;
     public const TYPE_STOCK_COUNT = 4;
 
@@ -122,7 +122,7 @@ class InventoryTransaction extends Model
     {
         $types = [
             self::TYPE_STOCK_IN => 'Stock In',
-            self::TYPE_STOCK_OUT => 'Stock Out',
+            self::TYPE_INVOICE => 'Invoice',
             self::TYPE_STOCK_RETURN => 'Stock Return'
         ];
         
@@ -136,7 +136,7 @@ class InventoryTransaction extends Model
     {
         return [
             self::TYPE_STOCK_IN => 'Stock In',
-            self::TYPE_STOCK_OUT => 'Stock Out',
+            self::TYPE_INVOICE => 'Invoice',
             self::TYPE_STOCK_RETURN => 'Stock Return'
         ];
     }
@@ -167,8 +167,8 @@ class InventoryTransaction extends Model
         int $invoiceId = null
     ): InventoryTransaction {
         // Validate transaction type
-        if (!in_array($type, [self::TYPE_STOCK_IN, self::TYPE_STOCK_OUT, self::TYPE_STOCK_RETURN])) {
-            throw new \Exception('Invalid transaction type. Must be 1 (Stock In), 2 (Stock Out), or 3 (Stock Return).');
+        if (!in_array($type, [self::TYPE_STOCK_IN, self::TYPE_INVOICE, self::TYPE_STOCK_RETURN])) {
+            throw new \Exception('Invalid transaction type. Must be 1 (Stock In), 2 (Invoice), or 3 (Stock Return).');
         }
 
         // Validate quantity based on type

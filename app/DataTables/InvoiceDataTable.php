@@ -24,14 +24,16 @@ class InvoiceDataTable extends DataTable
                 return $model->date ? date('d-m-Y', strtotime($model->date)) : '';
             })
             ->editColumn('created_by', function ($model) {
-                // Use the creator_name accessor
                 return $model->creator_name ?? 'Unknown';
+            })
+            ->editColumn('total', function ($model) {
+                // Format to 2 decimal places
+                return number_format($this->calculateDiscountedTotal($model), 2);
             })
             ->filterColumn('date', function ($query, $keyword) {
                 $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
             })
             ->filterColumn('created_by', function ($query, $keyword) {
-                // Add filtering for creator name
                 $query->where(function ($q) use ($keyword) {
                     $q->whereHas('createdByUser', function ($subQuery) use ($keyword) {
                         $subQuery->where('name', 'like', '%' . $keyword . '%');
@@ -39,8 +41,73 @@ class InvoiceDataTable extends DataTable
                         $subQuery->where('name', 'like', '%' . $keyword . '%');
                     });
                 });
-            }); 
+            });
+    }
+
+    /**
+     * Calculate discounted total with tiered pricing and special prices
+     *
+     * @param Invoice $invoice
+     * @return float
+     */
+    private function calculateDiscountedTotal($invoice)
+    {
+        $total = 0;
+        
+        foreach ($invoice->invoiceDetails as $detail) {
+            $product = $detail->product;
+            $quantity = $detail->quantity;
+            $regularPrice = $product->price;
+            
+            // Check for special price for this customer
+            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $invoice->customer_id)
+                ->where('status', 1)
+                ->first();
+            
+            $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+            
+            // Get tiered pricing
+            $tieredPricing = $product->tiered_pricing;
+            
+            if (!empty($tieredPricing) && is_array($tieredPricing)) {
+                // Sort tiers by quantity descending (largest first for best value)
+                usort($tieredPricing, function($a, $b) {
+                    return $b['quantity'] - $a['quantity'];
+                });
+                
+                $remainingQuantity = $quantity;
+                
+                // Apply tiered pricing for each tier
+                foreach ($tieredPricing as $tier) {
+                    if ($remainingQuantity <= 0) {
+                        break;
+                    }
+                    
+                    $tierQuantity = $tier['quantity'];
+                    $tierPrice = $tier['price'];
+                    
+                    // Calculate how many full tier packages fit into remaining quantity
+                    $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                    
+                    if ($numberOfPackages > 0) {
+                        $itemTotal = $numberOfPackages * $tierPrice;
+                        $total += $itemTotal;
+                        $remainingQuantity -= ($numberOfPackages * $tierQuantity);
+                    }
+                }
+                
+                // Handle remaining quantity with base price (special or regular)
+                if ($remainingQuantity > 0) {
+                    $total += $remainingQuantity * $basePrice;
+                }
+            } else {
+                // No tiered pricing, use base price
+                $total += $quantity * $basePrice;
+            }
         }
+        return round($total, 2);
+    }
 
     /**
      * Get query source of dataTable.
@@ -53,17 +120,12 @@ class InvoiceDataTable extends DataTable
         return $model->newQuery()   
             ->with([
                 'customer', 
-                'invoiceDetails',
+                'invoiceDetails.product', // Make sure to load product with tiered_pricing
                 'driver',
                 'createdByUser:id,name',
                 'createdByDriver:id,name'
             ])
-            ->selectRaw('invoices.*, 
-                (SELECT SUM(totalprice) FROM invoice_details 
-                 WHERE invoice_details.invoice_id = invoices.id) as calculated_total')
-            ->select('invoices.*')
-            ->orderBy('invoices.created_at', 'desc'); // Add this line
-
+            ->orderBy('invoices.created_at', 'desc');
     }
 
     /**
@@ -83,13 +145,8 @@ class InvoiceDataTable extends DataTable
                 'stateDuration' => 0,
                 'processing' => false,
                 'order'     => [[2, 'desc']],
-                'lengthMenu' => [[ 10, 50, 100, 300 ],[ '10 rows', '50 rows', '100 rows', '300 rows' ]],
+                'lengthMenu' => [[10, 50, 100, 300], ['10 rows', '50 rows', '100 rows', '300 rows']],
                 'buttons' => [
-                    [
-                        'extend' => 'create',
-                        'className' => 'btn btn-default btn-sm no-corner',
-                        'text' => '<i class="fa fa-plus"></i> Create',
-                    ],
                     [
                         'extend' => 'print',
                         'className' => 'btn btn-default btn-sm no-corner',
@@ -144,31 +201,10 @@ class InvoiceDataTable extends DataTable
                         'visible' => true,
                         'render' => 'function(data, type){return "<input type=\'checkbox\' class=\'checkboxselect\' checkboxid=\'"+data+"\'/>";}'
                     ],
+                  
                     [
-                        'targets' => 5, // This is the total price column
-                        'visible' => true,
-                        'render' => 'function(data, type, row){
-                            if(type === "display" || type === "filter"){
-                                var totalprice = 0;
-                                if(data && Array.isArray(data)){
-                                    $.each(data, function(index, value){
-                                        if(value && value.totalprice){
-                                            totalprice += parseFloat(value.totalprice) || 0;
-                                        }
-                                    });
-                                }
-                                // Alternative: if you have a total field directly in the invoice
-                                if(row.total && !isNaN(parseFloat(row.total))){
-                                    totalprice = parseFloat(row.total);
-                                }
-                                return totalprice.toFixed(2);
-                            }
-                            return data;
-                        }'
-                    ],
-                    [
-                    'targets' => 8,
-                    'render' => 'function(data, type){return data == 0 ? "Completed" : "Cancelled";}'
+                        'targets' => 8, // Status column index
+                        'render' => 'function(data, type){return data == 0 ? "Completed" : "Cancelled";}'
                     ],
                 ],
                 'initComplete' => 'function(){
@@ -209,11 +245,12 @@ class InvoiceDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            'checkbox'=> new \Yajra\DataTables\Html\Column(['title' => '<input type="checkbox" id="selectallcheckbox">',
-            'data' => 'id',
-            'name' => 'id',
-            'orderable' => false,
-            'searchable' => false
+            'checkbox' => new \Yajra\DataTables\Html\Column([
+                'title' => '<input type="checkbox" id="selectallcheckbox">',
+                'data' => 'id',
+                'name' => 'id',
+                'orderable' => false,
+                'searchable' => false
             ]),
 
             'invoiceno' => new \Yajra\DataTables\Html\Column([
@@ -242,9 +279,11 @@ class InvoiceDataTable extends DataTable
 
             'total' => new \Yajra\DataTables\Html\Column([
                 'title' => 'Total Price',
-                'data' => 'invoice_details',
-                'name' => 'invoice_details',
-                'searchable' => false
+                'data' => 'total',
+                'name' => 'total',
+                'searchable' => false,
+                'orderable' => true,
+                
             ]),
 
             'paymentterm' => new \Yajra\DataTables\Html\Column([
@@ -272,7 +311,6 @@ class InvoiceDataTable extends DataTable
                 'data' => 'autocount',
                 'name' => 'invoices.autocount'
             ]),
-
         ];
     }
 

@@ -99,6 +99,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/check-in-out', [App\Http\Controllers\Api\V1\DriverController::class, 'checkInOut']);
 
     //stock
+    Route::get('/driver/get-recent-product/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getRecentProducts']);
     Route::get('/driver/get-product/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getAllProduct']);
     Route::post('/driver/stock-request', [App\Http\Controllers\Api\V1\DriverController::class, 'StockRequest']);
     Route::post('/driver/stock-count', [App\Http\Controllers\Api\V1\DriverController::class, 'StockCount']);
@@ -107,6 +108,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/driver/driver-stock-return-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockReturnRecord']);
 
     Route::get('/driver/stock-count-report', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountPdf']);
+    Route::get('/driver/get-stock-count-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountList']);
 
     Route::get('/driver/inventory-balance', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryBalance']);
     Route::post('/driver/stock/transaction', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryTransaction']);
@@ -128,6 +130,11 @@ Route::group(['prefix' => 'v1'], function () {
 
     Route::post('/driver/manager-login', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogin']);
     Route::post('/driver/manager-logout', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogout']);
+
+    Route::get('/driver/get-return-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockReturnList']);
+
+    //transaction
+    //invoice and stock return only
 
     // AutoCount sync: system provides API only; no web UI. Plugin polls every 5 mins and creates IV/ARPayment in AutoCount.
     Route::post('/autocount/sync-customers', [AutoCountSyncController::class, 'syncCustomers']);
