@@ -108,6 +108,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/driver/driver-stock-return-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockReturnRecord']);
 
     Route::get('/driver/stock-count-report', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountPdf']);
+    Route::get('/driver/get-stock-count-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountList']);
 
     Route::get('/driver/inventory-balance', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryBalance']);
     Route::post('/driver/stock/transaction', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryTransaction']);

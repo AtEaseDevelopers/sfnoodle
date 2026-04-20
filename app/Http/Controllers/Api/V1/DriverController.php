@@ -6516,6 +6516,122 @@ class DriverController extends Controller
         }
     }
 
+    public function getStockCountList(Request $request)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+        
+        // Get inventory counts from last 7 days only, ordered by created_at descending (latest first)
+        $inventoryCounts = InventoryCount::where('created_at', '>=', Carbon::now()->subDays(7))
+            ->where('driver_id', $driver->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Get all unique product IDs from all inventory counts
+        $allProductIds = [];
+        foreach ($inventoryCounts as $count) {
+            $items = $count->items;
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    if (isset($item['product_id'])) {
+                        $allProductIds[] = $item['product_id'];
+                    }
+                }
+            }
+        }
+        
+        // Fetch all products in one query
+        $allProductIds = array_unique($allProductIds);
+        $products = Product::whereIn('id', $allProductIds)
+            ->get()
+            ->keyBy('id');
+        
+        $tripIds = $inventoryCounts->pluck('trip_id')->unique()->filter()->toArray();
+        $trips = Trip::whereIn('id', $tripIds)
+            ->get()
+            ->keyBy('id');
+            
+        // Helper function to convert UTC to UTC+8 (Malaysia Time)
+        $convertToUTC8 = function($datetime) {
+            if (empty($datetime)) {
+                return null;
+            }
+            return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
+        };
+        
+        // Format the response
+        $formattedCounts = $inventoryCounts->map(function ($count) use ($products, $convertToUTC8) {
+            $items = $count->items;
+            $formattedItems = [];
+            
+            if (is_array($items)) {
+                $formattedItems = array_map(function ($item) use ($products) {
+                    $productId = $item['product_id'];
+                    $product = $products[$productId] ?? null;
+                    
+                    return [
+                        'product_id' => $item['product_id'],
+                        'product_name' => $product ? $product->name : null,
+                        'product_code' => $product ? $product->code : null,
+                        'counted_quantity' => $item['counted_quantity'],
+                        'current_quantity' => $item['current_quantity']
+                    ];
+                }, $items);
+            }
+            
+            $tripUuid = null;
+            $trip = $trips[$count->trip_id] ?? null;
+            if ($trip) {
+                $tripUuid = $trip->uuid;
+            }
+            
+            // Generate PDF URL using trip UUID instead of trip_id
+            $pdf_url = null;
+            if ($tripUuid) {
+                $pdf_url = $this->generateStockCountReport($driver->id, $tripUuid);
+            }
+            
+            // Include driver info if you have driver relationship
+            $driver = null;
+            if ($count->driver_id) {
+                $driver = Driver::find($count->driver_id);
+            }
+            
+            $pdf_url = $this->generateStockCountReport($driver->id, $driver->trip_id);
+
+            return [
+                'id' => $count->id,
+                'driver_id' => $count->driver_id,
+                'driver_name' => $driver ? $driver->name : null,
+                'items' => $formattedItems,
+                'status' => $count->status,
+                'remarks' => $count->remarks,
+                'rejection_reason' => $count->rejection_reason,
+                'approved_by' => $count->approved_by,
+                'trip_id' => $count->trip_id,
+                'rejected_by' => $count->rejected_by,
+                'approved_at' => $convertToUTC8($count->approved_at),
+                'rejected_at' => $convertToUTC8($count->rejected_at),
+                'created_at' => $convertToUTC8($count->created_at),
+                'updated_at' => $convertToUTC8($count->updated_at),
+                'pdf_url' => $pdf_url
+            ];
+        });
+
+        return response()->json([
+            'result' => true,
+            'message' => __LINE__ . $this->message_separator . 'Stock Count list retrieved successfully',
+            'data' => $formattedCounts
+        ], 200);
+    }
+
     public function StockCountStatus(Request $request)
     {
 
