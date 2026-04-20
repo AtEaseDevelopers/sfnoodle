@@ -8460,15 +8460,20 @@ class DriverController extends Controller
                     $itemsWithProductNames = [];
                     if ($inventoryReturn->items && is_array($inventoryReturn->items)) {
                         foreach ($inventoryReturn->items as $item) {
+
                             $product = Product::find($item['product_id'] ?? null);
                             $itemsWithProductNames[] = [
                                 'product_id' => $item['product_id'] ?? null,
+                                'product_code' => $product ? $product->code : null, 
                                 'product_name' => $product ? $product->name : 'Unknown Product',
-                                'quantity' => $item['quantity'] ?? 0
+                                'quantity' => $item['quantity'] ?? 0,
+                                'image_url' => url($product->image_path)
+
                             ];
                         }
                     }
                     
+                
                     // Return formatted data with converted dates
                     return [
                         'id' => $inventoryReturn->id,
