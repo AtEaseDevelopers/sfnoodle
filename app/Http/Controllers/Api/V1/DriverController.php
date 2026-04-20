@@ -8467,7 +8467,7 @@ class DriverController extends Controller
                                 'product_code' => $product ? $product->code : null, 
                                 'product_name' => $product ? $product->name : 'Unknown Product',
                                 'quantity' => $item['quantity'] ?? 0,
-                                'image_url' => url($product->image_path)
+                                'image_url' => $product->image_path ? url($product->image_path) : ""
 
                             ];
                         }
