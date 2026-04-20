@@ -585,12 +585,16 @@ class AutoCountSyncController extends Controller
                     continue;
                 }
 
-                // Find product by ItemCode + UOM (SalesUOM mapped to products.uom)
-                $query = Product::where('code', $itemCode);
+                // Find product by ItemCode + UOM (normalized); fallback to ItemCode only
+                // so legacy products with missing/old UOM still can receive special price.
+                $query = Product::whereRaw('TRIM(code) = ?', [$itemCode]);
                 if ($uom !== null && $uom !== '') {
-                    $query->where('uom', $uom);
+                    $query->whereRaw('UPPER(TRIM(uom)) = ?', [strtoupper($uom)]);
                 }
                 $product = $query->first();
+                if (!$product) {
+                    $product = Product::whereRaw('TRIM(code) = ?', [$itemCode])->first();
+                }
                 if (!$product) {
                     $errors[] = "Product not found for ItemCode {$itemCode} and UOM {$uom}";
                     $skipped++;
