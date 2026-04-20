@@ -8356,7 +8356,7 @@ class DriverController extends Controller
                     // Return formatted data with converted dates
                     return [
                         'id' => $inventoryReturn->id,
-                        'driver_id' => $inventoryReturn->driver_id,
+                        'driver_id' => $inventoryReturn->driver,
                         'trip_id' => $inventoryReturn->trip_id,
                         'items' => $itemsWithProductNames,
                         'status' => $inventoryReturn->status,
