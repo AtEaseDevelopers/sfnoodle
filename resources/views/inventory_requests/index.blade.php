@@ -28,14 +28,14 @@
     <!-- Create Request Modal - Enhanced -->
     <div id="createRequest" class="modal fade" data-backdrop="static">
         <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
-            <div class="modal-content" style="border-radius: 12px;">
-                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+            <div class="modal-content" style="border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-shrink: 0;">
                     <h4 class="modal-title h5 font-weight-bold">
                         <i class="fa fa-plus-circle text-primary mr-2"></i>{{ __('Create Stock Request') }}
                     </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body" style="padding: 2rem;">
+                    <div class="modal-body" style="padding: 2rem; overflow-y: auto; flex: 1;">
                     {!! Form::open(['route' => 'inventoryRequests.store', 'enctype' => 'multipart/form-data', 'id' => 'createRequestForm']) !!}
                     
                     <div class="row">
@@ -80,34 +80,37 @@
                     <!-- Items Table -->
                     <div class="form-group mt-3">
                         <label class="col-form-label font-weight-bold">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive border rounded" style="border-radius: 8px;">
-                            <table class="table table-bordered mb-0" id="itemsTable" style="min-width: 700px;">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th width="5%" class="text-center">#</th>
-                                        <th width="55%">Product <span class="text-danger">*</span></th>
-                                        <th width="25%">Quantity <span class="text-danger">*</span></th>
-                                        <th width="15%" class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemsBody">
-                                    <!-- Items will be added here dynamically -->
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="4" class="text-right bg-light py-2">
-                                            <button type="button" class="btn btn-success btn-sm" id="addItemBtn">
-                                                <i class="fa fa-plus mr-1"></i> Add Item
-                                            </button>
-                                         </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                        <!-- Add a wrapper div with max-height and overflow-y for scrolling -->
+                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                            <div class="table-responsive border-0" style="border-radius: 8px;">
+                                <table class="table table-bordered mb-0" id="itemsTable" style="min-width: 700px;">
+                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th width="5%" class="text-center">#</th>
+                                            <th width="55%">Product <span class="text-danger">*</span></th>
+                                            <th width="25%">Quantity <span class="text-danger">*</span></th>
+                                            <th width="15%" class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsBody">
+                                        <!-- Items will be added here dynamically -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="4" class="text-right bg-light py-2">
+                                                <button type="button" class="btn btn-success btn-sm" id="addItemBtn">
+                                                    <i class="fa fa-plus mr-1"></i> Add Item
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
                         <div class="text-danger small mt-1" id="itemsError"></div>
                     </div>
 
-                    <div class="modal-footer" style="border-top: 1px solid #e9ecef; margin-top: 20px;">
+                    <div class="modal-footer" style="border-top: 1px solid #e9ecef; margin-top: 20px; flex-shrink: 0;">
                         <button type="button" class="btn btn-secondary rounded-0 px-4" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <button type="submit" class="btn btn-primary rounded-0 px-4">{{ __('Submit Request') }}</button>
                     </div>
@@ -120,15 +123,15 @@
     <!-- Edit Request Modal - Enhanced -->
     <div id="editRequest" class="modal fade" data-backdrop="static">
         <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
-            <div class="modal-content" style="border-radius: 12px;">
-                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+            <div class="modal-content" style="border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-shrink: 0;">
                     <h4 class="modal-title h5 font-weight-bold">
                         <i class="fa fa-pencil-square-o text-warning mr-2"></i>{{ __('Edit Stock Request') }}
                     </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body" style="padding: 2rem;">
-                    {!! Form::open(['route' => ['inventoryRequests.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editRequestForm']) !!}
+                <div class="modal-body" style="padding: 2rem; overflow-y: auto; flex: 1;">
+                        {!! Form::open(['route' => ['inventoryRequests.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editRequestForm']) !!}
                     
                     <!-- Add a hidden field to track if we want to save and approve -->
                     <input type="hidden" name="save_and_approve" id="saveAndApprove" value="0">
@@ -175,34 +178,37 @@
                     <!-- Items Table for Edit -->
                     <div class="form-group mt-3">
                         <label class="col-form-label font-weight-bold">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive border rounded" style="border-radius: 8px; overflow-x: auto;">
-                            <table class="table table-bordered mb-0" id="editItemsTable" style="min-width: 700px;">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th width="5%" class="text-center">#</th>
-                                        <th width="55%">Product <span class="text-danger">*</span></th>
-                                        <th width="25%">Quantity <span class="text-danger">*</span></th>
-                                        <th width="15%" class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="editItemsBody">
-                                    <!-- Items will be populated here -->
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="4" class="text-right bg-light py-2">
-                                            <button type="button" class="btn btn-success btn-sm" id="addEditItemBtn">
-                                                <i class="fa fa-plus mr-1"></i> Add Item
-                                            </button>
-                                         </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                        <!-- Add a wrapper div with max-height and overflow-y for scrolling -->
+                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                            <div class="table-responsive border-0" style="border-radius: 8px; overflow-x: auto;">
+                                <table class="table table-bordered mb-0" id="editItemsTable" style="min-width: 700px;">
+                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th width="5%" class="text-center">#</th>
+                                            <th width="55%">Product <span class="text-danger">*</span></th>
+                                            <th width="25%">Quantity <span class="text-danger">*</span></th>
+                                            <th width="15%" class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="editItemsBody">
+                                        <!-- Items will be populated here -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="4" class="text-right bg-light py-2">
+                                                <button type="button" class="btn btn-success btn-sm" id="addEditItemBtn">
+                                                    <i class="fa fa-plus mr-1"></i> Add Item
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
                         <div class="text-danger small mt-1" id="editItemsError"></div>
                     </div>
 
-                    <div class="modal-footer" style="border-top: 1px solid #e9ecef; margin-top: 20px;">
+                    <div class="modal-footer" style="border-top: 1px solid #e9ecef; margin-top: 20px; flex-shrink: 0;">
                         <button type="button" class="btn btn-secondary rounded-0 px-4" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <button type="submit" class="btn btn-primary rounded-0 px-4">{{ __('Update Request') }}</button>
                         
@@ -824,7 +830,7 @@
                                 </div>
                                 <div class="product-list" data-index="${itemCounter}" style="max-height: 230px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action product-select-item" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}">
+                                        <a href="#" class="list-group-item list-group-item-action product-select-item" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}">                                            
                                             <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                         </a>
                                     @endforeach
@@ -892,9 +898,10 @@
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
+            var productCode = $(this).data('code');  // ADD THIS LINE
             
-            // Update the dropdown button
-            $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
+            // Update the dropdown button - MODIFY THIS LINE
+            $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
             
             // Set the hidden input value
             $(this).closest('tr').find('.product-id-input').val(productId);
@@ -976,8 +983,8 @@
         }
         
         // Add item row to edit modal
-        function addEditItemRow(productId = '', productName = '', quantity = '') {
-            var displayName = productName || '{{ __('Select Product') }}';
+        function addEditItemRow(productId = '', productName = '', productCode = '', quantity = '') {
+            var displayName = productName ? `${productName} (${productCode})` : '{{ __('Select Product') }}';  
             var row = `
                 <tr class="edit-item-row" data-index="${editItemCounter}">
                     <td class="align-middle text-center font-weight-bold">${editItemCounter + 1}</td>
@@ -995,7 +1002,7 @@
                                 </div>
                                 <div class="edit-product-list" data-index="${editItemCounter}" style="max-height: 230px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}">
+                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}">
                                             <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                         </a>
                                     @endforeach
@@ -1062,8 +1069,12 @@
                 editItemCounter = 0;
                 
                 requestData.items.forEach(function(item, index) {
+                    var productCode = '';  // ADD THIS LINE
+                    if (productsLookup[item.product_id]) {
+                        productCode = productsLookup[item.product_id].code;  
+                    }
                     var productName = getProductName(item.product_id);
-                    addEditItemRow(item.product_id, productName, item.quantity);
+                    addEditItemRow(item.product_id, productName, productCode, item.quantity);  
                 });
             } else {
                 // For backward compatibility with old single-item requests
@@ -1114,9 +1125,10 @@
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
+            var productCode = $(this).data('code');  // ADD THIS LINE
             
-            // Update the dropdown button
-            $('#editProductDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
+            // Update the dropdown button - MODIFY THIS LINE
+            $('#editProductDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
             
             // Set the hidden input value
             $(this).closest('tr').find('.edit-product-id-input').val(productId);

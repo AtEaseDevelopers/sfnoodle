@@ -80,30 +80,33 @@
                     <!-- Items Table -->
                     <div class="form-group mt-2">
                         <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive border rounded-lg" style="border-radius: 2px !important;">
-                            <table class="table table-bordered mb-0" id="itemsTable">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th width="5%" class="text-center align-middle">#</th>
-                                        <th width="45%" class="align-middle">Product <span class="text-danger">*</span></th>
-                                        <th width="20%" class="align-middle">Quantity <span class="text-danger">*</span></th>
-                                        <th width="15%" class="text-center align-middle">Available</th>
-                                        <th width="15%" class="text-center align-middle">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemsBody">
-                                    <!-- Items will be added here dynamically -->
-                                </tbody>
-                                <tfoot class="bg-light">
-                                    <tr>
-                                        <td colspan="5" class="text-right p-2">
-                                            <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addItemBtn">
-                                                <i class="fa fa-plus mr-1"></i> Add Item
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                        <!-- Add scrollable wrapper -->
+                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                            <div class="table-responsive border-0" style="border-radius: 8px;">
+                                <table class="table table-bordered mb-0" id="itemsTable">
+                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th width="5%" class="text-center align-middle">#</th>
+                                            <th width="45%" class="align-middle">Product <span class="text-danger">*</span></th>
+                                            <th width="20%" class="align-middle">Quantity <span class="text-danger">*</span></th>
+                                            <th width="15%" class="text-center align-middle">Available</th>
+                                            <th width="15%" class="text-center align-middle">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsBody">
+                                        <!-- Items will be added here dynamically -->
+                                    </tbody>
+                                    <tfoot class="bg-light">
+                                        <tr>
+                                            <td colspan="5" class="text-right p-2">
+                                                <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addItemBtn">
+                                                    <i class="fa fa-plus mr-1"></i> Add Item
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
                         <div class="text-danger small mt-1" id="itemsError"></div>
                     </div>
@@ -119,95 +122,36 @@
     </div>
 
     <!-- Edit Return Modal -->
-    <div id="editRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-warning text-dark py-3">
-                    <h4 class="modal-title h5 font-weight-bold mb-0">
-                        <i class="fa fa-pencil-square-o mr-2"></i>{{ __('Edit Stock Return') }}
-                    </h4>
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                </div>
-                <div class="modal-body p-4">
-                    {!! Form::open(['route' => ['inventoryReturns.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editReturnForm']) !!}
-                    
-                    <div class="row">
-                        <!-- Driver Selection -->
-                        <div class="col-md-6">
-                            <div class="form-group mb-4">
-                                <label for="driver_id" class="col-form-label font-weight-bold mb-2">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
-                                <div class="dropdown w-100">
-                                    <button class="btn btn-outline-primary btn-block dropdown-toggle text-left py-2 px-3" type="button" id="dropdownDriverEdit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 8px; font-size: 1rem;">
-                                        <i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}
-                                    </button>
-                                    <div class="dropdown-menu p-3 shadow-sm border-0" aria-labelledby="dropdownDriverEdit" style="width: 400px; max-height: 400px; overflow-y: auto; border-radius: 12px;">
-                                        <div class="input-group mb-3">
-                                            <div class="input-group-prepend">
-                                                <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
-                                            </div>
-                                            <input type="text" class="form-control" id="driverSearchEdit" placeholder="Search Drivers...">
-                                        </div>
-                                        <div id="driverListEdit" class="list-group">
-                                            @foreach($drivers as $driver)
-                                                <a href="#" class="list-group-item list-group-item-action driver-item border-0 py-2 px-3 rounded mb-1" data-value="{{ $driver->id }}">
-                                                    <i class="fa fa-user-circle-o mr-2 text-primary"></i>{{ $driver->name }}
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="driver_id" id="selectedDriverEdit" required>
-                                <div class="text-danger small mt-1" id="driverEditError"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- Remarks -->
-                        <div class="col-md-6">
-                            <div class="form-group mb-4">
-                                <label for="remarks" class="col-form-label font-weight-bold mb-2">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
-                                <textarea class="form-control py-2" name="remarks" id="remarksEdit" rows="2" placeholder="Any additional notes..." style="border-radius: 8px; resize: vertical;"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Items Table for Edit -->
-                    <div class="form-group mt-2">
-                        <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <div class="table-responsive border rounded-lg" style="border-radius: 12px !important;">
-                            <table class="table table-bordered mb-0" id="editItemsTable">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th width="5%" class="text-center align-middle">#</th>
-                                        <th width="50%" class="align-middle">Product <span class="text-danger">*</span></th>
-                                        <th width="25%" class="align-middle">Quantity <span class="text-danger">*</span></th>
-                                        <th width="20%" class="text-center align-middle">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="editItemsBody">
-                                    <!-- Items will be populated here -->
-                                </tbody>
-                                <tfoot class="bg-light">
-                                    <tr>
-                                        <td colspan="4" class="text-right p-2">
-                                            <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addEditItemBtn">
-                                                <i class="fa fa-plus mr-1"></i> Add Item
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                        <div class="text-danger small mt-1" id="editItemsError"></div>
-                    </div>
-
-                    <div class="modal-footer border-0 px-0 pb-0 pt-4">
-                        <button type="button" class="btn btn-secondary px-4 py-2 rounded-pill" data-dismiss="modal">{{ __('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm">{{ __('Update Return') }}</button>
-                    </div>
-                    {!! Form::close() !!}
-                </div>
+    <div class="form-group mt-2">
+        <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
+        <!-- Add scrollable wrapper -->
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+            <div class="table-responsive border-0" style="border-radius: 8px; overflow-x: auto;">
+                <table class="table table-bordered mb-0" id="editItemsTable">
+                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th width="5%" class="text-center align-middle">#</th>
+                            <th width="50%" class="align-middle">Product <span class="text-danger">*</span></th>
+                            <th width="25%" class="align-middle">Quantity <span class="text-danger">*</span></th>
+                            <th width="20%" class="text-center align-middle">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="editItemsBody">
+                        <!-- Items will be populated here -->
+                    </tbody>
+                    <tfoot class="bg-light">
+                        <tr>
+                            <td colspan="4" class="text-right p-2">
+                                <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addEditItemBtn">
+                                    <i class="fa fa-plus mr-1"></i> Add Item
+                                </button>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
         </div>
+        <div class="text-danger small mt-1" id="editItemsError"></div>
     </div>
     
     <!-- View Return Modal -->
@@ -747,7 +691,7 @@
                                 </div>
                                 <div class="product-list" data-index="${itemCounter}" style="max-height: 220px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action product-select-item border-0 py-2 rounded mb-1" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
+                                        <a href="#" class="list-group-item list-group-item-action product-select-item border-0 py-2 rounded mb-1" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}" data-quantity="0">
                                             <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                             <span class="product-available-qty text-muted float-right"></span>
                                         </a>
@@ -894,6 +838,7 @@
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
+            var productCode = $(this).data('code');
             var availableQuantity = $(this).data('quantity') || 0;
             var driverId = $('#selectedDriverCreate').val();
             
@@ -907,7 +852,8 @@
                 return;
             }
             
-            $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
+            // Show product name with code
+            $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
             $(this).closest('tr').find('.product-id-input').val(productId);
             $(this).closest('tr').find('.product-error').text('');
             $(this).siblings().removeClass('active');
@@ -1049,7 +995,7 @@
                                 </div>
                                 <div class="edit-product-list" data-index="${editItemCounter}" style="max-height: 220px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item border-0 py-2 rounded mb-1" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-quantity="0">
+                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item border-0 py-2 rounded mb-1" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}" data-quantity="0">
                                             <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                             <span class="product-available-qty text-muted float-right"></span>
                                         </a>
@@ -1166,8 +1112,10 @@
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
+            var productCode = $(this).data('code');
             
-            $('#editProductDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName}`).attr('title', productName);
+            // Show product name with code
+            $('#editProductDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
             $(this).closest('tr').find('.edit-product-id-input').val(productId);
             $(this).closest('tr').find('.edit-product-error').text('');
             $(this).siblings().removeClass('active');
