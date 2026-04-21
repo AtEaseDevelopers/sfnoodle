@@ -381,8 +381,120 @@
 <script>
     // Auto-open script for inventory counts
     $(document).ready(function() {
-        console.log('Inventory Counts page loaded');
+
+        var tooltipTimeout;
+        var currentTooltipId = null;
         
+        // Handle mouse enter on product summary container
+        $(document).on('mouseenter', '.product-summary-container', function(e) {
+            var $container = $(this);
+            var tooltipId = $container.data('container-id');
+            
+            if (!tooltipId) return;
+            
+            // Clear any existing timeout
+            if (tooltipTimeout) {
+                clearTimeout(tooltipTimeout);
+            }
+            
+            // Show tooltip after short delay
+            tooltipTimeout = setTimeout(function() {
+                var $tooltip = $('#' + tooltipId);
+                var containerOffset = $container.offset();
+                
+                // Position tooltip above the container
+                var top = containerOffset.top - $tooltip.outerHeight() - 10;
+                var left = containerOffset.left;
+                
+                // Adjust if tooltip goes out of viewport
+                if (top < 10) {
+                    top = containerOffset.top + $container.outerHeight() + 10;
+                }
+                
+                if (left + $tooltip.outerWidth() > $(window).width()) {
+                    left = $(window).width() - $tooltip.outerWidth() - 10;
+                }
+                
+                if (left < 10) {
+                    left = 10;
+                }
+                
+                $tooltip.css({
+                    'top': top + 'px',
+                    'left': left + 'px',
+                    'display': 'block'
+                });
+                
+                currentTooltipId = tooltipId;
+                
+                // Add hover handler to tooltip to keep it open
+                $tooltip.off('mouseenter').on('mouseenter', function() {
+                    if (tooltipTimeout) {
+                        clearTimeout(tooltipTimeout);
+                    }
+                    $(this).css('display', 'block');
+                });
+                
+                $tooltip.off('mouseleave').on('mouseleave', function() {
+                    $(this).fadeOut(200);
+                    currentTooltipId = null;
+                });
+            }, 300);
+        });
+        
+        // Handle mouse leave on product summary container
+        $(document).on('mouseleave', '.product-summary-container', function(e) {
+            var $container = $(this);
+            var tooltipId = $container.data('container-id');
+            
+            if (tooltipTimeout) {
+                clearTimeout(tooltipTimeout);
+            }
+            
+            // Don't hide immediately, give time to move to tooltip
+            setTimeout(function() {
+                var $tooltip = $('#' + tooltipId);
+                // Check if mouse is not over the tooltip
+                if ($tooltip && !$tooltip.is(':hover')) {
+                    $tooltip.fadeOut(200);
+                    currentTooltipId = null;
+                }
+            }, 100);
+        });
+        
+        // Handle scroll to hide tooltips
+        $(window).on('scroll', function() {
+            $('.custom-product-tooltip').fadeOut(200);
+            currentTooltipId = null;
+        });
+        
+        // Handle resize to reposition tooltips
+        $(window).on('resize', function() {
+            $('.custom-product-tooltip').each(function() {
+                var $tooltip = $(this);
+                var containerId = $tooltip.attr('id');
+                var $container = $('.product-summary-container[data-container-id="' + containerId + '"]');
+                
+                if ($container.length && $tooltip.is(':visible')) {
+                    var containerOffset = $container.offset();
+                    var top = containerOffset.top - $tooltip.outerHeight() - 10;
+                    var left = containerOffset.left;
+                    
+                    if (top < 10) {
+                        top = containerOffset.top + $container.outerHeight() + 10;
+                    }
+                    
+                    if (left + $tooltip.outerWidth() > $(window).width()) {
+                        left = $(window).width() - $tooltip.outerWidth() - 10;
+                    }
+                    
+                    $tooltip.css({
+                        'top': top + 'px',
+                        'left': left + 'px'
+                    });
+                }
+            });
+        });
         // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const viewCountId = urlParams.get('view_count');
@@ -465,6 +577,36 @@
 
 @push('scripts')
     <style>
+        /* Custom product tooltip styling */ +
+        .custom-product-tooltip {  +
+           font-family: inherit; +
+           font-size: 13px; +
+           line-height: 1.5; +
+           background: white !important; +
+           color: #333 !important; +
+        } +
+        .custom-product-tooltip::-webkit-scrollbar {  +
+           width: 6px; +
+        } +
+        .custom-product-tooltip::-webkit-scrollbar-track {  +
+           background: #f1f1f1; +
+           border-radius: 3px; +
+        } +
+        .custom-product-tooltip::-webkit-scrollbar-thumb {  +
+           background: #888; +
+           border-radius: 3px; +
+        } +
+        .custom-product-tooltip::-webkit-scrollbar-thumb:hover {  +
+           background: #555; +
+        } +
+        .product-summary-container {  +
+           cursor: help; +
+           transition: background-color 0.2s; +
+        } +
+        .product-summary-container:hover {  +
+           background-color: rgba(74, 144, 226, 0.05); +
+        }
+
         .dropdown-menu {
             border-radius: 0.25rem;
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);

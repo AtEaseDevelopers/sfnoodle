@@ -4,15 +4,11 @@ namespace App\Providers;
 
 use App\Models\Invoice;
 use App\Models\Kelindan;
-
-
-
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Supervisor;
 use App\Models\Agent;
-
-
+use App\Models\SalesInvoice;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Code;
@@ -142,6 +138,7 @@ class ViewServiceProvider extends ServiceProvider
             $invoiceItems = Invoice::pluck('invoiceno','id')->toArray();
             $view->with('invoiceItems', $invoiceItems);
         });
+        
         View::composer(['invoices.fields'], function ($view) {
             $supervisorItems = Supervisor::pluck('name','id')->toArray();
             $view->with('supervisorItems', $supervisorItems);
@@ -216,7 +213,10 @@ class ViewServiceProvider extends ServiceProvider
             $view->with('customerItems', $customerItems);
         });
         View::composer(['special_prices.fields'], function ($view) {
-            $productItems = Product::pluck('name','id')->toArray();
+            $productItems = Product::get()->mapWithKeys(function ($product) {
+                return [$product->id => $product->name . ' (' . $product->code . ')'];
+            })->toArray();
+            
             $view->with('productItems', $productItems);
         });
         View::composer(['customers.fields'], function ($view) {

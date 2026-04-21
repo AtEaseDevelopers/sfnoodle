@@ -26,13 +26,15 @@
                                         {!! Form::select('sales_invoice_id', $salesInvoiceItems, $id, ['class' => 'form-control', 'placeholder' => 'Pick a Sales Order...','disabled']) !!}
                                     </div>
 
-
-                                    <!-- Product Id Field -->
+                                    <!-- Product Id Field with Select2 -->
                                     <div class="form-group col-sm-6">
                                         {!! Form::label('product_id', 'Product:') !!}<span class="asterisk"> *</span>
-                                        {!! Form::select('product_id', $productItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Product...','autofocus']) !!}
+                                        {!! Form::select('product_id', $productItems, null, [
+                                            'class' => 'form-control product-select2', 
+                                            'placeholder' => 'Search and pick a product...',
+                                            'autofocus'
+                                        ]) !!}
                                     </div>
-
 
                                     <!-- Quantity Field -->
                                     <div class="form-group col-sm-6">
@@ -58,25 +60,63 @@
                                         <a href="{{ route('salesInvoices.show',Crypt::encrypt($id)) }}" class="btn btn-secondary">Cancel</a>
                                     </div>
 
+                                    @push('styles')
+                                        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+                                        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+                                        <style>
+                                            .select2-container--bootstrap-5 .select2-selection {
+                                                min-height: 38px;
+                                                border-radius: 0.25rem;
+                                            }
+                                            .select2-container--bootstrap-5 .select2-selection--single {
+                                                padding: 5px;
+                                            }
+                                        </style>
+                                    @endpush
+
                                     @push('scripts')
+                                        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
                                         <script>
                                             $(document).keyup(function(e) {
                                                 if (e.key === "Escape") {
                                                     $('form a.btn-secondary')[0].click();
                                                 }
                                             });
+                                            
                                             $(document).ready(function () {
                                                 HideLoad();
+                                                
+                                                // Initialize Select2 for product selection
+                                                $('.product-select2').select2({
+                                                    theme: 'bootstrap-5',
+                                                    placeholder: 'Search for a product by name or code...',
+                                                    allowClear: true,
+                                                    width: '100%',
+                                                    language: {
+                                                        searching: function() {
+                                                            return 'Searching products...';
+                                                        },
+                                                        noResults: function() {
+                                                            return 'No products found';
+                                                        }
+                                                    }
+                                                });
+                                                
+                                                // Trigger price load when product is selected
+                                                $('.product-select2').on('change', function() {
+                                                    getprice();
+                                                });
+                                                
+                                                // Keep the original sales_invoice_id change handler
+                                                $("#sales_invoice_id").on('change', function(){
+                                                    getprice();
+                                                });
                                             });
-                                            $("#sales_invoice_id").change(function(){
-                                                getprice();
-                                            });
-                                            $("#product_id").change(function(){
-                                                getprice();
-                                            });
+                                            
                                             function getprice(){
                                                 var sales_invoice_id = $('#sales_invoice_id').val();
-                                                var product_id = $('#product_id').val();
+                                                var product_id = $('.product-select2').val();
+                                                
                                                 if(sales_invoice_id != '' && product_id != ''){
                                                     ShowLoad();
                                                     var url = '{{ config("app.url") }}/salesInvoiceDetails/getprice/'+sales_invoice_id+'/'+product_id;
@@ -93,7 +133,6 @@
                                                             HideLoad();
                                                         }
                                                     }); 
-
                                                 }
                                             }
                                         </script>

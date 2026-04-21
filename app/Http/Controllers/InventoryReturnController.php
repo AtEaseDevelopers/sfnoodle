@@ -48,10 +48,16 @@ class InventoryReturnController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
+    { 
         $validator = Validator::make($request->all(), InventoryReturn::$rules);
 
         if ($validator->fails()) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
@@ -63,6 +69,12 @@ class InventoryReturnController extends Controller
             // Validate items array
             $items = $request->items;
             if (!is_array($items) || empty($items)) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Please add at least one item'
+                    ], 422);
+                }
                 Flash::error('Please add at least one item');
                 return redirect()->back()->withInput();
             }
@@ -70,61 +82,50 @@ class InventoryReturnController extends Controller
             // Check for duplicate products
             $productIds = array_column($items, 'product_id');
             if (count($productIds) !== count(array_unique($productIds))) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Duplicate products are not allowed in the same return'
+                    ], 422);
+                }
                 Flash::error('Duplicate products are not allowed in the same return');
                 return redirect()->back()->withInput();
             }
 
-            // Check if driver has enough stock for all items
-            $errors = [];
-            foreach ($items as $item) {
-                $inventoryBalance = InventoryBalance::where([
-                    'driver_id' => $request->driver_id,
-                    'product_id' => $item['product_id']
-                ])->first();
-
-                $currentBalance = $inventoryBalance->quantity ?? 0;
-                if ($currentBalance < $item['quantity']) {
-                    $product = Product::find($item['product_id']);
-                    $errors[] = $product->name . ': Available stock: ' . $currentBalance . ', Requested: ' . $item['quantity'];
-                }
-            }
-
-            if (!empty($errors)) {
-                Flash::error('Insufficient stock for some items:<br>' . implode('<br>', $errors));
-                return redirect()->back()->withInput();
-            }
-
-            // Create inventory return with items
+            // Create inventory return with items (NO stock validation)
             $inventoryReturn = InventoryReturn::create([
                 'driver_id' => $request->driver_id,
-                'items' => $items, // Store as JSON array
-                'status' => InventoryReturn::STATUS_APPROVED, // Auto-approved
+                'items' => $items,
+                'status' => InventoryReturn::STATUS_APPROVED,
                 'remarks' => $request->remarks,
                 'approved_by' => Auth::id(),
                 'approved_at' => now(),
-                'trip_id' => $driver->trip_id,
+                'trip_id' => $driver->trip_id ?? null,
             ]);
 
-            // Process each item
+            // Process each item - ONLY deduct if product exists in inventory
             foreach ($items as $item) {
-                $inventoryBalance = InventoryBalance::firstOrNew([
+                $inventoryBalance = InventoryBalance::where([
                     'driver_id' => $inventoryReturn->driver_id,
                     'product_id' => $item['product_id']
-                ]);
+                ])->first();
 
-                // Subtract the returned quantity from existing balance
-                $currentBalance = $inventoryBalance->quantity ?? 0;
-                $inventoryBalance->quantity = $currentBalance - $item['quantity'];
-                $inventoryBalance->save();
-                $user = Auth::user();
-                // Create inventory transaction record for STOCK OUT
-                InventoryTransaction::createTransaction(
-                    $inventoryReturn->driver_id,
-                    $item['product_id'],
-                    $item['quantity'],
-                    InventoryTransaction::TYPE_STOCK_RETURN,
-                    'Stock Return - Approved by: ' . $user->name,
-                );
+                // Only deduct if inventory record exists
+                if ($inventoryBalance) {
+                    $currentBalance = $inventoryBalance->quantity ?? 0;
+                    $inventoryBalance->quantity = $currentBalance - $item['quantity'];
+                    $inventoryBalance->save();
+                    
+                    $user = Auth::user();
+                    InventoryTransaction::createTransaction(
+                        $inventoryReturn->driver_id,
+                        $item['product_id'],
+                        $item['quantity'],
+                        InventoryTransaction::TYPE_STOCK_RETURN,
+                        'Stock Return - Approved by: ' . ($user ? $user->name : 'System'),
+                    );
+                }
+                // If inventory record doesn't exist, skip deduction (do nothing)
             }
 
             if ($request->ajax()) {
@@ -139,6 +140,12 @@ class InventoryReturnController extends Controller
             return redirect(route('inventoryReturns.index'));
 
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create return: ' . $e->getMessage()
+                ], 500);
+            }
             Flash::error('Failed to create return: ' . $e->getMessage());
             return redirect()->back()->withInput();
         }
@@ -166,9 +173,6 @@ class InventoryReturnController extends Controller
         return view('inventory_returns.show', compact('inventoryReturn'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, $id)
     {
         $inventoryReturn = InventoryReturn::findOrFail($id);
@@ -188,15 +192,12 @@ class InventoryReturnController extends Controller
 
         // Validate the request based on what's being updated
         if ($request->has('items')) {
-            // For full updates with multiple items
             $validator = Validator::make($request->all(), InventoryReturn::$rules);
         } else if ($request->has('quantity') && !$request->has('driver_id') && !$request->has('product_id')) {
-            // For quantity-only updates (for backward compatibility)
             $validator = Validator::make($request->all(), [
                 'quantity' => 'required|integer|min:1'
             ]);
         } else {
-            // For backward compatibility with old single-item updates
             $validator = Validator::make($request->all(), [
                 'quantity' => 'required|integer|min:1',
                 'driver_id' => 'required|exists:drivers,id',
@@ -218,8 +219,26 @@ class InventoryReturnController extends Controller
         }
 
         try {
+            // Get old items to reverse previous deductions
+            $oldItems = $inventoryReturn->items;
+            
+            // Reverse previous deductions (add back the stock) - ONLY if inventory record exists
+            if (!empty($oldItems) && is_array($oldItems)) {
+                foreach ($oldItems as $oldItem) {
+                    $inventoryBalance = InventoryBalance::where([
+                        'driver_id' => $inventoryReturn->driver_id,
+                        'product_id' => $oldItem['product_id']
+                    ])->first();
+                    
+                    // Only add back if inventory record exists
+                    if ($inventoryBalance) {
+                        $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $oldItem['quantity'];
+                        $inventoryBalance->save();
+                    }
+                }
+            }
+            
             if ($request->has('items')) {
-                // Update with new items array
                 $items = $request->items;
                 
                 // Check for duplicate products
@@ -242,7 +261,6 @@ class InventoryReturnController extends Controller
                     'remarks' => $request->remarks,
                 ];
             } else {
-                // For backward compatibility - convert single item to array
                 $updateData = [
                     'driver_id' => $request->driver_id,
                     'items' => [[
@@ -254,6 +272,32 @@ class InventoryReturnController extends Controller
             }
 
             $inventoryReturn->update($updateData);
+            
+            // Process new items - ONLY deduct if inventory record exists
+            $newItems = $updateData['items'];
+            foreach ($newItems as $item) {
+                $inventoryBalance = InventoryBalance::where([
+                    'driver_id' => $inventoryReturn->driver_id,
+                    'product_id' => $item['product_id']
+                ])->first();
+                
+                // Only deduct if inventory record exists
+                if ($inventoryBalance) {
+                    $currentBalance = $inventoryBalance->quantity ?? 0;
+                    $inventoryBalance->quantity = $currentBalance - $item['quantity'];
+                    $inventoryBalance->save();
+                    
+                    $user = Auth::user();
+                    InventoryTransaction::createTransaction(
+                        $inventoryReturn->driver_id,
+                        $item['product_id'],
+                        $item['quantity'],
+                        InventoryTransaction::TYPE_STOCK_RETURN,
+                        'Stock Return Updated - ' . ($user ? $user->name : 'System'),
+                    );
+                }
+                // If inventory record doesn't exist, skip deduction (do nothing)
+            }
 
             if ($request->ajax()) {
                 return response()->json([
@@ -334,8 +378,8 @@ class InventoryReturnController extends Controller
             ], 400);
         }
         
+        // Get ALL inventory items (including zero quantities)
         $inventory = InventoryBalance::where('driver_id', $driverId)
-            ->where('quantity', '>', 0)  // Add this line to filter out zero quantities
             ->with('product:id,name,code')
             ->get()
             ->map(function($item) {
@@ -346,6 +390,22 @@ class InventoryReturnController extends Controller
                     'quantity' => $item->quantity
                 ];
             });
+        
+        // Also include products that have no inventory record (quantity = 0)
+        $allProducts = Product::all();
+        $existingProductIds = $inventory->pluck('product_id')->toArray();
+        
+        foreach ($allProducts as $product) {
+            if (!in_array($product->id, $existingProductIds)) {
+                $inventory->push([
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'product_code' => $product->code,
+                    'quantity' => 0
+                ]);
+            }
+        }
+        
         return response()->json([
             'success' => true,
             'inventory' => $inventory

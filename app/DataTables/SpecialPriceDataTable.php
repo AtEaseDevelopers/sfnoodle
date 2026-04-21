@@ -18,7 +18,13 @@ class SpecialPriceDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'special_prices.datatables_actions');
+        return $dataTable->addColumn('action', 'special_prices.datatables_actions')
+        ->editColumn('product.name', function ($model) {
+            if ($model->product) {
+                return $model->product->name . ' - (' . $model->product->code . ')';
+            }
+            return '-';
+        });
     }
 
     /**
@@ -30,7 +36,7 @@ class SpecialPriceDataTable extends DataTable
     public function query(SpecialPrice $model)
     {
         return $model->newQuery()
-            ->with('product:id,name')  // Removed uom from here since we don't need it from product anymore
+            ->with('product:id,name,code')  // Removed uom from here since we don't need it from product anymore
             ->with('customer:id,company')
             ->select('special_prices.*');
     }

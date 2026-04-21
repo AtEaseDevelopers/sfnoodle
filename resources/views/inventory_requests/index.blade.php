@@ -26,7 +26,7 @@
     </div>
 
     <!-- Create Request Modal - Enhanced -->
-    <div id="createRequest" class="modal fade" data-backdrop="static">
+    <div id="createRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
             <div class="modal-content" style="border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column;">
                 <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-shrink: 0;">
@@ -35,7 +35,7 @@
                     </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                    <div class="modal-body" style="padding: 2rem; overflow-y: auto; flex: 1;">
+                <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1; max-height: calc(100vh - 200px);">
                     {!! Form::open(['route' => 'inventoryRequests.store', 'enctype' => 'multipart/form-data', 'id' => 'createRequestForm']) !!}
                     
                     <div class="row">
@@ -77,14 +77,15 @@
                         </div>
                     </div>
                     
-                    <!-- Items Table -->
+                    <!-- Items Table - Scrollable wrapper -->
                     <div class="form-group mt-3">
                         <label class="col-form-label font-weight-bold">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <!-- Add a wrapper div with max-height and overflow-y for scrolling -->
-                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
-                            <div class="table-responsive border-0" style="border-radius: 8px;">
+                        
+                        <!-- Scrollable wrapper for items table -->
+                        <div class="items-scroll-wrapper" style="max-height: 450px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; background: #fff;">
+                            <div class="table-responsive" style="overflow-x: auto;">
                                 <table class="table table-bordered mb-0" id="itemsTable" style="min-width: 700px;">
-                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
+                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 10; background: #f8f9fa;">
                                         <tr>
                                             <th width="5%" class="text-center">#</th>
                                             <th width="55%">Product <span class="text-danger">*</span></th>
@@ -95,9 +96,9 @@
                                     <tbody id="itemsBody">
                                         <!-- Items will be added here dynamically -->
                                     </tbody>
-                                    <tfoot>
+                                    <tfoot class="bg-light">
                                         <tr>
-                                            <td colspan="4" class="text-right bg-light py-2">
+                                            <td colspan="4" class="text-right py-2">
                                                 <button type="button" class="btn btn-success btn-sm" id="addItemBtn">
                                                     <i class="fa fa-plus mr-1"></i> Add Item
                                                 </button>
@@ -121,7 +122,7 @@
     </div>
 
     <!-- Edit Request Modal - Enhanced -->
-    <div id="editRequest" class="modal fade" data-backdrop="static">
+    <div id="editRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
             <div class="modal-content" style="border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column;">
                 <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-shrink: 0;">
@@ -130,10 +131,10 @@
                     </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body" style="padding: 2rem; overflow-y: auto; flex: 1;">
-                        {!! Form::open(['route' => ['inventoryRequests.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editRequestForm']) !!}
+                <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1; max-height: calc(100vh - 200px);">
+                    {!! Form::open(['route' => ['inventoryRequests.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editRequestForm']) !!}
                     
-                    <!-- Add a hidden field to track if we want to save and approve -->
+                    <!-- Add hidden field -->
                     <input type="hidden" name="save_and_approve" id="saveAndApprove" value="0">
                     
                     <div class="row">
@@ -175,14 +176,15 @@
                         </div>
                     </div>
                     
-                    <!-- Items Table for Edit -->
+                    <!-- Items Table - Scrollable wrapper -->
                     <div class="form-group mt-3">
                         <label class="col-form-label font-weight-bold">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <!-- Add a wrapper div with max-height and overflow-y for scrolling -->
-                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
-                            <div class="table-responsive border-0" style="border-radius: 8px; overflow-x: auto;">
+                        
+                        <!-- Scrollable wrapper for items table -->
+                        <div class="items-scroll-wrapper" style="max-height: 450px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; background: #fff;">
+                            <div class="table-responsive" style="overflow-x: auto;">
                                 <table class="table table-bordered mb-0" id="editItemsTable" style="min-width: 700px;">
-                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
+                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 10; background: #f8f9fa;">
                                         <tr>
                                             <th width="5%" class="text-center">#</th>
                                             <th width="55%">Product <span class="text-danger">*</span></th>
@@ -193,9 +195,9 @@
                                     <tbody id="editItemsBody">
                                         <!-- Items will be populated here -->
                                     </tbody>
-                                    <tfoot>
+                                    <tfoot class="bg-light">
                                         <tr>
-                                            <td colspan="4" class="text-right bg-light py-2">
+                                            <td colspan="4" class="text-right py-2">
                                                 <button type="button" class="btn btn-success btn-sm" id="addEditItemBtn">
                                                     <i class="fa fa-plus mr-1"></i> Add Item
                                                 </button>
@@ -212,7 +214,6 @@
                         <button type="button" class="btn btn-secondary rounded-0 px-4" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <button type="submit" class="btn btn-primary rounded-0 px-4">{{ __('Update Request') }}</button>
                         
-                        <!-- Add Save & Approve button for admins -->
                         @if(auth()->user()->hasRole('admin'))
                             <button type="button" class="btn btn-success rounded-0 px-4" id="saveAndApproveBtn">
                                 <i class="fa fa-check mr-1"></i> {{ __('Save & Approve') }}
@@ -226,7 +227,7 @@
     </div>
     
     <!-- View Request Modal - Enhanced -->
-    <div id="viewRequest" class="modal fade">
+    <div id="viewRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
             <div class="modal-content" style="border-radius: 12px;">
                 <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
@@ -334,305 +335,457 @@
 @endsection
 
 @push('scripts')
-    <style>
-        /* Enhanced styles - matching Stock Return */
-        .modal-dialog {
-            margin: 1.75rem auto;
-        }
-        
-        .modal-xl {
-            max-width: 1400px;
-        }
-        
-        .modal-content {
-            border-radius: 12px;
-            border: none;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            overflow: visible !important;
-        }
-        
-        .modal-header {
-            padding: 1.25rem 1.5rem;
-            flex-shrink: 0;
-        }
+<style>
+    /* ============================================
+   COMPLETE FIXED CSS FOR MODAL SCROLLING
+   ============================================ */
+
+/* Fix modal scrolling for multiple items - CRITICAL */
+.modal {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.modal-open {
+    overflow: hidden !important;
+    padding-right: 0 !important;
+}
+
+.modal-dialog {
+    margin: 1.75rem auto !important;
+    max-height: calc(100vh - 3.5rem) !important;
+}
+
+.modal-content {
+    max-height: calc(100vh - 3.5rem) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    flex-shrink: 0 !important;
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-body {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 1.5rem !important;
+    max-height: none !important;
+}
+
+.modal-footer {
+    flex-shrink: 0 !important;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+}
+
+/* Fix for the items scroll wrapper - CRITICAL */
+.items-scroll-wrapper {
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+}
+
+/* Ensure table stays within wrapper */
+.items-scroll-wrapper .table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+}
+
+/* Sticky header for items table - CRITICAL */
+#itemsTable thead th,
+#editItemsTable thead th {
+    position: sticky !important;
+    top: 0 !important;
+    background: #f8f9fa !important;
+    z-index: 10 !important;
+    box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+}
+
+/* Sticky footer for items table */
+#itemsTable tfoot,
+#editItemsTable tfoot {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: #f8f9fa !important;
+    z-index: 10 !important;
+}
+
+/* Fix for the items table container */
+#itemsTable, #editItemsTable {
+    margin-bottom: 0;
+    overflow: visible !important;
+}
+
+/* Ensure the table wrapper scrolls properly */
+.table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+}
+
+.table-responsive .table {
+    overflow: visible !important;
+    margin-bottom: 0;
+}
+
+.table-responsive .table tbody {
+    overflow: visible !important;
+}
+
+.table-responsive .table tr {
+    overflow: visible !important;
+}
+
+.table-responsive .table td {
+    overflow: visible !important;
+}
+
+/* Make each row position relative for better dropdown positioning */
+.item-row, .edit-item-row {
+    position: relative;
+}
+
+/* ============================================
+   FIXED DROPDOWN STYLES - SEPARATE BY TYPE
+   ============================================ */
+
+/* Regular dropdown (driver selection) - normal behavior */
+.dropdown:not(.item-row .dropdown, .edit-item-row .dropdown) .dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: auto !important;
+    margin-top: 5px !important;
+    margin-bottom: 0 !important;
+    bottom: auto !important;
+    z-index: 9999 !important;
+}
+
+/* Product dropdown in table rows - fixed positioning for scrolling */
+.item-row .dropdown-menu,
+.edit-item-row .dropdown-menu {
+    position: fixed !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: 9999 !important;
+    min-width: 600px;
+    max-width: 600px;
+    margin-top: 0 !important;
+}
+
+/* General dropdown styles */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    max-height: 350px;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e0e0e0;
+    background: white;
+    will-change: transform;
+}
+
+/* Specific styles for driver dropdown */
+#dropdownDriverCreate + .dropdown-menu,
+#dropdownDriverEdit + .dropdown-menu {
+    width: 100% !important;
+    min-width: 100% !important;
+}
+
+.dropdown-toggle::after {
+    margin-left: 10px;
+    float: right;
+    margin-top: 8px;
+}
+
+.dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Fix dropdown positioning inside scrolling modal - only for product dropdowns */
+.modal-body .item-row .dropdown-menu,
+.modal-body .edit-item-row .dropdown-menu {
+    position: fixed !important;
+    z-index: 1060 !important;
+}
+
+/* Ensure proper spacing when many items */
+.item-row td, .edit-item-row td {
+    overflow: visible !important;
+    position: static !important;
+}
+
+.item-row .dropdown, .edit-item-row .dropdown {
+    position: static !important;
+}
+
+/* View modal items table scrolling - CRITICAL */
+#viewItemsTable {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+#viewItemsTable .table {
+    margin-bottom: 0;
+}
+
+#viewItemsTable .table th {
+    background-color: #f8f9fa;
+}
+
+/* Modal XL sizing */
+.modal-xl {
+    max-width: 1400px;
+}
+
+/* Button styling */
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.btn-outline-primary {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.btn-outline-secondary {
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+/* Error styling */
+.is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.text-danger {
+    font-size: 0.75rem;
+}
+
+/* Badge styles */
+.badge {
+    font-size: 85%;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.badge-pending {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-approved {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-rejected {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-cancelled {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Driver and product selection styles */
+.driver-item:hover,
+.driver-item.active,
+.product-select-item:hover,
+.product-select-item.active,
+.edit-product-select-item:hover,
+.edit-product-select-item.active {
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+}
+
+.list-group-item {
+    border: 1px solid rgba(0,0,0,.125);
+    margin-bottom: -1px;
+    padding: 10px 15px;
+}
+
+.list-group-item:first-child {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+.list-group-item:last-child {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.small {
+    font-size: 80%;
+}
+
+/* Ensure dropdowns from table rows are visible above modal content */
+.item-row .dropdown.show,
+.edit-item-row .dropdown.show {
+    position: relative;
+    z-index: 10000;
+}
+
+/* Fix for any hidden overflow on parent elements */
+.container-fluid, 
+.animated, 
+.fadeIn, 
+.row, 
+.col-lg-12, 
+.card, 
+.card-body {
+    overflow: visible !important;
+}
+
+/* Ensure modal backdrop doesn't cause issues */
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+/* Card body overflow fix */
+.card-body {
+    overflow: visible !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .modal-xl {
+        max-width: 95%;
+        margin: 1rem auto;
+    }
     
-        .modal-footer {
-            padding: 1rem 1.5rem;
-            flex-shrink: 0;
-        }
-        
-        /* Critical fix for dropdown - make it appear above everything */
-        .dropdown {
-            position: relative;
-        }
-        
-        .dropdown-menu {
-            position: absolute !important;
-            z-index: 9999 !important;
-            max-height: 350px;
-            width: 200px;
-            overflow-y: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            border: 1px solid #e0e0e0;
-            background: white;
-            will-change: transform;
-        }
-        
-        /* Ensure dropdown appears below the button by default */
-        .item-row .dropdown-menu,
-        .edit-item-row .dropdown-menu {
-            position: absolute !important;
-            top: 100% !important;
-            left: 0 !important;
-            right: auto !important;
-            margin-top: 5px !important;
-            margin-bottom: 0 !important;
-            bottom: auto !important;
-        }
-        
-        /* Fix for table responsive - prevent cutoff */
-        .table-responsive {
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-        }
-        
-        .table-responsive .table {
-            overflow: visible !important;
-            margin-bottom: 0;
-        }
-        
-        .table-responsive .table tbody {
-            overflow: visible !important;
-        }
-        
-        .table-responsive .table tr {
-            overflow: visible !important;
-        }
-        
-        .table-responsive .table td {
-            overflow: visible !important;
-        }
-        
-        /* Make each row position relative for better dropdown positioning */
-        .item-row, .edit-item-row {
-            position: relative;
-        }
-        
-        /* Remove overflow restrictions on containers */
-        #itemsTable, #editItemsTable {
-            overflow: visible !important;
-        }
-        
-        .card-body {
-            overflow: visible !important;
-        }
-        
-        /* Ensure modal doesn't clip dropdowns */
-        .modal {
-            overflow: visible !important;
-        }
-        
-        .modal-dialog {
-            overflow: visible !important;
-        }
-        
-        .dropdown-toggle::after {
-            margin-left: 10px;
-            float: right;
-            margin-top: 8px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 4px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-        
-        .btn-outline-primary {
-            border-color: #007bff;
-            color: #007bff;
-        }
-        
-        .btn-outline-primary:hover {
-            background-color: #007bff;
-            color: #fff;
-        }
-        
-        .btn-outline-secondary {
-            border-color: #6c757d;
-            color: #6c757d;
-        }
-        
-        .btn-outline-secondary:hover {
-            background-color: #6c757d;
-            color: #fff;
-        }
-        
-        .driver-item:hover,
-        .driver-item.active,
-        .product-select-item:hover,
-        .product-select-item.active,
-        .edit-product-select-item:hover,
-        .edit-product-select-item.active {
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-        
-        .list-group-item {
-            border: 1px solid rgba(0,0,0,.125);
-            margin-bottom: -1px;
-            padding: 10px 15px;
-        }
-        
-        .list-group-item:first-child {
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-        }
-        
-        .list-group-item:last-child {
-            border-bottom-left-radius: 6px;
-            border-bottom-right-radius: 6px;
-        }
-        
-        .badge {
-            font-size: 85%;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        
-        .badge-pending {
-            background-color: #ffc107;
-            color: #212529;
-        }
-        
-        .badge-approved {
-            background-color: #28a745;
-            color: white;
-        }
-        
-        .badge-rejected {
-            background-color: #dc3545;
-            color: white;
-        }
-        
-        .badge-cancelled {
-            background-color: #6c757d;
-            color: white;
-        }
-        
-        .small {
-            font-size: 80%;
-        }
-        
-        .item-row td, .edit-item-row td {
-            overflow: visible !important;
-            position: static !important;
-        }
-        
-        .item-row .dropdown, .edit-item-row .dropdown {
-            position: static !important;
-        }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .items-scroll-wrapper {
+        max-height: 300px !important;
+    }
+    
+    #viewItemsTable {
+        max-height: 300px;
+    }
+}
 
-        /* Make dropdown menu appear above everything with proper positioning */
-        .item-row .dropdown-menu,
-        .edit-item-row .dropdown-menu {
-            position: fixed !important;
-            top: auto !important;
-            left: auto !important;
-            z-index: 9999 !important;
-            min-width: 600px;
-            max-width: 600px;
-            margin-top: 0 !important;
-        }
-
-        /* Ensure table container doesn't clip dropdowns */
-        .table-responsive {
-            overflow: visible !important;
-        }
-
-        .table-responsive .table {
-            overflow: visible !important;
-        }
-
-        .table-responsive .table tbody {
-            overflow: visible !important;
-        }
-
-        .table-responsive .table tr {
-            overflow: visible !important;
-        }
-
-        /* Ensure modal body doesn't restrict dropdowns */
-        .modal-body {
-            overflow: visible !important;
-        }
-        /* Button styling */
-        .btn-sm {
-            padding: 0.25rem 0.75rem;
-            font-size: 0.8rem;
-        }
-        
-        /* Error styling */
-        .is-invalid {
-            border-color: #dc3545 !important;
-        }
-        
-        .text-danger {
-            font-size: 0.75rem;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 992px) {
-            .modal-xl {
-                max-width: 95%;
-                margin: 1rem auto;
-            }
-            
-            .table-responsive {
-                overflow-x: auto;
-            }
-        }
-        
-        /* View modal table styling */
-        #viewItemsTable .table {
-            margin-bottom: 0;
-        }
-        
-        #viewItemsTable .table th {
-            background-color: #f8f9fa;
-        }
-        
-        /* Ensure dropdowns from table rows are visible above modal content */
-        .item-row .dropdown.show,
-        .edit-item-row .dropdown.show {
-            position: relative;
-            z-index: 10000;
-        }
-        
-        /* Fix for any hidden overflow on parent elements */
-        .container-fluid, .animated, .fadeIn, .row, .col-lg-12, .card, .card-body {
-            overflow: visible !important;
-        }
-    </style>
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 0.5rem !important;
+        max-height: calc(100vh - 1rem) !important;
+    }
+    
+    .modal-content {
+        max-height: calc(100vh - 1rem) !important;
+    }
+}
+</style>
 
 <script>
     // Auto-open script for inventory requests
     $(document).ready(function() {
-        console.log('Inventory Requests page loaded');
+
+        $('.modal').on('show.bs.modal', function() {
+            $('body').addClass('modal-open');
+            $('body').css('overflow', 'hidden');
+            $('body').css('padding-right', '0');
+            
+            // Fix dropdown positioning in scrolling modal
+            setTimeout(function() {
+                $('.modal.show').each(function() {
+                    $(this).find('.dropdown-menu').each(function() {
+                        $(this).css('position', 'fixed');
+                    });
+                });
+            }, 100);
+        });
+        
+        $('.modal').on('hidden.bs.modal', function() {
+            $('body').removeClass('modal-open');
+            $('body').css('overflow', '');
+            $('body').css('padding-right', '');
+        });
+        
+        // Prevent modal from closing when clicking inside modal body
+        $('.modal').on('click', function(e) {
+            if ($(e.target).hasClass('modal')) {
+                // Don't auto-close, only close when clicking close button
+                e.preventDefault();
+            }
+        });
+        
+        // Fix for dropdowns in modals
+        $(document).on('shown.bs.dropdown', '.dropdown', function() {
+            var $menu = $(this).find('.dropdown-menu');
+            var $button = $(this).find('.dropdown-toggle');
+            
+            // Check if this is a product dropdown inside table row
+            if ($(this).closest('.item-row, .edit-item-row').length > 0) {
+                // Product dropdown - use fixed positioning
+                var buttonOffset = $button.offset();
+                $menu.css({
+                    'position': 'fixed',
+                    'top': buttonOffset.top + $button.outerHeight(),
+                    'left': buttonOffset.left,
+                    'z-index': 1060,
+                    'min-width': '600px',
+                    'max-width': '600px'
+                });
+            } else {
+                // Driver dropdown - use normal absolute positioning
+                $menu.css({
+                    'position': 'absolute',
+                    'top': '100%',
+                    'left': '0',
+                    'right': 'auto',
+                    'z-index': 9999
+                });
+            }
+        });
         
         // Initialize DataTable
         var table = window.LaravelDataTables["dataTableBuilder"] || $('.data-table').DataTable();

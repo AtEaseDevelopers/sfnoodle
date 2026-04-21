@@ -43,7 +43,7 @@ class InventoryReturnDataTable extends DataTable
             foreach ($items as $item) {
                 $product = Product::find($item['product_id'] ?? null);
                 
-                $productName = $product ? $product->name : '-';
+                $productName = $product ? $product->code : '-';
                 $quantity = $item['quantity'] ?? 0;
                 
                 if (isset($groupedItems[$productName])) {

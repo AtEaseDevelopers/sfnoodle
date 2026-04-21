@@ -27,15 +27,15 @@
 
     <!-- Create Return Modal -->
     <div id="createRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-shrink: 0;">
                     <h4 class="modal-title h5 font-weight-bold mb-0">
                         <i class="fa fa-arrow-circle-up mr-2"></i>{{ __('Create Stock Return') }}
                     </h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
                     {!! Form::open(['route' => 'inventoryReturns.store', 'enctype' => 'multipart/form-data', 'id' => 'createReturnForm']) !!}
                     
                     <div class="row">
@@ -80,11 +80,10 @@
                     <!-- Items Table -->
                     <div class="form-group mt-2">
                         <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-                        <!-- Add scrollable wrapper -->
-                        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
-                            <div class="table-responsive border-0" style="border-radius: 8px;">
-                                <table class="table table-bordered mb-0" id="itemsTable">
-                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
+                        <div class="items-scroll-wrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; background: #fff;">
+                            <div class="table-responsive" style="overflow-x: auto;">
+                                <table class="table table-bordered mb-0" id="itemsTable" style="min-width: 700px;">
+                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 10; background: #f8f9fa;">
                                         <tr>
                                             <th width="5%" class="text-center align-middle">#</th>
                                             <th width="45%" class="align-middle">Product <span class="text-danger">*</span></th>
@@ -111,7 +110,7 @@
                         <div class="text-danger small mt-1" id="itemsError"></div>
                     </div>
 
-                    <div class="modal-footer border-0 px-0 pb-0 pt-4">
+                    <div class="modal-footer border-0 px-0 pb-0 pt-4" style="flex-shrink: 0;">
                         <button type="button" class="btn btn-secondary px-4 py-2 rounded-pill" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm">{{ __('Submit Return') }}</button>
                     </div>
@@ -122,49 +121,110 @@
     </div>
 
     <!-- Edit Return Modal -->
-    <div class="form-group mt-2">
-        <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
-        <!-- Add scrollable wrapper -->
-        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
-            <div class="table-responsive border-0" style="border-radius: 8px; overflow-x: auto;">
-                <table class="table table-bordered mb-0" id="editItemsTable">
-                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 1;">
-                        <tr>
-                            <th width="5%" class="text-center align-middle">#</th>
-                            <th width="50%" class="align-middle">Product <span class="text-danger">*</span></th>
-                            <th width="25%" class="align-middle">Quantity <span class="text-danger">*</span></th>
-                            <th width="20%" class="text-center align-middle">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="editItemsBody">
-                        <!-- Items will be populated here -->
-                    </tbody>
-                    <tfoot class="bg-light">
-                        <tr>
-                            <td colspan="4" class="text-right p-2">
-                                <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addEditItemBtn">
-                                    <i class="fa fa-plus mr-1"></i> Add Item
-                                </button>
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
+    <div id="editRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1400px;">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="modal-header" style="background: #f8f9fa; border-bottom: 2px solid #e9ecef; flex-shrink: 0;">
+                    <h4 class="modal-title h5 font-weight-bold mb-0">
+                        <i class="fa fa-pencil-square-o text-warning mr-2"></i>{{ __('Edit Stock Return') }}
+                    </h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+                    {!! Form::open(['route' => ['inventoryReturns.update', ':id'], 'method' => 'PUT', 'enctype' => 'multipart/form-data', 'id' => 'editReturnForm']) !!}
+                    
+                    <div class="row">
+                        <!-- Driver Selection -->
+                        <div class="col-md-6">
+                            <div class="form-group mb-4">
+                                <label for="driver_id" class="col-form-label font-weight-bold mb-2">{{ __('Driver') }} <span class="text-danger">*</span>:</label>
+                                <div class="dropdown w-100">
+                                    <button class="btn btn-outline-primary btn-block dropdown-toggle text-left py-2 px-3" type="button" id="dropdownDriverEdit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="border-radius: 8px; font-size: 1rem;">
+                                        <i class="fa fa-user mr-2"></i>{{ __('Select Driver') }}
+                                    </button>
+                                    <div class="dropdown-menu p-3 shadow-sm border-0" aria-labelledby="dropdownDriverEdit" style="width: 400px; max-height: 400px; overflow-y: auto; border-radius: 12px;">
+                                        <div class="input-group mb-3">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
+                                            </div>
+                                            <input type="text" class="form-control" id="driverSearchEdit" placeholder="Search Drivers...">
+                                        </div>
+                                        <div id="driverListEdit" class="list-group">
+                                            @foreach($drivers as $driver)
+                                                <a href="#" class="list-group-item list-group-item-action driver-item border-0 py-2 px-3 rounded mb-1" data-value="{{ $driver->id }}">
+                                                    <i class="fa fa-user-circle-o mr-2 text-primary"></i>{{ $driver->name }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="driver_id" id="selectedDriverEdit" required>
+                                <div class="text-danger small mt-1" id="driverEditError"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Remarks -->
+                        <div class="col-md-6">
+                            <div class="form-group mb-4">
+                                <label for="remarks" class="col-form-label font-weight-bold mb-2">{{ __('Remarks') }} ({{ __('Optional') }}):</label>
+                                <textarea class="form-control py-2" name="remarks" id="remarksEdit" rows="2" placeholder="Any additional notes..." style="border-radius: 8px; resize: vertical;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Items Table -->
+                    <div class="form-group mt-2">
+                        <label class="col-form-label font-weight-bold mb-3">{{ __('Items') }} <span class="text-danger">*</span>:</label>
+                        <div class="items-scroll-wrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; background: #fff;">
+                            <div class="table-responsive" style="overflow-x: auto;">
+                                <table class="table table-bordered mb-0" id="editItemsTable" style="min-width: 700px;">
+                                    <thead class="bg-light position-sticky top-0" style="position: sticky; top: 0; z-index: 10; background: #f8f9fa;">
+                                        <tr>
+                                            <th width="5%" class="text-center align-middle">#</th>
+                                            <th width="50%" class="align-middle">Product <span class="text-danger">*</span></th>
+                                            <th width="25%" class="align-middle">Quantity <span class="text-danger">*</span></th>
+                                            <th width="20%" class="text-center align-middle">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="editItemsBody">
+                                        <!-- Items will be populated here -->
+                                    </tbody>
+                                    <tfoot class="bg-light">
+                                        <tr>
+                                            <td colspan="4" class="text-right p-2">
+                                                <button type="button" class="btn btn-success btn-sm px-3 py-1 rounded-pill" id="addEditItemBtn">
+                                                    <i class="fa fa-plus mr-1"></i> Add Item
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="text-danger small mt-1" id="editItemsError"></div>
+                    </div>
+
+                    <div class="modal-footer border-0 px-0 pb-0 pt-4" style="flex-shrink: 0;">
+                        <button type="button" class="btn btn-secondary px-4 py-2 rounded-pill" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill shadow-sm">{{ __('Update Return') }}</button>
+                    </div>
+                    {!! Form::close() !!}
+                </div>
             </div>
         </div>
-        <div class="text-danger small mt-1" id="editItemsError"></div>
     </div>
     
     <!-- View Return Modal -->
-    <div id="viewRequest" class="modal fade">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content shadow-lg border-0">
-                <div class="modal-header bg-info py-3">
+    <div id="viewRequest" class="modal fade" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="modal-header bg-info py-3" style="flex-shrink: 0;">
                     <h4 class="modal-title h5 font-weight-bold mb-0">
                         <i class="fa fa-info-circle mr-2"></i>Stock Return Details <span id="viewRequestId"></span>
                     </h4>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-hidden="true">&times;</button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
                     <div class="row">
                         <div class="col-md-12">
                             <div class="card bg-light border-0 shadow-none">
@@ -215,10 +275,10 @@
                     <!-- Items Table Section -->
                     <div class="mt-4">
                         <h5 class="font-weight-bold mb-3"><i class="fa fa-list mr-2"></i>Returned Items</h5>
-                        <div id="viewItemsTable"></div>
+                        <div id="viewItemsTable" style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;"></div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0">
+                <div class="modal-footer border-0 pt-0" style="flex-shrink: 0;">
                     <div class="d-flex justify-content-between w-100">
                         <div id="viewActionButtons">
                             <!-- Action buttons will be shown here for pending returns only -->
@@ -232,300 +292,204 @@
 @endsection
 
 @push('scripts')
-    <style>
-        /* Enhanced styles - matching Stock Return */
-        .modal-dialog {
-            margin: 1.75rem auto;
-        }
-        
-        .modal-xl {
-            max-width: 1400px;
-        }
-        
-        .modal-content {
-            border-radius: 12px;
-            border: none;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            overflow: visible !important;
-        }
-        
-        .modal-header {
-            padding: 1.25rem 1.5rem;
-            flex-shrink: 0;
-        }
+<style>
+    /* ============================================
+   COMPLETE FIXED CSS FOR MODAL SCROLLING
+   ============================================ */
+
+/* Fix modal scrolling for multiple items - CRITICAL */
+.modal {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+.modal-open {
+    overflow: hidden !important;
+    padding-right: 0 !important;
+}
+
+.modal-dialog {
+    margin: 1.75rem auto !important;
+    max-height: calc(100vh - 3.5rem) !important;
+}
+
+.modal-content {
+    max-height: calc(100vh - 3.5rem) !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    flex-shrink: 0 !important;
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-body {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 1.5rem !important;
+    max-height: none !important;
+}
+
+.modal-footer {
+    flex-shrink: 0 !important;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+}
+
+/* Fix for the items scroll wrapper - CRITICAL */
+.items-scroll-wrapper {
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+}
+
+/* Ensure table stays within wrapper */
+.items-scroll-wrapper .table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+}
+
+/* Sticky header for items table - CRITICAL */
+#itemsTable thead th,
+#editItemsTable thead th {
+    position: sticky !important;
+    top: 0 !important;
+    background: #f8f9fa !important;
+    z-index: 10 !important;
+    box-shadow: inset 0 1px 0 #dee2e6, inset 0 -1px 0 #dee2e6;
+}
+
+/* Sticky footer for items table */
+#itemsTable tfoot,
+#editItemsTable tfoot {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: #f8f9fa !important;
+    z-index: 10 !important;
+}
+
+/* View modal items table scrolling - CRITICAL */
+#viewItemsTable {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+#viewItemsTable .table {
+    margin-bottom: 0;
+}
+
+#viewItemsTable .table th {
+    background-color: #f8f9fa;
+}
+
+/* Dropdown styles - separated for driver vs product */
+.dropdown {
+    position: relative;
+}
+
+/* Regular dropdown (driver selection) - normal behavior */
+.dropdown:not(.item-row .dropdown, .edit-item-row .dropdown) .dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: auto !important;
+    margin-top: 5px !important;
+    margin-bottom: 0 !important;
+    bottom: auto !important;
+    z-index: 9999 !important;
+}
+
+/* Product dropdown in table rows - fixed positioning for scrolling */
+.item-row .dropdown-menu,
+.edit-item-row .dropdown-menu {
+    position: fixed !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: 9999 !important;
+    min-width: 600px;
+    max-width: 600px;
+    margin-top: 0 !important;
+}
+
+.dropdown-menu {
+    max-height: 350px;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e0e0e0;
+    background: white;
+}
+
+/* Ensure table container doesn't clip dropdowns */
+.table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+}
+
+.table-responsive .table {
+    overflow: visible !important;
+    margin-bottom: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .modal-xl {
+        max-width: 95%;
+        margin: 1rem auto;
+    }
     
-        .modal-footer {
-            padding: 1rem 1.5rem;
-            flex-shrink: 0;
-        }
-        
-        /* Critical fix for dropdown - make it appear above everything */
-        .dropdown {
-            position: relative;
-        }
-        
-        .dropdown-menu {
-            position: absolute !important;
-            z-index: 9999 !important;
-            max-height: 350px;
-            width: 400px;
-            overflow-y: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            border: 1px solid #e0e0e0;
-            background: white;
-            will-change: transform;
-        }
-        
-        /* Ensure dropdown appears below the button by default */
-        .item-row .dropdown-menu,
-        .edit-item-row .dropdown-menu {
-            position: absolute !important;
-            top: 100% !important;
-            left: 0 !important;
-            right: auto !important;
-            margin-top: 5px !important;
-            margin-bottom: 0 !important;
-            bottom: auto !important;
-        }
-        
-        /* Fix for table responsive - prevent cutoff */
-        .table-responsive {
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-        }
-        
-        .table-responsive .table {
-            overflow: visible !important;
-            margin-bottom: 0;
-        }
-        
-        .table-responsive .table tbody {
-            overflow: visible !important;
-        }
-        
-        .table-responsive .table tr {
-            overflow: visible !important;
-        }
-        
-        .table-responsive .table td {
-            overflow: visible !important;
-        }
-        
-        /* Make each row position relative for better dropdown positioning */
-        .item-row, .edit-item-row {
-            position: relative;
-        }
-        
-        /* Remove overflow restrictions on containers */
-        #itemsTable, #editItemsTable {
-            overflow: visible !important;
-        }
-        
-        .card-body {
-            overflow: visible !important;
-        }
-        
-        /* Ensure modal doesn't clip dropdowns */
-        .modal {
-            overflow: visible !important;
-        }
-        
-        .modal-dialog {
-            overflow: visible !important;
-        }
-        
-        .dropdown-toggle::after {
-            margin-left: 10px;
-            float: right;
-            margin-top: 8px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 4px;
-        }
-        
-        .dropdown-menu::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-        
-        .btn-outline-primary {
-            border-color: #007bff;
-            color: #007bff;
-        }
-        
-        .btn-outline-primary:hover {
-            background-color: #007bff;
-            color: #fff;
-        }
-        
-        .btn-outline-secondary {
-            border-color: #6c757d;
-            color: #6c757d;
-        }
-        
-        .btn-outline-secondary:hover {
-            background-color: #6c757d;
-            color: #fff;
-        }
-        
-        .driver-item:hover,
-        .driver-item.active,
-        .product-select-item:hover,
-        .product-select-item.active,
-        .edit-product-select-item:hover,
-        .edit-product-select-item.active {
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-        
-        .list-group-item {
-            border: 1px solid rgba(0,0,0,.125);
-            margin-bottom: -1px;
-            padding: 10px 15px;
-        }
-        
-        .list-group-item:first-child {
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-        }
-        
-        .list-group-item:last-child {
-            border-bottom-left-radius: 6px;
-            border-bottom-right-radius: 6px;
-        }
-        
-        .badge {
-            font-size: 85%;
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        
-        .badge-pending {
-            background-color: #ffc107;
-            color: #212529;
-        }
-        
-        .badge-approved {
-            background-color: #28a745;
-            color: white;
-        }
-        
-        .badge-rejected {
-            background-color: #dc3545;
-            color: white;
-        }
-        
-        .badge-cancelled {
-            background-color: #6c757d;
-            color: white;
-        }
-        
-        .small {
-            font-size: 80%;
-        }
-        
-        .item-row td, .edit-item-row td {
-            overflow: visible !important;
-            position: static !important;
-        }
-        
-        .item-row .dropdown, .edit-item-row .dropdown {
-            position: static !important;
-        }
+    .items-scroll-wrapper {
+        max-height: 300px !important;
+    }
+    
+    #viewItemsTable {
+        max-height: 300px;
+    }
+}
 
-        /* Make dropdown menu appear above everything with proper positioning */
-        .item-row .dropdown-menu,
-        .edit-item-row .dropdown-menu {
-            position: fixed !important;
-            top: auto !important;
-            left: auto !important;
-            z-index: 9999 !important;
-            min-width: 600px;
-            max-width: 600px;
-            margin-top: 0 !important;
-        }
 
-        /* Ensure table container doesn't clip dropdowns */
-        .table-responsive {
-            overflow: visible !important;
-        }
+/* Warning state for inputs */
+.is-warning {
+    border-color: #ffc107 !important;
+    background-color: #fff3cd !important;
+}
 
-        .table-responsive .table {
-            overflow: visible !important;
-        }
+.is-warning:focus {
+    border-color: #ffc107 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25) !important;
+}
 
-        .table-responsive .table tbody {
-            overflow: visible !important;
-        }
+/* Badge styles for stock status */
+.badge-danger {
+    background-color: #dc3545;
+}
 
-        .table-responsive .table tr {
-            overflow: visible !important;
-        }
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
 
-        /* Ensure modal body doesn't restrict dropdowns */
-        .modal-body {
-            overflow: visible !important;
-        }
-        /* Button styling */
-        .btn-sm {
-            padding: 0.25rem 0.75rem;
-            font-size: 0.8rem;
-        }
-        
-        /* Error styling */
-        .is-invalid {
-            border-color: #dc3545 !important;
-        }
-        
-        .text-danger {
-            font-size: 0.75rem;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 992px) {
-            .modal-xl {
-                max-width: 95%;
-                margin: 1rem auto;
-            }
-            
-            .table-responsive {
-                overflow-x: auto;
-            }
-        }
-        
-        /* View modal table styling */
-        #viewItemsTable .table {
-            margin-bottom: 0;
-        }
-        
-        #viewItemsTable .table th {
-            background-color: #f8f9fa;
-        }
-        
-        /* Ensure dropdowns from table rows are visible above modal content */
-        .item-row .dropdown.show,
-        .edit-item-row .dropdown.show {
-            position: relative;
-            z-index: 10000;
-        }
-        
-        /* Fix for any hidden overflow on parent elements */
-        .container-fluid, .animated, .fadeIn, .row, .col-lg-12, .card, .card-body {
-            overflow: visible !important;
-        }
-    </style>
+.badge-success {
+    background-color: #28a745;
+}
+
+</style>
 
 <script>
     $(document).ready(function () {
@@ -691,9 +655,8 @@
                                 </div>
                                 <div class="product-list" data-index="${itemCounter}" style="max-height: 220px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action product-select-item border-0 py-2 rounded mb-1" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}" data-quantity="0">
+                                        <a href="#" class="list-group-item list-group-item-action product-select-item border-0 py-2 rounded mb-1" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}" data-quantity="0">
                                             <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
-                                            <span class="product-available-qty text-muted float-right"></span>
                                         </a>
                                     @endforeach
                                 </div>
@@ -701,19 +664,19 @@
                         </div>
                         <input type="hidden" class="product-id-input" name="items[${itemCounter}][product_id]" value="">
                         <div class="text-danger product-error small mt-1"></div>
-                    </td>
+                    </div>
                     <td style="min-width: 140px;">
                         <input type="number" min="1" class="form-control quantity-input" name="items[${itemCounter}][quantity]" placeholder="Enter quantity" style="border-radius: 8px;">
                         <div class="text-danger quantity-error small mt-1"></div>
-                    </td>
+                    </div>
                     <td class="align-middle text-center">
                         <span class="available-quantity" id="availableQuantity${itemCounter}">—</span>
-                    </td>
+                    </div>
                     <td class="align-middle text-center">
                         <button type="button" class="btn btn-outline-danger btn-sm rounded-pill remove-item-btn" ${itemCounter === 0 ? 'disabled' : ''}>
                             <i class="fa fa-trash-o mr-1"></i> Remove
                         </button>
-                    </td>
+                    </div>
                 </tr>
             `;
             
@@ -724,45 +687,69 @@
             if ($('#itemsBody tr').length > 1) {
                 $('#itemsBody tr:first .remove-item-btn').prop('disabled', false);
             }
+            
+            // Update product quantities for this new row if driver is already selected
+            var driverId = $('#selectedDriverCreate').val();
+            if (driverId && driverInventoryMap) {
+                updateProductQuantitiesInDropdown(driverInventoryMap);
+            }
         }
         
         // Function to update product quantities in dropdown lists
         function updateProductQuantitiesInDropdown(inventoryMap) {
-            // Update create modal product lists
+            // Update create modal product lists - show all products
             $('.product-list .product-select-item').each(function() {
                 var productId = $(this).data('value');
                 var quantity = inventoryMap[productId] || 0;
                 var productName = $(this).data('name');
-                var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
+                var productCode = $(this).data('code');
                 
-                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode})`);
+                // Clear existing content and set new HTML
+                $(this).empty();
+                $(this).append(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode})`);
                 $(this).data('quantity', quantity);
                 
+                // Show all products
+                $(this).show();
+                
+                // Add quantity badge
                 if (quantity === 0) {
-                    $(this).hide();
+                    $(this).append('<span class="badge badge-danger float-right">Out of Stock</span>');
+                    $(this).addClass('text-danger');
                 } else if (quantity < 10) {
-                    $(this).removeClass('text-muted').addClass('text-warning');
+                    $(this).append(`<span class="badge badge-warning float-right">Stock: ${quantity}</span>`);
+                    $(this).removeClass('text-danger');
                 } else {
-                    $(this).removeClass('text-muted text-warning');
+                    $(this).append(`<span class="badge badge-success float-right">Stock: ${quantity}</span>`);
+                    $(this).removeClass('text-danger');
                 }
             });
             
-            // Update edit modal product lists
+            // Update edit modal product lists - show all products
             $('.edit-product-list .edit-product-select-item').each(function() {
                 var productId = $(this).data('value');
                 var quantity = inventoryMap[productId] || 0;
                 var productName = $(this).data('name');
-                var productCode = $(this).text().match(/\(([^)]+)\)/)?.[1] || '';
+                var productCode = $(this).data('code');
                 
-                $(this).html(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode})`);
+                // Clear existing content and set new HTML
+                $(this).empty();
+                $(this).append(`<i class="fa fa-cube mr-2 text-secondary"></i>${productName} (${productCode})`);
                 $(this).data('quantity', quantity);
                 
+                // Show all products
+                $(this).show();
+                
+                // Add quantity badge
                 if (quantity === 0) {
-                    $(this).addClass('text-muted');
+                    $(this).append('<span class="badge badge-danger float-right">Out of Stock</span>');
+                    $(this).addClass('text-danger');
                 } else if (quantity < 10) {
-                    $(this).addClass('text-warning');
+                    $(this).append(`<span class="badge badge-warning float-right">Stock: ${quantity}</span>`);
+                    $(this).removeClass('text-danger');
                 } else {
-                    $(this).removeClass('text-muted text-warning');
+                    $(this).append(`<span class="badge badge-success float-right">Stock: ${quantity}</span>`);
+                    $(this).removeClass('text-danger');
                 }
             });
         }
@@ -812,10 +799,11 @@
                                 var available = getAvailableQuantity(productId);
                                 var index = $(this).data('index');
                                 $('#availableQuantity' + index).html(available);
-                                $(this).find('.quantity-input').attr('max', available);
+                                $(this).find('.quantity-input').attr('max', null);
                             }
                         });
                         
+                        // Update ALL product lists (including newly added rows)
                         updateProductQuantitiesInDropdown(driverInventoryMap);
                     }
                 },
@@ -826,6 +814,7 @@
                 }
             });
         }
+
         
         // Get available quantity for a product
         function getAvailableQuantity(productId) {
@@ -847,24 +836,31 @@
                 return;
             }
             
-            if (availableQuantity === 0) {
-                alert('This product is out of stock for the selected driver');
-                return;
-            }
-            
             // Show product name with code
             $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
             $(this).closest('tr').find('.product-id-input').val(productId);
             $(this).closest('tr').find('.product-error').text('');
             $(this).siblings().removeClass('active');
             $(this).addClass('active bg-light');
-            $('#availableQuantity' + index).html(availableQuantity);
-            $(this).closest('tr').find('.quantity-input').attr('max', availableQuantity);
+            
+            // Show available quantity with warning if out of stock
+            var availableHtml = availableQuantity;
+            if (availableQuantity === 0) {
+                availableHtml = '<span class="text-danger"><i class="fa fa-exclamation-triangle"></i> Out of Stock</span>';
+                $('#availableQuantity' + index).html(availableHtml);
+                // Show warning notification
+                showNotification('warning', `${productName} is out of stock for this driver. You can still create the return request.`);
+            } else {
+                $('#availableQuantity' + index).html(availableHtml);
+            }
+            
+            // Don't set max attribute - allow any quantity
+            $(this).closest('tr').find('.quantity-input').attr('max', null);
             
             var currentQuantity = $(this).closest('tr').find('.quantity-input').val();
-            if (currentQuantity && parseInt(currentQuantity) > availableQuantity) {
-                $(this).closest('tr').find('.quantity-input').val(availableQuantity);
-                $(this).closest('tr').find('.quantity-error').text('Quantity adjusted to available stock: ' + availableQuantity);
+            if (currentQuantity && parseInt(currentQuantity) > availableQuantity && availableQuantity > 0) {
+                // Don't auto-adjust, just show warning
+                $(this).closest('tr').find('.quantity-error').text('Note: Quantity exceeds available stock (' + availableQuantity + ' available)');
             }
         });
         
@@ -877,15 +873,18 @@
             var quantityError = row.find('.quantity-error');
             
             if (productId && quantity) {
-                if (quantity > available) {
-                    quantityError.text('⚠️ Quantity exceeds available stock. Maximum: ' + available);
-                    $(this).addClass('is-invalid');
+                if (quantity > available && available > 0) {
+                    quantityError.html('<i class="fa fa-exclamation-triangle"></i> Warning: Quantity exceeds available stock (' + available + ' available)');
+                    $(this).removeClass('is-invalid').addClass('is-warning');
+                } else if (available === 0) {
+                    quantityError.html('<i class="fa fa-exclamation-triangle"></i> Note: This product is out of stock for this driver');
+                    $(this).removeClass('is-invalid').addClass('is-warning');
                 } else if (quantity < 1) {
                     quantityError.text('⚠️ Quantity must be at least 1');
-                    $(this).addClass('is-invalid');
+                    $(this).addClass('is-invalid').removeClass('is-warning');
                 } else {
                     quantityError.text('');
-                    $(this).removeClass('is-invalid');
+                    $(this).removeClass('is-invalid is-warning');
                 }
             }
         });
@@ -997,7 +996,6 @@
                                     @foreach($products as $product)
                                         <a href="#" class="list-group-item list-group-item-action edit-product-select-item border-0 py-2 rounded mb-1" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}" data-quantity="0">
                                             <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
-                                            <span class="product-available-qty text-muted float-right"></span>
                                         </a>
                                     @endforeach
                                 </div>
@@ -1005,16 +1003,16 @@
                         </div>
                         <input type="hidden" class="edit-product-id-input" name="items[${editItemCounter}][product_id]" value="${productId}">
                         <div class="text-danger edit-product-error small mt-1"></div>
-                    </td>
+                    </div>
                     <td style="min-width: 150px;">
                         <input type="number" min="1" class="form-control edit-quantity-input" name="items[${editItemCounter}][quantity]" placeholder="Enter quantity" value="${quantity}" style="border-radius: 8px;">
                         <div class="text-danger edit-quantity-error small mt-1"></div>
-                    </td>
+                    </div>
                     <td class="align-middle text-center">
                         <button type="button" class="btn btn-outline-danger btn-sm rounded-pill remove-edit-item-btn" ${editItemCounter === 0 ? 'disabled' : ''}>
                             <i class="fa fa-trash-o mr-1"></i> Remove
                         </button>
-                    </td>
+                    </div>
                 </tr>
             `;
             
@@ -1023,6 +1021,12 @@
             
             if ($('#editItemsBody tr').length > 1) {
                 $('#editItemsBody tr:first .remove-edit-item-btn').prop('disabled', false);
+            }
+            
+            // Update product quantities for this new row if driver is already selected
+            var driverId = $('#selectedDriverEdit').val();
+            if (driverId && driverInventoryMap) {
+                updateProductQuantitiesInDropdown(driverInventoryMap);
             }
         }
         
@@ -1301,7 +1305,6 @@
                 var quantity = $(this).find('.quantity-input').val();
                 var productError = $(this).find('.product-error');
                 var quantityError = $(this).find('.quantity-error');
-                var available = getAvailableQuantity(productId);
                 
                 productError.text('');
                 quantityError.text('');
@@ -1316,15 +1319,13 @@
                     productIds.add(productId);
                 }
                 
+                // ONLY validate quantity is a positive number, NOT stock availability
                 if (!quantity || quantity < 1) {
                     quantityError.text('⚠️ Please enter a valid quantity (minimum 1)');
                     hasErrors = true;
-                } else if (available < quantity) {
-                    quantityError.text('⚠️ Insufficient stock. Available: ' + available);
-                    hasErrors = true;
                 }
                 
-                if (productId && quantity && quantity >= 1 && available >= quantity) {
+                if (productId && quantity && quantity >= 1) {
                     items.push({
                         product_id: parseInt(productId),
                         quantity: parseInt(quantity)
@@ -1337,11 +1338,27 @@
                 hasErrors = true;
             }
             
+            // Show confirmation warning if any items are out of stock
+            var hasOutOfStockItems = false;
+            $('#itemsBody tr').each(function() {
+                var productId = $(this).find('.product-id-input').val();
+                var quantity = $(this).find('.quantity-input').val();
+                var available = getAvailableQuantity(productId);
+                
+                if (productId && quantity && available === 0) {
+                    hasOutOfStockItems = true;
+                }
+            });
+            
+            if (hasOutOfStockItems && !confirm('Warning: Some selected products are out of stock for this driver. Do you still want to proceed with the return request?')) {
+                if (typeof HideLoad === 'function') HideLoad();
+                return false;
+            }
+            
             if (hasErrors) {
                 $('#itemsBody tr').each(function(index) {
                     var productId = $(this).find('.product-id-input').val();
                     var quantity = $(this).find('.quantity-input').val();
-                    var available = getAvailableQuantity(productId);
                     
                     if (!productId) {
                         $(this).find('.product-dropdown').addClass('is-invalid');
@@ -1349,7 +1366,7 @@
                         $(this).find('.product-dropdown').removeClass('is-invalid');
                     }
                     
-                    if (!quantity || quantity < 1 || (productId && available < quantity)) {
+                    if (!quantity || quantity < 1) {
                         $(this).find('.quantity-input').addClass('is-invalid');
                     } else {
                         $(this).find('.quantity-input').removeClass('is-invalid');
