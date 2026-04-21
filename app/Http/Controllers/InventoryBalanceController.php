@@ -44,6 +44,31 @@ class InventoryBalanceController extends AppBaseController
         return $inventoryBalanceDataTable->render('inventory_balances.index', compact('driverItems', 'productItems'));
     }
 
+    public function getBlockedProducts(Request $request)
+    {
+        $driverIds = $request->get('driver_ids');
+        
+        if (empty($driverIds)) {
+            return response()->json([
+                'success' => true,
+                'blocked_product_ids' => []
+            ]);
+        }
+        
+        // Get blocked products for all selected drivers
+        // If any driver has the product blocked, it should be hidden
+        $blockedProductIds = \App\Models\Product::where(function($query) use ($driverIds) {
+            foreach ($driverIds as $driverId) {
+                $query->orWhereJsonContains('blocked_drivers', (string)$driverId);
+            }
+        })->pluck('id')->toArray();
+        
+        return response()->json([
+            'success' => true,
+            'blocked_product_ids' => $blockedProductIds
+        ]);
+    }
+
 	public function stockin(Request $request)
     {
         $data = $request->all();
@@ -62,11 +87,25 @@ class InventoryBalanceController extends AppBaseController
         }
         
         $driverIds = array_filter($driverIds); // Remove empty values
-        $productId = $data['product_id'];
-        $quantity = $data['quantity'];
+        
+        // Get items array (multiple products)
+        $items = $data['items'];
+        
+        if (!is_array($items) || empty($items)) {
+            Flash::error('Please add at least one item');
+            return redirect(route('inventoryBalances.index'));
+        }
+        
+        // Check for duplicate products in items
+        $productIds = array_column($items, 'product_id');
+        if (count($productIds) !== count(array_unique($productIds))) {
+            Flash::error('Duplicate products are not allowed in the same stock in');
+            return redirect(route('inventoryBalances.index'));
+        }
         
         $successCount = 0;
         $errorMessages = [];
+        $totalItemsProcessed = 0;
         
         foreach ($driverIds as $driverId) {
             // Trim whitespace and convert to integer
@@ -78,42 +117,40 @@ class InventoryBalanceController extends AppBaseController
             }
             
             try {
-                $inventoryBalance = InventoryBalance::where('product_id', $productId)
-                    ->where('driver_id', $driverId)
-                    ->first();
+                foreach ($items as $item) {
+                    $productId = $item['product_id'];
+                    $quantity = $item['quantity'];
+                    
+                    $inventoryBalance = InventoryBalance::where('product_id', $productId)
+                        ->where('driver_id', $driverId)
+                        ->first();
 
-                if (!empty($inventoryBalance)) {
-                    // Update the existing inventory balance
-                    $inventoryBalance->quantity = $inventoryBalance->quantity + $quantity;
-                    $inventoryBalance->save();
-
+                    if (!empty($inventoryBalance)) {
+                        // Update the existing inventory balance
+                        $inventoryBalance->quantity = $inventoryBalance->quantity + $quantity;
+                        $inventoryBalance->save();
+                    } else {
+                        // Insert a new inventory balance
+                        $newInventoryBalance = new InventoryBalance();
+                        $newInventoryBalance->product_id = $productId;
+                        $newInventoryBalance->driver_id = $driverId;
+                        $newInventoryBalance->quantity = $quantity;
+                        $newInventoryBalance->save();
+                    }
+                    
                     // Create an inventory transaction record
                     $inventoryTransaction = new InventoryTransaction();
                     $inventoryTransaction->type = 1; // Stock In
                     $inventoryTransaction->driver_id = $driverId;
                     $inventoryTransaction->product_id = $productId;
                     $inventoryTransaction->quantity = $quantity;
+                    $inventoryTransaction->remark = 'Stock In - Multiple items';
                     $inventoryTransaction->save();
-
-                    $successCount++;
-                } else {
-                    // Insert a new inventory balance
-                    $newInventoryBalance = new InventoryBalance();
-                    $newInventoryBalance->product_id = $productId;
-                    $newInventoryBalance->driver_id = $driverId;
-                    $newInventoryBalance->quantity = $quantity;
-                    $newInventoryBalance->save();
-
-                    // Create an inventory transaction record
-                    $inventoryTransaction = new InventoryTransaction();
-                    $inventoryTransaction->type = 1; // Stock In
-                    $inventoryTransaction->driver_id = $driverId;
-                    $inventoryTransaction->product_id = $productId;
-                    $inventoryTransaction->quantity = $quantity;
-                    $inventoryTransaction->save();
-
-                    $successCount++;
+                    
+                    $totalItemsProcessed++;
                 }
+                
+                $successCount++;
             } catch (\Exception $e) {
                 $errorMessages[] = "Driver ID {$driverId}: " . $e->getMessage();
             }
@@ -121,9 +158,9 @@ class InventoryBalanceController extends AppBaseController
         
         if ($successCount > 0) {
             if (count($driverIds) == 1) {
-                Flash::success("Inventory Balance for driver has been updated successfully.");
+                Flash::success("Stock In completed successfully. " . count($items) . " item(s) added to driver.");
             } else {
-                Flash::success("{$successCount} out of " . count($driverIds) . " drivers have been updated successfully.");
+                Flash::success("{$successCount} out of " . count($driverIds) . " drivers processed successfully. Total items: {$totalItemsProcessed}");
             }
         }
         

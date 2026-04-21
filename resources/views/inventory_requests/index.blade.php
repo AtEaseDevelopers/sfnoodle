@@ -463,6 +463,32 @@
    ============================================ */
 
 /* Regular dropdown (driver selection) - normal behavior */
+
+.dropdown-menu.show {
+    display: block !important;
+}
+
+/* Ensure product dropdown closes properly */
+.item-row .dropdown .dropdown-menu,
+.edit-item-row .dropdown .dropdown-menu {
+    position: fixed !important;
+    display: none !important;
+}
+
+.item-row .dropdown.show .dropdown-menu,
+.edit-item-row .dropdown.show .dropdown-menu {
+    display: block !important;
+}
+
+/* Fix for Bootstrap dropdown not closing */
+.dropdown .dropdown-menu {
+    display: none;
+}
+
+.dropdown.show .dropdown-menu {
+    display: block;
+}
+
 .dropdown:not(.item-row .dropdown, .edit-item-row .dropdown) .dropdown-menu {
     position: absolute !important;
     top: 100% !important;
@@ -983,7 +1009,11 @@
                                 </div>
                                 <div class="product-list" data-index="${itemCounter}" style="max-height: 230px; overflow-y: auto;">
                                     @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action product-select-item" data-index="${itemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}">                                            
+                                        <a href="#" class="list-group-item list-group-item-action product-select-item" 
+                                        data-index="${itemCounter}" 
+                                        data-value="{{ $product->id }}" 
+                                        data-name="{{ $product->name }}" 
+                                        data-code="{{ $product->code }}">                                            
                                             <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
                                         </a>
                                     @endforeach
@@ -992,16 +1022,16 @@
                         </div>
                         <input type="hidden" class="product-id-input" name="items[${itemCounter}][product_id]" value="">
                         <div class="text-danger product-error small mt-1"></div>
-                    </td>
+                    </div>
                     <td style="min-width: 140px;">
                         <input type="number" min="1" class="form-control quantity-input" name="items[${itemCounter}][quantity]" placeholder="Enter quantity" style="padding: 8px 12px;">
                         <div class="text-danger quantity-error small mt-1"></div>
-                    </td>
+                    </div>
                     <td class="align-middle text-center">
                         <button type="button" class="btn btn-danger btn-sm remove-item-btn" ${itemCounter === 0 ? 'disabled' : ''}>
                             <i class="fa fa-trash"></i>
                         </button>
-                    </td>
+                    </div>
                 </tr>
             `;
             
@@ -1012,6 +1042,12 @@
             if ($('#itemsBody tr').length > 1) {
                 $('#itemsBody tr:first .remove-item-btn').prop('disabled', false);
             }
+            
+            // If driver is already selected, filter products for the new row
+            var driverId = $('#selectedDriverCreate').val();
+            if (driverId) {
+                filterProductsByDriver(driverId);
+            }
         }
         
         // Driver selection for create modal
@@ -1020,11 +1056,19 @@
             var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
+            console.log('Driver selected:', driverId, driverName);
+            
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
             $('#dropdownDriverCreate').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverCreate').val(driverId);
             $('#driverError').text('');
+            
+            // Close any open product dropdowns
+            $('.dropdown.show').removeClass('show');
+            $('.dropdown-menu.show').removeClass('show');
+                        
+            filterProductsByDriver(driverId);
         });
         
         // Product search in create modal
@@ -1044,16 +1088,133 @@
                 }
             });
         });
-        
-        // Product selection in create modal
+
+        // Function to restore all products (when driver changes)
+        function restoreAllProducts() {
+            console.log('Restoring all products');
+            
+            // Get the original products data from the server
+            var originalProducts = @json($products->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code
+                ];
+            }));
+            
+            // For each product list in each row, restore all products
+            $('.product-list').each(function() {
+                var $list = $(this);
+                var currentIndex = $list.data('index');
+                
+                // Clear current list
+                $list.empty();
+                
+                // Add back all products
+                originalProducts.forEach(function(product) {
+                    $list.append(`
+                        <a href="#" class="list-group-item list-group-item-action product-select-item" 
+                            data-index="${currentIndex}" 
+                            data-value="${product.id}" 
+                            data-name="${product.name}" 
+                            data-code="${product.code}">                                            
+                            <i class="fa fa-cube mr-2 text-secondary"></i>${product.name} (${product.code})
+                        </a>
+                    `);
+                });
+                
+                // Remove any "no products" message
+                $list.find('.no-products-message').remove();
+            });
+        }
+
+        function filterProductsByDriver(driverId) {
+            
+            if (!driverId) {
+                console.log('No driver ID provided');
+                return;
+            }
+
+            restoreAllProducts();
+
+            // Get the selected driver's blocked products
+            var url = '/driver/' + driverId + '/blocked-products';
+            console.log('AJAX URL:', url);
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var blockedProductIds = response.blocked_product_ids;
+                        
+                        // Store blocked IDs globally
+                        window.blockedProductIds = blockedProductIds;
+                        
+                        // COMPLETELY REMOVE blocked products from the dropdown
+                        $('.product-list .product-select-item').each(function() {
+                            var productId = $(this).data('value');
+                            
+                            if (blockedProductIds.includes(productId)) {
+                                console.log('Removing blocked product:', productId);
+                                // Completely remove the blocked product item
+                                $(this).remove();
+                            }
+                        });
+                        
+                        // Also check existing selected products in rows and clear them
+                        $('#itemsBody tr').each(function() {
+                            var productId = $(this).find('.product-id-input').val();
+                            var productError = $(this).find('.product-error');
+                            var $dropdownBtn = $(this).find('.product-dropdown');
+                            
+                            if (productId && blockedProductIds.includes(parseInt(productId))) {
+                                console.log('Clearing blocked selected product:', productId);
+                                // Clear the blocked product selection
+                                $(this).find('.product-id-input').val('');
+                                $dropdownBtn.html('<i class="fa fa-cube mr-2"></i>{{ __('Select Product') }}');
+                                productError.text('');
+                            }
+                        });
+                        
+                        // Show message if no products available
+                        $('.product-list').each(function() {
+                            var $list = $(this);
+                            var hasProducts = $list.find('.product-select-item').length > 0;
+                            
+                            // Remove existing message
+                            $list.find('.no-products-message').remove();
+                            
+                            if (!hasProducts) {
+                                $list.append('<div class="alert alert-warning no-products-message mt-2">No products available for this driver</div>');
+                            }
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log('AJAX Error:', error);
+                }
+            });
+        }
+
+        // Product selection in create modal 
         $(document).on('click', '.product-select-item', function(e) {
             e.preventDefault();
+            var driverId = $('#selectedDriverCreate').val();
+            
+            // Check if driver is selected
+            if (!driverId) {
+                alert('Please select a driver first');
+                return;
+            }
+            
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
-            var productCode = $(this).data('code');  // ADD THIS LINE
+            var productCode = $(this).data('code');
             
-            // Update the dropdown button - MODIFY THIS LINE
+            // Show product name with code
             $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
             
             // Set the hidden input value
@@ -1065,6 +1226,10 @@
             // Highlight selected item
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
+            
+            // Close the dropdown
+            $(this).closest('.dropdown').removeClass('show');
+            $(this).closest('.dropdown-menu').removeClass('show');
         });
         
         // Add item button
@@ -1132,45 +1297,42 @@
         function initializeEditItemsTable() {
             $('#editItemsBody').empty();
             editItemCounter = 0;
-            addEditItemRow();
         }
         
         // Add item row to edit modal
         function addEditItemRow(productId = '', productName = '', productCode = '', quantity = '') {
-            var displayName = productName ? `${productName} (${productCode})` : '{{ __('Select Product') }}';  
+            var displayName = productName ? `${productName} (${productCode})` : '{{ __('Select Product') }}';
+            var currentIndex = editItemCounter;
+            
             var row = `
-                <tr class="edit-item-row" data-index="${editItemCounter}">
-                    <td class="align-middle text-center font-weight-bold">${editItemCounter + 1}</td>
+                <tr class="edit-item-row" data-index="${currentIndex}">
+                    <td class="align-middle text-center font-weight-bold">${currentIndex + 1}</td>
                     <td style="min-width: 600px;">
                         <div class="dropdown w-100">
-                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left edit-product-dropdown" type="button" id="editProductDropdown${editItemCounter}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: visible; text-overflow: ellipsis; padding: 8px 12px;">
+                            <button class="btn btn-outline-secondary btn-block dropdown-toggle text-left edit-product-dropdown" type="button" id="editProductDropdown${currentIndex}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="overflow: visible; text-overflow: ellipsis; padding: 8px 12px;">
                                 <i class="fa fa-cube mr-2"></i>${displayName}
                             </button>
-                            <div class="dropdown-menu p-3" aria-labelledby="editProductDropdown${editItemCounter}" style="width: 100%; min-width: 600px; max-height: 350px; overflow-y: auto;">
+                            <div class="dropdown-menu p-3" aria-labelledby="editProductDropdown${currentIndex}" style="width: 100%; min-width: 600px; max-height: 350px; overflow-y: auto;">
                                 <div class="input-group mb-3">
                                     <div class="input-group-prepend">
                                         <span class="input-group-text bg-white"><i class="fa fa-search"></i></span>
                                     </div>
-                                    <input type="text" class="form-control edit-product-search" placeholder="Search Products..." data-index="${editItemCounter}">
+                                    <input type="text" class="form-control edit-product-search" placeholder="Search Products..." data-index="${currentIndex}">
                                 </div>
-                                <div class="edit-product-list" data-index="${editItemCounter}" style="max-height: 230px; overflow-y: auto;">
-                                    @foreach($products as $product)
-                                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item" data-index="${editItemCounter}" data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-code="{{ $product->code }}">
-                                            <i class="fa fa-cube mr-2 text-secondary"></i>{{ $product->name }} ({{ $product->code }})
-                                        </a>
-                                    @endforeach
+                                <div class="edit-product-list" data-index="${currentIndex}" style="max-height: 230px; overflow-y: auto;">
+                                    <!-- Products will be populated here -->
                                 </div>
                             </div>
                         </div>
-                        <input type="hidden" class="edit-product-id-input" name="items[${editItemCounter}][product_id]" value="${productId}">
+                        <input type="hidden" class="edit-product-id-input" name="items[${currentIndex}][product_id]" value="${productId}">
                         <div class="text-danger edit-product-error small mt-1"></div>
                     </div>
                     <td style="min-width: 150px;">
-                        <input type="number" min="1" class="form-control edit-quantity-input" name="items[${editItemCounter}][quantity]" placeholder="Enter quantity" value="${quantity}" style="padding: 8px 12px;">
+                        <input type="number" min="1" class="form-control edit-quantity-input" name="items[${currentIndex}][quantity]" placeholder="Enter quantity" value="${quantity}" style="padding: 8px 12px;">
                         <div class="text-danger edit-quantity-error small mt-1"></div>
                     </div>
                     <td class="align-middle text-center">
-                        <button type="button" class="btn btn-danger btn-sm remove-edit-item-btn" ${editItemCounter === 0 ? 'disabled' : ''}>
+                        <button type="button" class="btn btn-danger btn-sm remove-edit-item-btn" ${currentIndex === 0 ? 'disabled' : ''}>
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
@@ -1178,6 +1340,31 @@
             `;
             
             $('#editItemsBody').append(row);
+            
+            // Populate products from original list for this new row
+            var originalProducts = @json($products->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code
+                ];
+            }));
+            
+            var $productList = $(`#editItemsBody tr:last .edit-product-list`);
+            $productList.data('index', currentIndex);
+            
+            originalProducts.forEach(function(product) {
+                $productList.append(`
+                    <a href="#" class="list-group-item list-group-item-action edit-product-select-item" 
+                        data-index="${currentIndex}" 
+                        data-value="${product.id}" 
+                        data-name="${product.name}" 
+                        data-code="${product.code}">                                            
+                        <i class="fa fa-cube mr-2 text-secondary"></i>${product.name} (${product.code})
+                    </a>
+                `);
+            });
+            
             editItemCounter++;
             
             // Enable remove buttons if more than one row
@@ -1215,52 +1402,197 @@
             $('#driverListEdit .driver-item[data-value="' + requestData.driver_id + '"]').addClass('active');
             
             // Clear and populate items table
-            initializeEditItemsTable();
+            $('#editItemsBody').empty();
+            editItemCounter = 0;
             
             if (requestData.items && Array.isArray(requestData.items) && requestData.items.length > 0) {
-                $('#editItemsBody').empty();
-                editItemCounter = 0;
-                
                 requestData.items.forEach(function(item, index) {
-                    var productCode = '';  // ADD THIS LINE
+                    var productCode = '';
                     if (productsLookup[item.product_id]) {
-                        productCode = productsLookup[item.product_id].code;  
+                        productCode = productsLookup[item.product_id].code;
                     }
                     var productName = getProductName(item.product_id);
-                    addEditItemRow(item.product_id, productName, productCode, item.quantity);  
+                    addEditItemRow(item.product_id, productName, productCode, item.quantity);
                 });
             } else {
                 // For backward compatibility with old single-item requests
                 if (requestData.product_id && requestData.quantity) {
-                    $('#editItemsBody').empty();
-                    editItemCounter = 0;
                     var productName = getProductName(requestData.product_id);
-                    addEditItemRow(requestData.product_id, productName, requestData.quantity);
+                    addEditItemRow(requestData.product_id, productName, '', requestData.quantity);
                 }
             }
             
             // Show modal
             $('#editRequest').modal('show');
+            
+            // AFTER modal is shown, filter products based on the selected driver
+            setTimeout(function() {
+                var driverId = $('#selectedDriverEdit').val();
+                if (driverId) {
+                    console.log('Filtering edit modal products for driver:', driverId);
+                    filterProductsForEditModal(driverId);
+                }
+            }, 200);
         });
         
+        // Function to restore all products for edit modal (when driver changes)
+        function restoreAllProductsForEditModal() {
+            
+            // Get the original products data from the server
+            var originalProducts = @json($products->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code
+                ];
+            }));
+            
+            // For each product list in each edit row, restore all products
+            $('.edit-product-list').each(function() {
+                var $list = $(this);
+                var currentIndex = $list.data('index');
+                
+                if (currentIndex === undefined || currentIndex === null) {
+                    // Try to get index from the dropdown button or parent row
+                    var $row = $list.closest('tr');
+                    if ($row.length) {
+                        currentIndex = $row.data('index');
+                        $list.data('index', currentIndex);
+                    }
+                }
+                
+                console.log('Restoring product list for index:', currentIndex);
+                
+                // Clear current list
+                $list.empty();
+                
+                // Add back all products
+                originalProducts.forEach(function(product) {
+                    $list.append(`
+                        <a href="#" class="list-group-item list-group-item-action edit-product-select-item" 
+                            data-index="${currentIndex}" 
+                            data-value="${product.id}" 
+                            data-name="${product.name}" 
+                            data-code="${product.code}">                                            
+                            <i class="fa fa-cube mr-2 text-secondary"></i>${product.name} (${product.code})
+                        </a>
+                    `);
+                });
+                
+                // Remove any "no products" message
+                $list.find('.no-products-message').remove();
+            });
+        }
+
         // Driver selection for edit modal
         $(document).on('click', '#driverListEdit .driver-item', function(e) {
             e.preventDefault();
             var driverName = $(this).text().trim();
             var driverId = $(this).data('value');
             
+            console.log('Edit modal - Driver selected:', driverId, driverName);
+            
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
             $('#dropdownDriverEdit').html(`<i class="fa fa-user mr-2"></i>${driverName}`);
             $('#selectedDriverEdit').val(driverId);
             $('#driverEditError').text('');
+            
+            // Close any open product dropdowns
+            $('.dropdown.show').removeClass('show');
+            $('.dropdown-menu.show').removeClass('show');
+            
+            // Filter products for edit modal
+            filterProductsForEditModal(driverId);
         });
-        
+
+        function filterProductsForEditModal(driverId) {
+            console.log('filterProductsForEditModal called with driverId:', driverId);
+            
+            if (!driverId) {
+                console.log('No driver ID provided');
+                return;
+            }
+            
+            // FIRST: Restore all products for edit modal
+            restoreAllProductsForEditModal();
+            
+            // Get the selected driver's blocked products
+            var url = '/driver/' + driverId + '/blocked-products';
+            console.log('AJAX URL for edit:', url);
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    console.log('AJAX Response for edit:', response);
+                    if (response.success) {
+                        var blockedProductIds = response.blocked_product_ids;
+                        console.log('Blocked product IDs for edit:', blockedProductIds);
+                        
+                        // Store blocked IDs globally
+                        window.blockedProductIds = blockedProductIds;
+                        
+                        // COMPLETELY REMOVE blocked products from edit modal dropdown
+                        $('.edit-product-list .edit-product-select-item').each(function() {
+                            var productId = $(this).data('value');
+                            
+                            if (blockedProductIds.includes(productId)) {
+                                console.log('Removing blocked product from edit:', productId);
+                                $(this).remove();
+                            }
+                        });
+                        
+                        // Check existing selected products in edit rows
+                        $('#editItemsBody tr').each(function() {
+                            var productId = $(this).find('.edit-product-id-input').val();
+                            var productError = $(this).find('.edit-product-error');
+                            var $dropdownBtn = $(this).find('.edit-product-dropdown');
+                            
+                            if (productId && blockedProductIds.includes(parseInt(productId))) {
+                                console.log('Clearing blocked selected product in edit:', productId);
+                                // Clear the blocked product selection
+                                $(this).find('.edit-product-id-input').val('');
+                                $dropdownBtn.html('<i class="fa fa-cube mr-2"></i>{{ __('Select Product') }}');
+                                productError.text('⚠️ This product is blocked for the selected driver');
+                            } else if (productId) {
+                                productError.text('');
+                            }
+                        });
+                        
+                        // Show message if no products available
+                        $('.edit-product-list').each(function() {
+                            var $list = $(this);
+                            var hasProducts = $list.find('.edit-product-select-item').length > 0;
+                            
+                            $list.find('.no-products-message').remove();
+                            
+                            if (!hasProducts) {
+                                $list.append('<div class="alert alert-warning no-products-message mt-2">No products available for this driver</div>');
+                            }
+                        });
+                    } else {
+                        console.log('Response success false:', response);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log('AJAX Error for edit - Status:', status);
+                    console.log('AJAX Error for edit - Error:', error);
+                    console.log('AJAX Error for edit - Response:', xhr.responseText);
+                }
+            });
+        }
         // Product search in edit modal
         $(document).on('keyup', '.edit-product-search', function() {
             var searchTerm = $(this).val().toLowerCase();
             var index = $(this).data('index');
-            var productList = $(this).siblings('.edit-product-list');
+            
+            // Find the product list - it's within the same dropdown-menu, not sibling
+            var dropdownMenu = $(this).closest('.dropdown-menu');
+            var productList = dropdownMenu.find('.edit-product-list');
+            
+            console.log('Searching for:', searchTerm, 'in list index:', index);
             
             productList.find('.edit-product-select-item').each(function() {
                 var productText = $(this).text().toLowerCase();
@@ -1275,23 +1607,27 @@
         // Product selection in edit modal
         $(document).on('click', '.edit-product-select-item', function(e) {
             e.preventDefault();
+            var driverId = $('#selectedDriverEdit').val();
+            
+            if (!driverId) {
+                alert('Please select a driver first');
+                return;
+            }
+            
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
-            var productCode = $(this).data('code');  // ADD THIS LINE
+            var productCode = $(this).data('code');
             
-            // Update the dropdown button - MODIFY THIS LINE
             $('#editProductDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
-            
-            // Set the hidden input value
             $(this).closest('tr').find('.edit-product-id-input').val(productId);
-            
-            // Clear error
             $(this).closest('tr').find('.edit-product-error').text('');
-            
-            // Highlight selected item
             $(this).siblings().removeClass('active');
             $(this).addClass('active');
+            
+            // Close the dropdown
+            $(this).closest('.dropdown').removeClass('show');
+            $(this).closest('.dropdown-menu').removeClass('show');
         });
         
         // Add item button for edit modal
@@ -1508,8 +1844,8 @@
         
         // Validate create form
         $('#createRequestForm').submit(function(e) {
-            e.preventDefault();
-            
+             e.preventDefault();
+    
             // Reset errors
             $('#driverError, #itemsError').text('');
             $('.product-error, .quantity-error').text('');
@@ -1521,7 +1857,7 @@
                 return false;
             }
             
-            // Validate items
+            // Validate items (blocked products check removed since they can't be selected)
             var hasErrors = false;
             var items = [];
             var productIds = new Set();

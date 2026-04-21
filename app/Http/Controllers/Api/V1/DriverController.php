@@ -5777,6 +5777,11 @@ class DriverController extends Controller
         }
 
         try {
+            // Get blocked product IDs for this driver
+            $blockedProductIds = Product::whereJsonContains('blocked_drivers', (string)$driver->id)
+                ->pluck('id')
+                ->toArray();
+            
             // Get driver's inventory balances
             $driverInventory = InventoryBalance::where('driver_id', $driver->id)
                 ->pluck('quantity', 'product_id')
@@ -5795,17 +5800,18 @@ class DriverController extends Controller
             $recentDate = Carbon::now()->subDays($days);
             
             // Get product IDs from recent invoices (including both driver and admin invoices)
-            // But exclude cancelled invoices
+            // But exclude cancelled invoices AND exclude blocked products
             $recentProductIds = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
-                $query->where('date', '>=', $recentDate)
-                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
-            })
-            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(invoice_details.created_at) as last_used'))
-            ->groupBy('product_id')
-            ->orderBy('last_used', 'desc')
-            ->orderBy('usage_count', 'desc')
-            ->pluck('product_id')
-            ->toArray();
+                    $query->where('date', '>=', $recentDate)
+                        ->where('status', '!=', Invoice::STATUS_CANCELLED);
+                })
+                ->whereNotIn('product_id', $blockedProductIds) // Filter out blocked products
+                ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(invoice_details.created_at) as last_used'))
+                ->groupBy('product_id')
+                ->orderBy('last_used', 'desc')
+                ->orderBy('usage_count', 'desc')
+                ->pluck('product_id')
+                ->toArray();
             
             if (empty($recentProductIds)) {
                 return response()->json([
@@ -5815,9 +5821,10 @@ class DriverController extends Controller
                 ], 200);
             }
             
-            // Get all products that were in recent invoices
+            // Get all products that were in recent invoices (excluding blocked ones)
             $products = Product::where('status', 1)
                 ->whereIn('id', $recentProductIds)
+                ->whereNotIn('id', $blockedProductIds) // Double ensure blocked products are excluded
                 ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
                 ->get();
             
@@ -5867,16 +5874,17 @@ class DriverController extends Controller
                 ];
             }
             
-            // Get usage statistics for each product
+            // Get usage statistics for each product (excluding blocked ones)
             $usageStats = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
-                $query->where('date', '>=', $recentDate)
-                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
-            })
-            ->whereIn('product_id', $recentProductIds)
-            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(created_at) as last_used'))
-            ->groupBy('product_id')
-            ->get()
-            ->keyBy('product_id');
+                    $query->where('date', '>=', $recentDate)
+                        ->where('status', '!=', Invoice::STATUS_CANCELLED);
+                })
+                ->whereIn('product_id', $recentProductIds)
+                ->whereNotIn('product_id', $blockedProductIds) // Filter out blocked products
+                ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(created_at) as last_used'))
+                ->groupBy('product_id')
+                ->get()
+                ->keyBy('product_id');
             
             // Add usage statistics to products
             foreach ($groupedProducts as &$category) {
@@ -5947,6 +5955,11 @@ class DriverController extends Controller
         }
 
         try {
+            // Get blocked product IDs for this driver
+            $blockedProductIds = Product::whereJsonContains('blocked_drivers', (string)$driver->id)
+                ->pluck('id')
+                ->toArray();
+            
             // Get driver's inventory balances
             $driverInventory = InventoryBalance::where('driver_id', $driver->id)
                 ->pluck('quantity', 'product_id')
@@ -5972,6 +5985,7 @@ class DriverController extends Controller
             if($driverInventory){
                 // HAS INVENTORY - Get all products with their categories as string
                 $products = Product::where('status', 1)
+                    ->whereNotIn('id', $blockedProductIds) // Filter out blocked products
                     ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
                     ->orderBy('name')
                     ->get();
@@ -5980,11 +5994,11 @@ class DriverController extends Controller
                 $groupedProducts = [];
                 
                 foreach ($products as $product) {
-                    $categoryName = $product->category ?: 'Uncategorized'; // Default category if empty
+                    $categoryName = $product->category ?: 'Uncategorized';
                     
                     if (!isset($groupedProducts[$categoryName])) {
                         $groupedProducts[$categoryName] = [
-                            'category_id' => null, // Keep for backward compatibility
+                            'category_id' => null,
                             'category_name' => $categoryName,
                             'products' => []
                         ];
@@ -6025,6 +6039,7 @@ class DriverController extends Controller
             } else {
                 // NO INVENTORY - Get all products directly
                 $products = Product::where('status', 1)
+                    ->whereNotIn('id', $blockedProductIds) // Filter out blocked products
                     ->select('id', 'name', 'category', 'code', 'price', 'status', 'image_path')
                     ->orderBy('name')
                     ->get();
@@ -6033,11 +6048,11 @@ class DriverController extends Controller
                 $groupedProducts = [];
                 
                 foreach ($products as $product) {
-                    $categoryName = $product->category ?: 'Uncategorized'; // Default category if empty
+                    $categoryName = $product->category ?: 'Uncategorized';
                     
                     if (!isset($groupedProducts[$categoryName])) {
                         $groupedProducts[$categoryName] = [
-                            'category_id' => null, // Keep for backward compatibility
+                            'category_id' => null,
                             'category_name' => $categoryName,
                             'products' => []
                         ];
@@ -6051,7 +6066,7 @@ class DriverController extends Controller
                         'name' => $product->name,
                         'code' => $product->code,
                         'price' => $price,
-                        'quantity' => 0, // Always 0 when no inventory
+                        'quantity' => 0,
                         'status' => $product->getStatusTextAttribute(),
                         'image_url' => $getImageUrl($product->image_path)
                     ];

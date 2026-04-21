@@ -120,7 +120,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/driver/get-trip-summary-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getLastSevenDaysTripSummary']);
 
     //driver
-    Route::get('/driver/get-driver-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverProduct']);
+    Route::get('/driver/get-driver-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverProduct']);//manager side
     Route::get('/driver/stock-request-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockRequest']);
     Route::get('/driver/stock-return-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockReturn']);
     Route::post('/driver/stock-request-approve', [App\Http\Controllers\Api\V1\DriverController::class, 'approveStockRequest']);

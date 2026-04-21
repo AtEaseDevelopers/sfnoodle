@@ -690,11 +690,126 @@
             
             // Update product quantities for this new row if driver is already selected
             var driverId = $('#selectedDriverCreate').val();
-            if (driverId && driverInventoryMap) {
-                updateProductQuantitiesInDropdown(driverInventoryMap);
+            if (driverId) {
+                filterProductsByDriverForReturn(driverId);
             }
         }
         
+        // Function to restore all products (when driver changes)
+        function restoreAllProductsForReturn() {
+            console.log('Restoring all products for return');
+            
+            // Get the original products data from the server
+            var originalProducts = @json($products->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code
+                ];
+            }));
+            
+            // For each product list in each row, restore all products
+            $('.product-list').each(function() {
+                var $list = $(this);
+                var currentIndex = $list.data('index');
+                
+                // Clear current list
+                $list.empty();
+                
+                // Add back all products
+                originalProducts.forEach(function(product) {
+                    $list.append(`
+                        <a href="#" class="list-group-item list-group-item-action product-select-item border-0 py-2 rounded mb-1" 
+                            data-index="${currentIndex}" 
+                            data-value="${product.id}" 
+                            data-name="${product.name}" 
+                            data-code="${product.code}" 
+                            data-quantity="0">
+                            <i class="fa fa-cube mr-2 text-secondary"></i>${product.name} (${product.code})
+                        </a>
+                    `);
+                });
+                
+                // Remove any "no products" message
+                $list.find('.no-products-message').remove();
+            });
+        }
+
+        // Function to filter products by blocked drivers
+        function filterProductsByDriverForReturn(driverId) {
+            console.log('filterProductsByDriverForReturn called with driverId:', driverId);
+            
+            if (!driverId) {
+                console.log('No driver ID provided');
+                return;
+            }
+
+            // FIRST: Restore all products
+            restoreAllProductsForReturn();
+
+            // Get the selected driver's blocked products
+            var url = '/driver/' + driverId + '/blocked-products';
+            console.log('AJAX URL:', url);
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    console.log('AJAX Response:', response);
+                    if (response.success) {
+                        var blockedProductIds = response.blocked_product_ids;
+                        console.log('Blocked product IDs:', blockedProductIds);
+                        
+                        // Store blocked IDs globally
+                        window.blockedProductIds = blockedProductIds;
+                        
+                        // COMPLETELY REMOVE blocked products from the dropdown
+                        $('.product-list .product-select-item').each(function() {
+                            var productId = $(this).data('value');
+                            
+                            if (blockedProductIds.includes(productId)) {
+                                console.log('Removing blocked product:', productId);
+                                // Completely remove the blocked product item
+                                $(this).remove();
+                            }
+                        });
+                        
+                        // Also check existing selected products in rows and clear them
+                        $('#itemsBody tr').each(function() {
+                            var productId = $(this).find('.product-id-input').val();
+                            var productError = $(this).find('.product-error');
+                            var $dropdownBtn = $(this).find('.product-dropdown');
+                            
+                            if (productId && blockedProductIds.includes(parseInt(productId))) {
+                                console.log('Clearing blocked selected product:', productId);
+                                // Clear the blocked product selection
+                                $(this).find('.product-id-input').val('');
+                                $dropdownBtn.html('<i class="fa fa-cube mr-2"></i>{{ __('Select Product') }}');
+                                productError.text('This product is blocked for this driver');
+                            }
+                        });
+                        
+                        // Show message if no products available
+                        $('.product-list').each(function() {
+                            var $list = $(this);
+                            var hasProducts = $list.find('.product-select-item').length > 0;
+                            
+                            // Remove existing message
+                            $list.find('.no-products-message').remove();
+                            
+                            if (!hasProducts) {
+                                $list.append('<div class="alert alert-warning no-products-message mt-2">No products available for this driver</div>');
+                            }
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log('AJAX Error:', error);
+                }
+            });
+        }
+
         // Function to update product quantities in dropdown lists
         function updateProductQuantitiesInDropdown(inventoryMap) {
             // Update create modal product lists - show all products
@@ -772,7 +887,11 @@
             $('#selectedDriverCreate').val(driverId);
             $('#driverError').text('');
             
+            // Fetch driver inventory
             fetchDriverInventory(driverId);
+            
+            // Filter products based on blocked list
+            filterProductsByDriverForReturn(driverId);
         });
         
         // Fetch driver inventory
@@ -821,20 +940,22 @@
             return driverInventoryMap[productId] || 0;
         }
         
-        // Product selection in create modal
+        // Product selection in create modal - add driver check
         $(document).on('click', '.product-select-item', function(e) {
             e.preventDefault();
+            var driverId = $('#selectedDriverCreate').val();
+            
+            // Check if driver is selected
+            if (!driverId) {
+                alert('Please select a driver first');
+                return;
+            }
+            
             var index = $(this).data('index');
             var productId = $(this).data('value');
             var productName = $(this).data('name');
             var productCode = $(this).data('code');
             var availableQuantity = $(this).data('quantity') || 0;
-            var driverId = $('#selectedDriverCreate').val();
-            
-            if (!driverId) {
-                alert('Please select a driver first');
-                return;
-            }
             
             // Show product name with code
             $('#productDropdown' + index).html(`<i class="fa fa-cube mr-2"></i>${productName} (${productCode})`).attr('title', `${productName} (${productCode})`);
@@ -848,7 +969,6 @@
             if (availableQuantity === 0) {
                 availableHtml = '<span class="text-danger"><i class="fa fa-exclamation-triangle"></i> Out of Stock</span>';
                 $('#availableQuantity' + index).html(availableHtml);
-                // Show warning notification
                 showNotification('warning', `${productName} is out of stock for this driver. You can still create the return request.`);
             } else {
                 $('#availableQuantity' + index).html(availableHtml);
@@ -859,9 +979,12 @@
             
             var currentQuantity = $(this).closest('tr').find('.quantity-input').val();
             if (currentQuantity && parseInt(currentQuantity) > availableQuantity && availableQuantity > 0) {
-                // Don't auto-adjust, just show warning
                 $(this).closest('tr').find('.quantity-error').text('Note: Quantity exceeds available stock (' + availableQuantity + ' available)');
             }
+            
+            // Close the dropdown
+            $(this).closest('.dropdown').removeClass('show');
+            $(this).closest('.dropdown-menu').removeClass('show');
         });
         
         // Validate quantity on input change

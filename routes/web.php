@@ -482,10 +482,12 @@ Route::group(['middleware' => ['auth']], function() {
         Route::get('/inventoryBalances/getstock/{lorry_id}/{product_id}', [App\Http\Controllers\InventoryBalanceController::class, 'getstock'])->name('inventoryBalances.getstock');
         Route::post('/inventoryBalances/stockout', [App\Http\Controllers\InventoryBalanceController::class, 'stockout'])->name('inventoryBalances.stockout');
         Route::get('inventoryBalances/get-products-by-driver', [App\Http\Controllers\InventoryBalanceController::class, 'getProductsByDriver'])->name('inventoryBalances.getProductsByDriver');
+        Route::post('/inventoryBalances/get-blocked-products', [App\Http\Controllers\InventoryBalanceController::class, 'getBlockedProducts'])->name('inventoryBalances.getBlockedProducts');
     });
 
     Route::group(['middleware' => ['permission:stockrequest']], function() {
         // Index
+        Route::get('/driver/{id}/blocked-products', [App\Http\Controllers\InventoryRequestController::class, 'getDriverBlockedProducts'])->name('driver.getBlockedProducts');
         Route::get('/inventoryRequests', [App\Http\Controllers\InventoryRequestController::class, 'index'])->name('inventoryRequests.index');
         // Store (Create)
         Route::post('/inventoryRequests/store', [App\Http\Controllers\InventoryRequestController::class, 'store'])->name('inventoryRequests.store');

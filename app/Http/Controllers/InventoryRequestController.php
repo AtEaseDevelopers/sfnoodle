@@ -18,6 +18,17 @@ class InventoryRequestController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function getDriverBlockedProducts($driverId)
+    {
+        $blockedProductIds = Product::whereJsonContains('blocked_drivers', $driverId)
+            ->pluck('id')
+            ->toArray();
+        return response()->json([
+            'success' => true,
+            'blocked_product_ids' => $blockedProductIds
+        ]);
+    }
+
     public function index(InventoryRequestDataTable $dataTable, Request $request)
     {
         // Get data for filters
