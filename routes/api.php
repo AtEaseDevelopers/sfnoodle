@@ -117,6 +117,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/driver/start-trip', [App\Http\Controllers\Api\V1\DriverController::class, 'TripStart']);
     Route::get('/driver/end-trip', [App\Http\Controllers\Api\V1\DriverController::class, 'TripEnd']);
     Route::get('/driver/get-lasttrip-summary', [App\Http\Controllers\Api\V1\DriverController::class, 'getLastTripSummary']);
+    Route::get('/driver/get-trip-summary-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getLastSevenDaysTripSummary']);
 
     //driver
     Route::get('/driver/get-driver-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverProduct']);

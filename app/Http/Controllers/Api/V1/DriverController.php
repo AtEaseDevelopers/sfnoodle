@@ -7316,6 +7316,143 @@ class DriverController extends Controller
         
     }
 
+    public function getLastSevenDaysTripSummary(Request $request)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        try{
+            // Get the last 7 days date range
+            $endDate = now();
+            $startDate = now()->subDays(6); // Last 7 days including today
+
+            // Get all trips from the last 7 days
+            $trips = Trip::where('driver_id', $driver->id)
+                ->where('type', Trip::END_TRIP)
+                ->whereBetween('date', [$startDate->startOfDay(), $endDate->endOfDay()])
+                ->orderBy('date', 'desc')
+                ->get();
+                
+            if($trips->isEmpty()){
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No trips found in the last 7 days',
+                    'data' => []
+                ], 200);
+            }
+            
+            $dailyTripSummaries = [];
+            
+            foreach($trips as $trip) {
+                // Get trip summary for each trip
+                $tripSummary = TripController::generateTripReport($trip->uuid);
+                
+                // Process inventory balances
+                $inventoryBalances = json_decode($trip->stock_data, true);
+                $productIds = array_column($inventoryBalances, 'product_id');
+                $products = Product::whereIn('id', $productIds)
+                    ->get()
+                    ->keyBy('id');
+                
+                // Map product names to the inventory balances
+                foreach ($inventoryBalances as &$item) {
+                    $item['product_name'] = $products[$item['product_id']]->name ?? 'Unknown';
+                }
+                
+                // Get invoices for this trip
+                $invoices = Invoice::where('is_driver', 1)
+                    ->where('trip_id', $trip->uuid)
+                    ->where('created_by', $driver->id)
+                    ->where('status', Invoice::STATUS_COMPLETED)
+                    ->with(['invoiceDetails.product'])
+                    ->get();
+                
+                // Process products sold
+                $productsSold = $invoices->flatMap(function($invoice) {
+                        return $invoice->invoiceDetails;
+                    })
+                    ->groupBy('product_id')
+                    ->map(function($details, $productId) {
+                        $firstDetail = $details->first();
+                        return [
+                            'name' => $firstDetail->product ? $firstDetail->product->name : 'Unknown Product',
+                            'quantity' => $details->sum('quantity')
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+                
+                // Process customer summary
+                $customerSummary = $invoices
+                    ->groupBy('customer_id')
+                    ->map(function($customerInvoices, $customerId) {
+                        $firstInvoice = $customerInvoices->first();
+                        $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : '-';
+                        
+                        $totalAmount = $customerInvoices->sum(function($invoice) {
+                            return $invoice->total;
+                        });
+                        
+                        $invoiceCount = $customerInvoices->count();
+                        
+                        return [
+                            'customer_id' => $customerId,
+                            'customer_name' => $customerName,
+                            'total_amount' => (float) $totalAmount,
+                            'formatted_amount' => number_format($totalAmount, 2),
+                            'invoice_count' => $invoiceCount
+                        ];
+                    })
+                    ->values()
+                    ->sortByDesc('total_amount')
+                    ->toArray();
+                
+                // Compile summary for this day/trip
+                $dailyTripSummaries[] = [
+                    'trip_date' => $trip->date ? date('Y-m-d', strtotime($trip->date)) : null,
+                    'trip_summary' => [
+                        'trip_id' => $tripSummary['trip_info']['trip_id'] ?? 'T-' . $driver->trip_id,
+                        'driver_name' => $tripSummary['trip_info']['driver']['name'] ?? $driver->name,
+                        'start_time' => $tripSummary['trip_info']['start_time'] ?? null,
+                        'end_time' => $tripSummary['trip_info']['end_time'] ?? now(),
+                        'trip_duration' => isset($tripSummary['trip_info']['start_time'], $tripSummary['trip_info']['end_time']) 
+                            ? $this->calculateDuration($tripSummary['trip_info']['start_time'], $tripSummary['trip_info']['end_time'])
+                            : null,
+                    ],
+                    'sales_summary' => [
+                        'total_invoices' => $tripSummary['sales_summary']['total_invoices'] ?? 0,
+                        'total_sales_orders' => $tripSummary['sales_summary']['total_sales_orders'] ?? 0,
+                        'total_amount' => $tripSummary['sales_summary']['total_amount'] ?? 0,
+                        'total_credit' => $tripSummary['sales_summary']['total_credit'] ?? 0,
+                        'total_cash' => $tripSummary['sales_summary']['total_cash'] ?? 0,
+                    ],
+                    'stock_summary' => $inventoryBalances,
+                    'products_sold' => $productsSold,
+                    'customer_summary' => $customerSummary,
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Last 7 days trip data retrieved successfully.',
+                'data' => $dailyTripSummaries
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get last 7 days trip data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getCustomers(Request $request)
     {
         // Validate session

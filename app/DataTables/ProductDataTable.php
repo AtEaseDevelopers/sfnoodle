@@ -132,10 +132,7 @@ class ProductDataTable extends DataTable
                         'targets' => 4, // Category column
                         'render' => 'function(data, type, row, meta){return row.category || "N/A";}'
                     ],
-                    [
-                        'targets' => 5, // Status column (adjusted index)
-                        'render' => 'function(data, type, row, meta){return row.status_text || (data == 1 ? "Active" : "Inactive");}'
-                    ],
+                    
                 ],
                 'initComplete' => 'function(){
                     var columns = this.api().init().columns;
