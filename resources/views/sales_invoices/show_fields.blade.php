@@ -88,8 +88,11 @@
                     // Process each purchased item with tiered pricing
                     foreach ($salesInvoiceDetails as $detail) {
                         $product = $detail->product;
+                        if (!$product) {
+                            continue;
+                        }
                         $quantity = $detail->quantity;
-                        $regularPrice = $product->price;
+                        $regularPrice = $product->price ?? 0;
                         
                         // Check for special price for this customer
                         $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
