@@ -4371,23 +4371,6 @@ class DriverController extends Controller
 
             // Use the calculated total for payment amount
             $paymentAmount = $calculatedTotal;
-            
-            // If client provided amount, validate it matches (optional)
-            if ($request->has('amount')) {
-                $providedAmount = floatval($request->amount);
-                if (abs($providedAmount - $calculatedTotal) > 0.01) {
-                    DB::rollBack();
-                    return response()->json([
-                        'result' => false,
-                        'message' => __LINE__ . $this->message_separator . 'Payment amount does not match calculated invoice total',
-                        'data' => [
-                            'calculated_total' => $calculatedTotal,
-                            'provided_amount' => $providedAmount,
-                            'difference' => $providedAmount - $calculatedTotal
-                        ]
-                    ], 200);
-                }
-            }
 
             // Create APPROVED invoice payment record for cash
             $invoicePayment = new InvoicePayment();
