@@ -4895,7 +4895,7 @@ class DriverController extends Controller
 
         // Define validation rules
         $validationRules = [
-            'invoiceno' => 'required|string|max:255',
+            'invoiceno' => 'required|string|max:255|unique:invoices,invoiceno',
             'date' => 'required|date_format:d-m-Y',
             'customer_id' => 'required|exists:customers,id',
             'remark' => 'nullable|string|max:255',
