@@ -114,28 +114,38 @@ class Invoice extends Model
         // Build the prefix
         $prefix = "AE{$year}{$month}/{$userCode}/";
         
-        // Get the maximum numeric value (not string length)
-        $maxNumber = self::where('invoiceno', 'like', $prefix . '%')
+        // Get all invoice numbers for this driver and extract numeric values
+        $invoices = self::where('invoiceno', 'like', $prefix . '%')
             ->where('is_driver', true)
             ->where('created_by', $driver_id)
-            ->get()
-            ->map(function($invoice) use ($prefix) {
-                return (int) substr($invoice->invoiceno, strlen($prefix));
-            })
-            ->max();
+            ->get();
         
-        $nextNumber = $maxNumber ? $maxNumber + 1 : 1;
+        // Find the maximum numeric value
+        $maxNumber = 0;
+        foreach ($invoices as $invoice) {
+            $numericPart = (int) substr($invoice->invoiceno, strlen($prefix));
+            if ($numericPart > $maxNumber) {
+                $maxNumber = $numericPart;
+            }
+        }
         
-        // Generate with existence check (in case of gaps)
+        $nextNumber = $maxNumber + 1;
+        
+        // Generate with existence check
         $maxAttempts = 100;
         $attempt = 0;
         $invoiceNo = null;
         
         while ($attempt < $maxAttempts) {
-            // No padding - use natural numbers
-            // Results: 1, 2, 3... 9999, 10000, 10001
-            $candidateInvoiceNo = $prefix . $nextNumber;
+            // Format number with minimum 4 digits (pad with leading zeros)
+            // This will produce: 0001, 0002... 9999, 10000, 10001, etc.
+            // str_pad with 4 will:
+            // - For 1-9999: pad to 4 digits (0001-9999)
+            // - For 10000+: no padding needed, returns as-is (10000, 10001)
+            $formattedNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            $candidateInvoiceNo = $prefix . $formattedNumber;
             
+            // Check if this invoice number already exists
             $exists = self::where('invoiceno', $candidateInvoiceNo)->exists();
             
             if (!$exists) {
@@ -143,6 +153,7 @@ class Invoice extends Model
                 break;
             }
             
+            // If exists, increment and try again
             $nextNumber++;
             $attempt++;
         }
