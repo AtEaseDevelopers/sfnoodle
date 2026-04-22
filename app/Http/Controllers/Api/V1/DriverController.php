@@ -5149,6 +5149,204 @@ class DriverController extends Controller
         }
     }
 
+    public function calculateInvoiceAmount(Request $request)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        // Get customer payment term
+        $customer = Customer::find($request->customer_id);
+        if (!$customer) {
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Customer not found',
+                'data' => null
+            ], 200);
+        }
+
+        $paymentTerm = $customer->paymentterm;
+
+        // Define validation rules (NO price validation)
+        $validationRules = [
+            'invoiceno' => 'required|string|max:255',
+            'date' => 'required|date_format:d-m-Y',
+            'customer_id' => 'required|exists:customers,id',
+            'remark' => 'nullable|string|max:255',
+            'details' => 'required|array|min:1',
+            'details.*.product_id' => 'required|exists:products,id',
+            'details.*.quantity' => 'required|numeric|min:0.01'
+        ];
+        
+        // Add payment validation for cash
+        if ($paymentTerm == 'Cash') {
+            $validationRules['payment_attachment'] = 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048';
+            $validationRules['payment_remark'] = 'nullable|string|max:255';
+        }
+
+        // Validate request
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Validation failed',
+                'errors' => $validator->errors()->toArray(),
+                'data' => null
+            ], 200);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $input = $request->all();
+            
+            // Convert date format
+            $input['date'] = \Carbon\Carbon::createFromFormat('d-m-Y', $input['date'])->format('Y-m-d');
+            
+            // Handle invoice number generation
+            if (empty($input['invoiceno']) || $input['invoiceno'] == 'SYSTEM GENERATED IF BLANK') {
+                $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
+            }
+            
+            // Set driver information
+            $input['driver_id'] = $driver->id;
+            $input['created_by'] = $driver->id;
+            $input['is_driver'] = true;
+            $input['paymentterm'] = $paymentTerm;
+
+            // Calculate total with pricing logic matching getinvoicepdf
+            $total = 0;
+            $invoiceDetails = [];
+            
+            foreach ($input['details'] as $detail) {
+                $productId = $detail['product_id'];
+                $quantity = $detail['quantity'];
+                
+                // Get the product
+                $product = Product::find($productId);
+                
+                // Calculate price using the same logic as getinvoicepdf
+                $priceCalculation = $this->calculateProductPriceForInvoice($product, $quantity, $customer->id);
+                
+                $itemTotal = $priceCalculation['total_price'];
+                $total += $itemTotal;
+                
+                $invoiceDetails[] = [
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'price' => $priceCalculation['unit_price'], // Average unit price for display
+                    'totalprice' => $itemTotal,
+                    'remark' => $detail['remark'] ?? null,
+                ];
+
+            }
+            $grandTotal = array_sum(array_column($invoiceDetails, 'totalprice'));
+
+        
+            return response()->json([
+                'result' => true,
+                'message' => __LINE__ . $this->message_separator . 'Invoice amount calculated successfully',
+                'data' => [
+                    'details' => $invoiceDetails,
+                    'total_amount' => number_format($grandTotal, 2, '.', '')
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+        
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Error calculating invoice: ' . $e->getMessage(),
+                'data' => null
+            ], 200);
+        }
+    }
+
+    private function calculateProductPriceForInvoice($product, $quantity, $customerId)
+    {
+        // Get base price (Special Price or Regular Price)
+        $specialPrice = SpecialPrice::where('product_id', $product->id)
+            ->where('customer_id', $customerId)
+            ->where('status', 1)
+            ->first();
+        
+        $basePrice = $specialPrice ? $specialPrice->price : $product->price;
+        
+        $totalPrice = 0;
+        $breakdown = [];
+        $remainingQuantity = $quantity;
+        
+        // Check for tiered pricing
+        $tieredPricing = $product->tiered_pricing;
+        
+        if (!empty($tieredPricing) && is_array($tieredPricing)) {
+            // Sort tiers by quantity ascending (smallest first)
+            usort($tieredPricing, function($a, $b) {
+                return $a['quantity'] - $b['quantity'];
+            });
+            
+            // Apply tiered pricing for each tier
+            foreach ($tieredPricing as $tier) {
+                if ($remainingQuantity <= 0) {
+                    break;
+                }
+                
+                $tierQuantity = $tier['quantity'];
+                $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
+                
+                // Calculate how many full tier packages fit into remaining quantity
+                $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                
+                if ($numberOfPackages > 0) {
+                    $quantityInThisTier = $numberOfPackages * $tierQuantity;
+                    $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                    
+                    $totalPrice += $itemTotal;
+                    $remainingQuantity -= $quantityInThisTier;
+                    
+                    $breakdown[] = [
+                        'type' => 'tiered',
+                        'tier_quantity' => $tierQuantity,
+                        'packages' => $numberOfPackages,
+                        'quantity' => $quantityInThisTier,
+                        'package_price' => $tierPrice,
+                        'total' => $itemTotal
+                    ];
+                }
+            }
+        }
+        
+        // Handle remaining quantity with base price (special or regular)
+        if ($remainingQuantity > 0) {
+            $itemTotal = $remainingQuantity * $basePrice;
+            $totalPrice += $itemTotal;
+            
+            $breakdown[] = [
+                'type' => 'base',
+                'quantity' => $remainingQuantity,
+                'unit_price' => $basePrice,
+                'total' => $itemTotal,
+                'price_source' => $specialPrice ? 'special_price' : 'default_price'
+            ];
+        }
+        
+        // Calculate average unit price for display
+        $unitPrice = $quantity > 0 ? $totalPrice / $quantity : 0;
+        
+        return [
+            'total_price' => $totalPrice,
+            'unit_price' => round($unitPrice, 2),
+            'breakdown' => $breakdown
+        ];
+    }
+
     public function getDriverInvoices(Request $request, $customer_id = null)
     {
         // Validate session

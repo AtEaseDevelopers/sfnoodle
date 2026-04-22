@@ -93,6 +93,7 @@ Route::group(['prefix' => 'v1'], function () {
     //invoice
     Route::get('/driver/get-invoice-fields', [App\Http\Controllers\Api\V1\DriverController::class, 'getInvoiceFields']);
     Route::post('/driver/create-invoice', [App\Http\Controllers\Api\V1\DriverController::class, 'createInvoice']);
+    Route::post('/driver/calculate-invoice-amount', [App\Http\Controllers\Api\V1\DriverController::class, 'calculateInvoiceAmount']);
     Route::get('/driver/get-invoice-list/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverInvoices']);
     Route::get('/driver/get-invoice-detail/{id}', [App\Http\Controllers\Api\V1\DriverController::class, 'getInvoiceById']);
     Route::post('/driver/invoice/{id}/cancel', [App\Http\Controllers\Api\V1\DriverController::class, 'cancelInvoice']);
