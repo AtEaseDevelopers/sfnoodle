@@ -101,34 +101,63 @@ class Invoice extends Model
         $month = date('m'); // Month with leading zeros
         
         if ($driver_id) {
-            $user = \App\Models\Driver::find($driver_id);
+            $driver = \App\Models\Driver::find($driver_id);
+            if (!$driver) {
+                throw new \Exception('Driver not found');
+            }
+            $userCode = $driver->invoice_code ?? 'R00';
         } else {
             $user = Auth::user();
+            $userCode = $user->invoice_code ?? 'R00';
         }
-
-        $userCode = $user->invoice_code ?? ''; // Default to R00 if not set
         
-        // Get the latest invoice number for current month and user code
+        // Build the prefix
         $prefix = "AE{$year}{$month}/{$userCode}/";
         
-        // Find the latest invoice with this prefix
-        $latestInvoice = self::orderBy('id', 'desc')
+        // Find the latest invoice with this exact prefix for this specific driver
+        $latestInvoice = self::where('invoiceno', 'like', $prefix . '%')
+            ->where('is_driver', true) // Only driver-created invoices
+            ->where('created_by', $driver_id) // Filter by specific driver
+            ->orderBy('id', 'desc')
             ->first();
-
+        
+        $nextNumber = 1;
+        
         if ($latestInvoice) {
-            // Extract the numeric part
+            // Extract the numeric part from the invoice number
             $invoiceNumber = $latestInvoice->invoiceno;
             $numericPart = (int) substr($invoiceNumber, strlen($prefix));
             $nextNumber = $numericPart + 1;
-        } else {
-            // Start from 1 for new month/user combination
-            $nextNumber = 1;
         }
         
-        // Format the number with leading zeros (minimum 4 digits, but can grow)
-        $formattedNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        // Generate the invoice number with existence check
+        $maxAttempts = 100; // Prevent infinite loop
+        $attempt = 0;
+        $invoiceNo = null;
         
-        return $prefix . $formattedNumber;
+        while ($attempt < $maxAttempts) {
+            // Format the number with leading zeros (minimum 4 digits)
+            $formattedNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            $candidateInvoiceNo = $prefix . $formattedNumber;
+            
+            // Check if this invoice number already exists
+            $exists = self::where('invoiceno', $candidateInvoiceNo)->exists();
+            
+            if (!$exists) {
+                $invoiceNo = $candidateInvoiceNo;
+                break;
+            }
+            
+            // If exists, increment and try again
+            $nextNumber++;
+            $attempt++;
+        }
+        
+        if (!$invoiceNo) {
+            throw new \Exception('Unable to generate unique invoice number after ' . $maxAttempts . ' attempts');
+        }
+        
+        return $invoiceNo;
     }
 
     public static function getPaymentTypeOptions()
