@@ -136,7 +136,11 @@
     <!-- Main Content -->
     <div class="content">
         
-        <div class="report-title">TRIP SUMMARY</div>
+        <div class="report-title">
+            TRIP SUMMARY 
+            <span style="margin-left: 20px;">&nbsp;</span>
+            TRIP ID : ( {{ $trip_id }} )
+        </div>
 
         <!-- Trip Information -->
         <table class="trip-info">

@@ -20,10 +20,7 @@ class TripDataTable extends DataTable
         $dataTable = new EloquentDataTable($query);
 
         return $dataTable
-           ->editColumn('uuid', function ($row) {
-                // Add "T-" prefix to UUID
-                return 'T-' . $row->uuid;
-            })
+           
             ->addColumn('action', function ($row) {
                 if ($row->type == 0) {
                     return '<div class="btn-group">
@@ -183,12 +180,12 @@ class TripDataTable extends DataTable
     protected function getColumns()
     {
         return [
-            // 'uuid'=> new \Yajra\DataTables\Html\Column([
-            //     'title' => trans('trips.trip_id'),
-            //     'data' => 'uuid',
-            //     'name' => 'uuid',
+            'uuid'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('trips.trip_id'),
+                'data' => 'uuid',
+                'name' => 'uuid',
                 
-            // ]),
+            ]),
 
             'date',
 
