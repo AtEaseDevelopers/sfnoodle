@@ -97,8 +97,8 @@ class Invoice extends Model
     public static function generateInvoiceNumber($driver_id = null)
     {
         // Get current year and month
-        $year = date('y'); // Last 2 digits of year
-        $month = date('m'); // Month with leading zeros
+        $year = date('y');
+        $month = date('m');
         
         if ($driver_id) {
             $driver = \App\Models\Driver::find($driver_id);
@@ -114,33 +114,28 @@ class Invoice extends Model
         // Build the prefix
         $prefix = "AE{$year}{$month}/{$userCode}/";
         
-        // Find the latest invoice with this exact prefix for this specific driver
-        $latestInvoice = self::where('invoiceno', 'like', $prefix . '%')
-            ->where('is_driver', true) // Only driver-created invoices
-            ->where('created_by', $driver_id) // Filter by specific driver
-            ->orderBy('id', 'desc')
-            ->first();
+        // Get the maximum numeric value (not string length)
+        $maxNumber = self::where('invoiceno', 'like', $prefix . '%')
+            ->where('is_driver', true)
+            ->where('created_by', $driver_id)
+            ->get()
+            ->map(function($invoice) use ($prefix) {
+                return (int) substr($invoice->invoiceno, strlen($prefix));
+            })
+            ->max();
         
-        $nextNumber = 1;
+        $nextNumber = $maxNumber ? $maxNumber + 1 : 1;
         
-        if ($latestInvoice) {
-            // Extract the numeric part from the invoice number
-            $invoiceNumber = $latestInvoice->invoiceno;
-            $numericPart = (int) substr($invoiceNumber, strlen($prefix));
-            $nextNumber = $numericPart + 1;
-        }
-        
-        // Generate the invoice number with existence check
-        $maxAttempts = 100; // Prevent infinite loop
+        // Generate with existence check (in case of gaps)
+        $maxAttempts = 100;
         $attempt = 0;
         $invoiceNo = null;
         
         while ($attempt < $maxAttempts) {
-            // Format the number with leading zeros (minimum 4 digits)
-            $formattedNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-            $candidateInvoiceNo = $prefix . $formattedNumber;
+            // No padding - use natural numbers
+            // Results: 1, 2, 3... 9999, 10000, 10001
+            $candidateInvoiceNo = $prefix . $nextNumber;
             
-            // Check if this invoice number already exists
             $exists = self::where('invoiceno', $candidateInvoiceNo)->exists();
             
             if (!$exists) {
@@ -148,7 +143,6 @@ class Invoice extends Model
                 break;
             }
             
-            // If exists, increment and try again
             $nextNumber++;
             $attempt++;
         }
