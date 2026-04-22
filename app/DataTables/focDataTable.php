@@ -18,7 +18,15 @@ class focDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'focs.datatables_actions');
+        return $dataTable
+        ->addColumn('action', 'focs.datatables_actions')
+        ->editColumn('product.name', function ($model) {
+            if ($model->product) {
+                return $model->product->name . ' - (' . $model->product->code . ')';
+            }
+            return '-';
+        });
+
     }
 
     /**
@@ -30,7 +38,7 @@ class focDataTable extends DataTable
     public function query(foc $model)
     {
         return $model->newQuery()
-        ->with('product:id,name')
+        ->with('product:id,name,code')
         ->with('customer:id,company')
         ->with('freeproduct:id,name')
         ->select('focs.*');
@@ -156,9 +164,11 @@ class focDataTable extends DataTable
             'orderable' => false,
             'searchable' => false]),
 
-            'product_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('focs.product'),
-            'data' => 'product.name',
-            'name' => 'product.name']),
+             'product_id'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('focs.product'),
+                'data' => 'product.name',  // This will now show name with code from the editColumn
+                'name' => 'product.name'
+            ]),
 
             'customer_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('focs.customer'),
             'data' => 'customer.company',

@@ -47,10 +47,11 @@ class InventoryCountDataTable extends DataTable
         $dataTable->addColumn('product_summary', function($request) {
             $summary = '';
             $items = $request->items ?? [];
+            $containerId = 'product-tooltip-' . $request->id . '-' . uniqid();
             
             if (is_array($items) && count($items) > 0) {
                 $productNames = [];
-                $tooltipItems = []; // For detailed breakdown in tooltip
+                $tooltipItems = [];
                 
                 foreach ($items as $item) {
                     $product = Product::find($item['product_id'] ?? null);
@@ -59,9 +60,9 @@ class InventoryCountDataTable extends DataTable
                     $note = $item['note'] ?? '';
                     
                     if ($product) {
-                        $productNames[] = $product->name . ' (x' . $quantity . ')';
+                        $productNames[] = $product->code . ' (x' . $quantity . ')';
                         $tooltipItems[] = [
-                            'name' => $product->name,
+                            'name' => $product->code,
                             'quantity' => $quantity,
                             'unit' => $unit,
                             'note' => $note
@@ -79,45 +80,50 @@ class InventoryCountDataTable extends DataTable
                 $summary = implode(', ', $productNames);
                 
                 // Build HTML for hover tooltip
-                $tooltipHtml = '<div class="product-tooltip" style="text-align: left; min-width: 200px;">';
-                $tooltipHtml .= '<div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px;">Items Detail:</div>';
+                $tooltipHtml = '<div class="product-tooltip-content" style="text-align: left; min-width: 250px; max-width: 350px;">';
+                $tooltipHtml .= '<div style="font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #4a90e2; padding-bottom: 5px; color: #333;">📦 Items Detail</div>';
                 
                 foreach ($tooltipItems as $index => $tooltipItem) {
-                    $tooltipHtml .= '<div style="margin-bottom: 6px;">';
-                    $tooltipHtml .= '<div style="display: flex; justify-content: space-between; align-items: center;">';
-                    $tooltipHtml .= '<span style="font-weight: 500;">' . ($index + 1) . '. ' . e($tooltipItem['name']) . '</span>';
-                    $tooltipHtml .= '<span style="margin-left: 10px; background-color: #4a90e2; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px;">' . $tooltipItem['quantity'] . ' ' . e($tooltipItem['unit']) . '</span>';
+                    $tooltipHtml .= '<div style="margin-bottom: 12px; padding: 5px; border-left: 3px solid #4a90e2; background: #f9f9f9;">';
+                    $tooltipHtml .= '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">';
+                    $tooltipHtml .= '<span style="font-weight: 600; color: #333;">' . ($index + 1) . '. ' . e($tooltipItem['name']) . '</span>';
+                    $tooltipHtml .= '<span style="background-color: #4a90e2; color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">' . $tooltipItem['quantity'] . ' ' . e($tooltipItem['unit']) . '</span>';
                     $tooltipHtml .= '</div>';
                     
                     if (!empty($tooltipItem['note'])) {
-                        $tooltipHtml .= '<div style="font-size: 12px; color: #666; margin-top: 2px; margin-left: 20px;"><em>' . e($tooltipItem['note']) . '</em></div>';
+                        $tooltipHtml .= '<div style="font-size: 12px; color: #666; margin-top: 5px;"><i class="fa fa-comment-o"></i> ' . e($tooltipItem['note']) . '</div>';
                     }
                     
                     $tooltipHtml .= '</div>';
                 }
                 
+                $tooltipHtml .= '<div style="margin-top: 8px; padding-top: 5px; border-top: 1px solid #eee; font-size: 11px; color: #999; text-align: center;">Total: ' . count($items) . ' items</div>';
                 $tooltipHtml .= '</div>';
                 
             } else {
                 $summary = '-';
-                $tooltipHtml = '<div class="product-tooltip">No items</div>';
+                $tooltipHtml = '<div class="product-tooltip-content">No items</div>';
+                $containerId = '';
             }
             
-            // Create the main display with hover tooltip on entire container
-            return '<div class="product-summary-container" 
-                        style="position: relative; display: block; width: 100%; height: 100%; cursor: help;"
-                        data-toggle="tooltip" 
-                        data-html="true" 
-                        data-placement="top" 
-                        data-boundary="viewport"
-                        title="' . htmlspecialchars($tooltipHtml) . '">
-                        <div class="product-summary-text" 
-                            style="display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            ' . e($summary) . '
-                        </div>
-                        <br>
-                        <small class="text-muted">(' . count($items) . ' items)</small>
-                    </div>';
+            if (!empty($containerId)) {
+                // Create the main display with custom hover container
+                return '<div class="product-summary-container" 
+                            data-container-id="' . $containerId . '"
+                            style="position: relative; display: block; width: 100%; cursor: help;">
+                            <div class="product-summary-text" 
+                                style="display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ' . e($summary) . '
+                            </div>
+                            <br>
+                            <small class="text-muted">(' . count($items) . ' items)</small>
+                            <div id="' . $containerId . '" class="custom-product-tooltip" style="display: none; position: fixed; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 12px; z-index: 10000; max-width: 350px; max-height: 400px; overflow-y: auto;">
+                                ' . $tooltipHtml . '
+                            </div>
+                        </div>';
+            } else {
+                return '<div class="product-summary-container">-</div>';
+            }
         });
 
         // Add total quantity column

@@ -5149,6 +5149,204 @@ class DriverController extends Controller
         }
     }
 
+    public function calculateInvoiceAmount(Request $request)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        // Get customer payment term
+        $customer = Customer::find($request->customer_id);
+        if (!$customer) {
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Customer not found',
+                'data' => null
+            ], 200);
+        }
+
+        $paymentTerm = $customer->paymentterm;
+
+        // Define validation rules (NO price validation)
+        $validationRules = [
+            'invoiceno' => 'required|string|max:255',
+            'date' => 'required|date_format:d-m-Y',
+            'customer_id' => 'required|exists:customers,id',
+            'remark' => 'nullable|string|max:255',
+            'details' => 'required|array|min:1',
+            'details.*.product_id' => 'required|exists:products,id',
+            'details.*.quantity' => 'required|numeric|min:0.01'
+        ];
+        
+        // Add payment validation for cash
+        if ($paymentTerm == 'Cash') {
+            $validationRules['payment_attachment'] = 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048';
+            $validationRules['payment_remark'] = 'nullable|string|max:255';
+        }
+
+        // Validate request
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Validation failed',
+                'errors' => $validator->errors()->toArray(),
+                'data' => null
+            ], 200);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $input = $request->all();
+            
+            // Convert date format
+            $input['date'] = \Carbon\Carbon::createFromFormat('d-m-Y', $input['date'])->format('Y-m-d');
+            
+            // Handle invoice number generation
+            if (empty($input['invoiceno']) || $input['invoiceno'] == 'SYSTEM GENERATED IF BLANK') {
+                $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
+            }
+            
+            // Set driver information
+            $input['driver_id'] = $driver->id;
+            $input['created_by'] = $driver->id;
+            $input['is_driver'] = true;
+            $input['paymentterm'] = $paymentTerm;
+
+            // Calculate total with pricing logic matching getinvoicepdf
+            $total = 0;
+            $invoiceDetails = [];
+            
+            foreach ($input['details'] as $detail) {
+                $productId = $detail['product_id'];
+                $quantity = $detail['quantity'];
+                
+                // Get the product
+                $product = Product::find($productId);
+                
+                // Calculate price using the same logic as getinvoicepdf
+                $priceCalculation = $this->calculateProductPriceForInvoice($product, $quantity, $customer->id);
+                
+                $itemTotal = $priceCalculation['total_price'];
+                $total += $itemTotal;
+                
+                $invoiceDetails[] = [
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'price' => $priceCalculation['unit_price'], // Average unit price for display
+                    'totalprice' => $itemTotal,
+                    'remark' => $detail['remark'] ?? null,
+                ];
+
+            }
+            $grandTotal = array_sum(array_column($invoiceDetails, 'totalprice'));
+
+        
+            return response()->json([
+                'result' => true,
+                'message' => __LINE__ . $this->message_separator . 'Invoice amount calculated successfully',
+                'data' => [
+                    'details' => $invoiceDetails,
+                    'total_amount' => number_format($grandTotal, 2, '.', '')
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+        
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'Error calculating invoice: ' . $e->getMessage(),
+                'data' => null
+            ], 200);
+        }
+    }
+
+    private function calculateProductPriceForInvoice($product, $quantity, $customerId)
+    {
+        // Get base price (Special Price or Regular Price)
+        $specialPrice = SpecialPrice::where('product_id', $product->id)
+            ->where('customer_id', $customerId)
+            ->where('status', 1)
+            ->first();
+        
+        $basePrice = $specialPrice ? $specialPrice->price : $product->price;
+        
+        $totalPrice = 0;
+        $breakdown = [];
+        $remainingQuantity = $quantity;
+        
+        // Check for tiered pricing
+        $tieredPricing = $product->tiered_pricing;
+        
+        if (!empty($tieredPricing) && is_array($tieredPricing)) {
+            // Sort tiers by quantity ascending (smallest first)
+            usort($tieredPricing, function($a, $b) {
+                return $a['quantity'] - $b['quantity'];
+            });
+            
+            // Apply tiered pricing for each tier
+            foreach ($tieredPricing as $tier) {
+                if ($remainingQuantity <= 0) {
+                    break;
+                }
+                
+                $tierQuantity = $tier['quantity'];
+                $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
+                
+                // Calculate how many full tier packages fit into remaining quantity
+                $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                
+                if ($numberOfPackages > 0) {
+                    $quantityInThisTier = $numberOfPackages * $tierQuantity;
+                    $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                    
+                    $totalPrice += $itemTotal;
+                    $remainingQuantity -= $quantityInThisTier;
+                    
+                    $breakdown[] = [
+                        'type' => 'tiered',
+                        'tier_quantity' => $tierQuantity,
+                        'packages' => $numberOfPackages,
+                        'quantity' => $quantityInThisTier,
+                        'package_price' => $tierPrice,
+                        'total' => $itemTotal
+                    ];
+                }
+            }
+        }
+        
+        // Handle remaining quantity with base price (special or regular)
+        if ($remainingQuantity > 0) {
+            $itemTotal = $remainingQuantity * $basePrice;
+            $totalPrice += $itemTotal;
+            
+            $breakdown[] = [
+                'type' => 'base',
+                'quantity' => $remainingQuantity,
+                'unit_price' => $basePrice,
+                'total' => $itemTotal,
+                'price_source' => $specialPrice ? 'special_price' : 'default_price'
+            ];
+        }
+        
+        // Calculate average unit price for display
+        $unitPrice = $quantity > 0 ? $totalPrice / $quantity : 0;
+        
+        return [
+            'total_price' => $totalPrice,
+            'unit_price' => round($unitPrice, 2),
+            'breakdown' => $breakdown
+        ];
+    }
+
     public function getDriverInvoices(Request $request, $customer_id = null)
     {
         // Validate session
@@ -5777,6 +5975,11 @@ class DriverController extends Controller
         }
 
         try {
+            // Get blocked product IDs for this driver
+            $blockedProductIds = Product::whereJsonContains('blocked_drivers', (string)$driver->id)
+                ->pluck('id')
+                ->toArray();
+            
             // Get driver's inventory balances
             $driverInventory = InventoryBalance::where('driver_id', $driver->id)
                 ->pluck('quantity', 'product_id')
@@ -5795,17 +5998,18 @@ class DriverController extends Controller
             $recentDate = Carbon::now()->subDays($days);
             
             // Get product IDs from recent invoices (including both driver and admin invoices)
-            // But exclude cancelled invoices
+            // But exclude cancelled invoices AND exclude blocked products
             $recentProductIds = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
-                $query->where('date', '>=', $recentDate)
-                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
-            })
-            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(invoice_details.created_at) as last_used'))
-            ->groupBy('product_id')
-            ->orderBy('last_used', 'desc')
-            ->orderBy('usage_count', 'desc')
-            ->pluck('product_id')
-            ->toArray();
+                    $query->where('date', '>=', $recentDate)
+                        ->where('status', '!=', Invoice::STATUS_CANCELLED);
+                })
+                ->whereNotIn('product_id', $blockedProductIds) // Filter out blocked products
+                ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(invoice_details.created_at) as last_used'))
+                ->groupBy('product_id')
+                ->orderBy('last_used', 'desc')
+                ->orderBy('usage_count', 'desc')
+                ->pluck('product_id')
+                ->toArray();
             
             if (empty($recentProductIds)) {
                 return response()->json([
@@ -5815,9 +6019,10 @@ class DriverController extends Controller
                 ], 200);
             }
             
-            // Get all products that were in recent invoices
+            // Get all products that were in recent invoices (excluding blocked ones)
             $products = Product::where('status', 1)
                 ->whereIn('id', $recentProductIds)
+                ->whereNotIn('id', $blockedProductIds) // Double ensure blocked products are excluded
                 ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
                 ->get();
             
@@ -5867,16 +6072,17 @@ class DriverController extends Controller
                 ];
             }
             
-            // Get usage statistics for each product
+            // Get usage statistics for each product (excluding blocked ones)
             $usageStats = InvoiceDetail::whereHas('invoice', function($query) use ($recentDate, $driver) {
-                $query->where('date', '>=', $recentDate)
-                    ->where('status', '!=', Invoice::STATUS_CANCELLED);
-            })
-            ->whereIn('product_id', $recentProductIds)
-            ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(created_at) as last_used'))
-            ->groupBy('product_id')
-            ->get()
-            ->keyBy('product_id');
+                    $query->where('date', '>=', $recentDate)
+                        ->where('status', '!=', Invoice::STATUS_CANCELLED);
+                })
+                ->whereIn('product_id', $recentProductIds)
+                ->whereNotIn('product_id', $blockedProductIds) // Filter out blocked products
+                ->select('product_id', \DB::raw('COUNT(*) as usage_count'), \DB::raw('MAX(created_at) as last_used'))
+                ->groupBy('product_id')
+                ->get()
+                ->keyBy('product_id');
             
             // Add usage statistics to products
             foreach ($groupedProducts as &$category) {
@@ -5947,6 +6153,11 @@ class DriverController extends Controller
         }
 
         try {
+            // Get blocked product IDs for this driver
+            $blockedProductIds = Product::whereJsonContains('blocked_drivers', (string)$driver->id)
+                ->pluck('id')
+                ->toArray();
+            
             // Get driver's inventory balances
             $driverInventory = InventoryBalance::where('driver_id', $driver->id)
                 ->pluck('quantity', 'product_id')
@@ -5972,6 +6183,7 @@ class DriverController extends Controller
             if($driverInventory){
                 // HAS INVENTORY - Get all products with their categories as string
                 $products = Product::where('status', 1)
+                    ->whereNotIn('id', $blockedProductIds) // Filter out blocked products
                     ->select('id', 'name', 'category', 'price', 'status', 'code', 'image_path')
                     ->orderBy('name')
                     ->get();
@@ -5980,11 +6192,11 @@ class DriverController extends Controller
                 $groupedProducts = [];
                 
                 foreach ($products as $product) {
-                    $categoryName = $product->category ?: 'Uncategorized'; // Default category if empty
+                    $categoryName = $product->category ?: 'Uncategorized';
                     
                     if (!isset($groupedProducts[$categoryName])) {
                         $groupedProducts[$categoryName] = [
-                            'category_id' => null, // Keep for backward compatibility
+                            'category_id' => null,
                             'category_name' => $categoryName,
                             'products' => []
                         ];
@@ -6025,6 +6237,7 @@ class DriverController extends Controller
             } else {
                 // NO INVENTORY - Get all products directly
                 $products = Product::where('status', 1)
+                    ->whereNotIn('id', $blockedProductIds) // Filter out blocked products
                     ->select('id', 'name', 'category', 'code', 'price', 'status', 'image_path')
                     ->orderBy('name')
                     ->get();
@@ -6033,11 +6246,11 @@ class DriverController extends Controller
                 $groupedProducts = [];
                 
                 foreach ($products as $product) {
-                    $categoryName = $product->category ?: 'Uncategorized'; // Default category if empty
+                    $categoryName = $product->category ?: 'Uncategorized';
                     
                     if (!isset($groupedProducts[$categoryName])) {
                         $groupedProducts[$categoryName] = [
-                            'category_id' => null, // Keep for backward compatibility
+                            'category_id' => null,
                             'category_name' => $categoryName,
                             'products' => []
                         ];
@@ -6051,7 +6264,7 @@ class DriverController extends Controller
                         'name' => $product->name,
                         'code' => $product->code,
                         'price' => $price,
-                        'quantity' => 0, // Always 0 when no inventory
+                        'quantity' => 0,
                         'status' => $product->getStatusTextAttribute(),
                         'image_url' => $getImageUrl($product->image_path)
                     ];
@@ -7314,6 +7527,143 @@ class DriverController extends Controller
             ], 500);
         }
         
+    }
+
+    public function getLastSevenDaysTripSummary(Request $request)
+    {
+        // Validate session
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if(empty($driver)){
+            return response()->json([
+                'result' => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data' => null
+            ], 401);
+        }
+
+        try{
+            // Get the last 7 days date range
+            $endDate = now();
+            $startDate = now()->subDays(6); // Last 7 days including today
+
+            // Get all trips from the last 7 days
+            $trips = Trip::where('driver_id', $driver->id)
+                ->where('type', Trip::END_TRIP)
+                ->whereBetween('date', [$startDate->startOfDay(), $endDate->endOfDay()])
+                ->orderBy('date', 'desc')
+                ->get();
+                
+            if($trips->isEmpty()){
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No trips found in the last 7 days',
+                    'data' => []
+                ], 200);
+            }
+            
+            $dailyTripSummaries = [];
+            
+            foreach($trips as $trip) {
+                // Get trip summary for each trip
+                $tripSummary = TripController::generateTripReport($trip->uuid);
+                
+                // Process inventory balances
+                $inventoryBalances = json_decode($trip->stock_data, true);
+                $productIds = array_column($inventoryBalances, 'product_id');
+                $products = Product::whereIn('id', $productIds)
+                    ->get()
+                    ->keyBy('id');
+                
+                // Map product names to the inventory balances
+                foreach ($inventoryBalances as &$item) {
+                    $item['product_name'] = $products[$item['product_id']]->name ?? 'Unknown';
+                }
+                
+                // Get invoices for this trip
+                $invoices = Invoice::where('is_driver', 1)
+                    ->where('trip_id', $trip->uuid)
+                    ->where('created_by', $driver->id)
+                    ->where('status', Invoice::STATUS_COMPLETED)
+                    ->with(['invoiceDetails.product'])
+                    ->get();
+                
+                // Process products sold
+                $productsSold = $invoices->flatMap(function($invoice) {
+                        return $invoice->invoiceDetails;
+                    })
+                    ->groupBy('product_id')
+                    ->map(function($details, $productId) {
+                        $firstDetail = $details->first();
+                        return [
+                            'name' => $firstDetail->product ? $firstDetail->product->name : 'Unknown Product',
+                            'quantity' => $details->sum('quantity')
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+                
+                // Process customer summary
+                $customerSummary = $invoices
+                    ->groupBy('customer_id')
+                    ->map(function($customerInvoices, $customerId) {
+                        $firstInvoice = $customerInvoices->first();
+                        $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : '-';
+                        
+                        $totalAmount = $customerInvoices->sum(function($invoice) {
+                            return $invoice->total;
+                        });
+                        
+                        $invoiceCount = $customerInvoices->count();
+                        
+                        return [
+                            'customer_id' => $customerId,
+                            'customer_name' => $customerName,
+                            'total_amount' => (float) $totalAmount,
+                            'formatted_amount' => number_format($totalAmount, 2),
+                            'invoice_count' => $invoiceCount
+                        ];
+                    })
+                    ->values()
+                    ->sortByDesc('total_amount')
+                    ->toArray();
+                
+                // Compile summary for this day/trip
+                $dailyTripSummaries[] = [
+                    'trip_date' => $trip->date ? date('Y-m-d', strtotime($trip->date)) : null,
+                    'trip_summary' => [
+                        'trip_id' => $tripSummary['trip_info']['trip_id'] ?? 'T-' . $driver->trip_id,
+                        'driver_name' => $tripSummary['trip_info']['driver']['name'] ?? $driver->name,
+                        'start_time' => $tripSummary['trip_info']['start_time'] ?? null,
+                        'end_time' => $tripSummary['trip_info']['end_time'] ?? now(),
+                        'trip_duration' => isset($tripSummary['trip_info']['start_time'], $tripSummary['trip_info']['end_time']) 
+                            ? $this->calculateDuration($tripSummary['trip_info']['start_time'], $tripSummary['trip_info']['end_time'])
+                            : null,
+                    ],
+                    'sales_summary' => [
+                        'total_invoices' => $tripSummary['sales_summary']['total_invoices'] ?? 0,
+                        'total_sales_orders' => $tripSummary['sales_summary']['total_sales_orders'] ?? 0,
+                        'total_amount' => $tripSummary['sales_summary']['total_amount'] ?? 0,
+                        'total_credit' => $tripSummary['sales_summary']['total_credit'] ?? 0,
+                        'total_cash' => $tripSummary['sales_summary']['total_cash'] ?? 0,
+                    ],
+                    'stock_summary' => $inventoryBalances,
+                    'products_sold' => $productsSold,
+                    'customer_summary' => $customerSummary,
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Last 7 days trip data retrieved successfully.',
+                'data' => $dailyTripSummaries
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get last 7 days trip data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getCustomers(Request $request)

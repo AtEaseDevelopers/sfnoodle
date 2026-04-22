@@ -40,7 +40,9 @@ class Product extends Model
         'status',
         'category',
         'image_path',
-        'tiered_pricing' // Add this
+        'tiered_pricing',
+        'blocked_drivers' // Add this
+
     ];
 
     /**
@@ -57,7 +59,8 @@ class Product extends Model
         'status' => 'integer',
         'category' => 'string',
         'image_path' => 'string',
-        'tiered_pricing' => 'array' // Cast JSON to array
+        'tiered_pricing' => 'array',
+        'blocked_drivers' => 'array' 
     ];
 
     /**
@@ -75,7 +78,10 @@ class Product extends Model
         'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         'tiered_pricing' => 'nullable|array',
         'tiered_pricing.*.quantity' => 'required|integer|min:1',
-        'tiered_pricing.*.price' => 'required|numeric|min:0'
+        'tiered_pricing.*.price' => 'required|numeric|min:0',
+        'blocked_drivers' => 'nullable|array', // Add this
+        'blocked_drivers.*' => 'exists:drivers,id' // Add this
+
     ];
 
     /**

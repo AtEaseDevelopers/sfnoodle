@@ -456,14 +456,19 @@ class SalesInvoiceController extends AppBaseController
     {
         $id = Crypt::decrypt($id);
         $salesInvoice = $this->salesInvoiceRepository->find($id);
-
+        $salesInvoiceItems = SalesInvoice::pluck('invoiceno', 'id')->toArray();
+        
+        // Modified: Create array with product name and code combined
+        $productItems = Product::get()->mapWithKeys(function ($product) {
+            return [$product->id => $product->name . ' (' . $product->code . ')'];
+        })->toArray();
+        
         if (empty($salesInvoice)) {
             Flash::error('Sales invoice not found');
-
             return redirect(route('salesInvoices.index'));
         }
 
-        return view('sales_invoices.detail')->with('id', $id);
+        return view('sales_invoices.detail')->with('id', $id)->with('salesInvoiceItems', $salesInvoiceItems)->with('productItems', $productItems);
     }
 
     public function adddetail($id , Request $request)
@@ -689,8 +694,11 @@ class SalesInvoiceController extends AppBaseController
         // Process each purchased item with tiered pricing
         foreach ($salesInvoice->salesInvoiceDetails as $detail) {
             $product = $detail->product;
+            if (!$product) {
+                continue;
+            }
             $quantity = $detail->quantity;
-            $regularPrice = $product->price;
+            $regularPrice = $product->price ?? 0;
             
             // Check for special price for this customer
             $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)

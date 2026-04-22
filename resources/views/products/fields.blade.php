@@ -186,6 +186,34 @@
             </div>
         </div>
 
+        <!-- Blocked Drivers Section -->
+        <div class="col-md-12 mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user-slash"></i> Blocked Drivers</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {!! Form::label('blocked_drivers', 'Select Drivers to Block') !!}
+                        <select name="blocked_drivers[]" id="blocked_drivers" class="form-control" multiple="multiple">
+                            @foreach($drivers as $driver)
+                                @php
+                                    $blockedDrivers = isset($product) && $product->blocked_drivers ? $product->blocked_drivers : old('blocked_drivers', []);
+                                    $selected = in_array($driver->id, $blockedDrivers) ? 'selected' : '';
+                                @endphp
+                                <option value="{{ $driver->id }}" {{ $selected }}>
+                                    {{ $driver->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Selected drivers will NOT see this product in their product list. Leave empty to show to all drivers.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -230,7 +258,11 @@
                     }
                 }
             });
-            
+            $('#blocked_drivers').select2({
+                placeholder: "Select drivers to block",
+                allowClear: true,
+                theme: "default"
+            });
             // Set the value if there's an old category or existing product category
             if (oldCategory && oldCategory !== '') {
                 var exists = false;
@@ -527,6 +559,52 @@
 
 @push('css')
     <style>
+        
+        /* Blocked Drivers Section - Clean & Simple */
+        .select2-container--default .select2-selection--multiple {
+            min-height: 38px;
+            border: 1px solid #d2d6de;
+            border-radius: 4px;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #dc3545;
+            border: none;
+            border-radius: 3px;
+            padding: 3px 8px;
+            margin: 4px 5px 4px 0;
+            color: white;
+            font-size: 12px;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: white;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #ffc107;
+            background: none;
+        }
+
+        .select2-container--default .select2-search--inline .select2-search__field {
+            margin-top: 6px;
+            padding: 3px;
+        }
+
+        /* Make the blocked drivers card consistent with other cards */
+        .card-header h5 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .card-header h5 i {
+            margin-right: 8px;
+        }
+
+
         #tiered-pricing-table .table {
             margin-bottom: 0;
         }

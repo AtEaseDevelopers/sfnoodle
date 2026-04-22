@@ -20,6 +20,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceDetail;
 use App\Models\SpecialPrice;
 use App\Models\Foc;
+use App\Models\Driver;
 use Illuminate\Support\Facades\Session;
 use Exception;
 use Illuminate\Support\Facades\Validator;
@@ -64,8 +65,9 @@ class ProductController extends AppBaseController
         
         // Sort categories alphabetically
         sort($existingCategories);
-        
-        return view('products.create', compact('existingCategories'));
+        $drivers = Driver::orderBy('name')->get();
+
+        return view('products.create', compact('existingCategories', 'drivers'));
     }
 
     /**
@@ -90,6 +92,8 @@ class ProductController extends AppBaseController
             'tiered_pricing' => 'nullable|array',
             'tiered_pricing.*.quantity' => 'required_with:tiered_pricing.*.price|integer|min:1|distinct',
             'tiered_pricing.*.price' => 'required_with:tiered_pricing.*.quantity|numeric|min:0',
+            'blocked_drivers' => 'nullable|array', 
+            'blocked_drivers.*' => 'exists:drivers,id'
         ];
 
         $messages = [
@@ -132,6 +136,7 @@ class ProductController extends AppBaseController
             $imagePath = $image->storeAs('product-images', $imageName, 'public');
             $input['image_path'] = '/' . $imagePath;
         }
+        $input['blocked_drivers'] = $request->input('blocked_drivers', []);
 
         $product = $this->productRepository->create($input);
 
@@ -188,8 +193,9 @@ class ProductController extends AppBaseController
         
         // Sort categories alphabetically
         sort($existingCategories);
-        
-        return view('products.edit', compact('product', 'existingCategories'));
+        $drivers = Driver::orderBy('name')->get();
+
+        return view('products.edit', compact('product', 'existingCategories', 'drivers'));
     }
 
     /**
@@ -263,7 +269,8 @@ class ProductController extends AppBaseController
             $imagePath = $image->storeAs('product-images', $imageName, 'public');
             $input['image_path'] = '/' . $imagePath;
         }
-        
+        $input['blocked_drivers'] = $request->input('blocked_drivers', []);
+
         $product = $this->productRepository->update($input, $id);
 
         Flash::success($product->code . __('products.updated_successfully'));

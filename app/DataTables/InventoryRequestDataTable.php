@@ -46,7 +46,7 @@ class InventoryRequestDataTable extends DataTable
                     // Get product details
                     $productId = $item['product_id'] ?? $item['id'] ?? null;
                     $quantity = $item['quantity'] ?? 0;
-                    $productName = $product ? $product->name : '-';
+                    $productName = $product ? $product->code : '-';
                     
                     $productNames[] = $productName . ' (x' . $quantity . ')';
                     $tooltipItems[] = [

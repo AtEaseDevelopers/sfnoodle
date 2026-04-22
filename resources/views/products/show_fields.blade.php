@@ -101,7 +101,47 @@
         </div>
     </div>
     @endif
-
+    <!-- Blocked Drivers Section -->
+    @if($product->blocked_drivers && count($product->blocked_drivers) > 0)
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user-slash"></i> Blocked Drivers</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>This product is hidden from the following drivers:</strong>
+                        <ul class="mt-2 mb-0">
+                            @php
+                                $blockedDrivers = App\Models\Driver::whereIn('id', $product->blocked_drivers)->get();
+                            @endphp
+                            @foreach($blockedDrivers as $driver)
+                                <li>{{ $driver->name }} </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @else
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-user-slash"></i> Blocked Drivers</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> No drivers are blocked from seeing this product. Visible to all drivers.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 @push('scripts')

@@ -158,7 +158,6 @@
                     <tr>
                         <th>Product</th>
                         <th>Quantity</th>
-                        <th>Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -166,13 +165,11 @@
                     <tr>
                         <td>{{ $item['code'] }}</td>
                         <td>{{ $item['quantity'] }}</td>
-                        <td>RM {{ $item['amount'] }}</td>
                     </tr>
                     @endforeach
                     <tr class="total-row">
                         <td><strong>Total</strong></td>
                         <td><strong>{{ $total_quantity }}</strong></td>
-                        <td><strong>{{ $total_amount }}</strong></td>
                     </tr>
                 </tbody>
             </table>

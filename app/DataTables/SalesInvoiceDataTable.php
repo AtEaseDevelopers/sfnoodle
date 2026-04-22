@@ -48,8 +48,14 @@ class SalesInvoiceDataTable extends DataTable
         
         foreach ($salesInvoice->salesInvoiceDetails as $detail) {
             $product = $detail->product;
+            
+            // Skip if product is null
+            if (!$product) {
+                continue;
+            }
+            
             $quantity = $detail->quantity;
-            $regularPrice = $product->price;
+            $regularPrice = $product->price ?? 0;
             
             // Check for special price for this customer
             $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
@@ -59,10 +65,11 @@ class SalesInvoiceDataTable extends DataTable
             
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
             
-            // Get tiered pricing
+            // Get tiered pricing (handle null case)
             $tieredPricing = $product->tiered_pricing;
             
-            if (!empty($tieredPricing) && is_array($tieredPricing)) {
+            // Check if tiered pricing exists and is a valid array
+            if (!empty($tieredPricing) && is_array($tieredPricing) && count($tieredPricing) > 0) {
                 // Sort tiers by quantity descending (largest first for best value)
                 usort($tieredPricing, function($a, $b) {
                     return $b['quantity'] - $a['quantity'];
@@ -74,6 +81,11 @@ class SalesInvoiceDataTable extends DataTable
                 foreach ($tieredPricing as $tier) {
                     if ($remainingQuantity <= 0) {
                         break;
+                    }
+                    
+                    // Skip invalid tiers
+                    if (!isset($tier['quantity']) || !isset($tier['price'])) {
+                        continue;
                     }
                     
                     $tierQuantity = $tier['quantity'];
@@ -98,7 +110,6 @@ class SalesInvoiceDataTable extends DataTable
                 $total += $quantity * $basePrice;
             }
         }
-        
         return round($total, 2);
     }
 
@@ -113,7 +124,9 @@ class SalesInvoiceDataTable extends DataTable
         return $model->newQuery()
             ->with([
                 'customer', 
-                'salesInvoiceDetails.product', // Make sure to load product with tiered_pricing
+                'salesInvoiceDetails' => function($query) {
+                    $query->with('product'); // Eager load product with proper relationship
+                },
                 'driver'
             ])
             ->orderBy('sales_invoices.created_at', 'desc');

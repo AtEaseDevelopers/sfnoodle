@@ -55,6 +55,12 @@ class InventoryTransactionDataTable extends DataTable
                 
                 return '<span class="' . $colorClass . '">' . $sign . abs($model->quantity) . '</span>';
             })
+             ->editColumn('product_id', function ($model) {
+                if ($model->product) {
+                    return $model->product->name . ' - (' . $model->product->code . ')';
+                }
+                return '-';
+            })
             ->rawColumns(['type', 'quantity', 'action']);
     }
 
@@ -68,7 +74,7 @@ class InventoryTransactionDataTable extends DataTable
     {
         return $model->newQuery()
         ->with('driver:id,name')
-        ->with('product:id,name')
+        ->with('product:id,name,code')
         ->select('inventory_transactions.*');
     }
 
@@ -185,9 +191,13 @@ class InventoryTransactionDataTable extends DataTable
             'data' => 'driver.name',
             'name' => 'driver.name']),
 
-            'product_id'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.product'),
-            'data' => 'product.name',
-            'name' => 'product.name']),
+            'product_id'=> new \Yajra\DataTables\Html\Column([
+                'title' => trans('inventory_transactions.product'),  // Updated title
+                'data' => 'product_id',  // This will use the edited column
+                'name' => 'product.name',
+                'searchable' => true,
+                'orderable' => true
+            ]),
 
             'quantity'=> new \Yajra\DataTables\Html\Column(['title' => trans('inventory_transactions.quantity'),
             'data' => 'quantity',

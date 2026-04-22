@@ -93,6 +93,7 @@ Route::group(['prefix' => 'v1'], function () {
     //invoice
     Route::get('/driver/get-invoice-fields', [App\Http\Controllers\Api\V1\DriverController::class, 'getInvoiceFields']);
     Route::post('/driver/create-invoice', [App\Http\Controllers\Api\V1\DriverController::class, 'createInvoice']);
+    Route::post('/driver/calculate-invoice-amount', [App\Http\Controllers\Api\V1\DriverController::class, 'calculateInvoiceAmount']);
     Route::get('/driver/get-invoice-list/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverInvoices']);
     Route::get('/driver/get-invoice-detail/{id}', [App\Http\Controllers\Api\V1\DriverController::class, 'getInvoiceById']);
     Route::post('/driver/invoice/{id}/cancel', [App\Http\Controllers\Api\V1\DriverController::class, 'cancelInvoice']);
@@ -117,9 +118,10 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/driver/start-trip', [App\Http\Controllers\Api\V1\DriverController::class, 'TripStart']);
     Route::get('/driver/end-trip', [App\Http\Controllers\Api\V1\DriverController::class, 'TripEnd']);
     Route::get('/driver/get-lasttrip-summary', [App\Http\Controllers\Api\V1\DriverController::class, 'getLastTripSummary']);
+    Route::get('/driver/get-trip-summary-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getLastSevenDaysTripSummary']);
 
     //driver
-    Route::get('/driver/get-driver-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverProduct']);
+    Route::get('/driver/get-driver-product', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverProduct']);//manager side
     Route::get('/driver/stock-request-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockRequest']);
     Route::get('/driver/stock-return-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockReturn']);
     Route::post('/driver/stock-request-approve', [App\Http\Controllers\Api\V1\DriverController::class, 'approveStockRequest']);
