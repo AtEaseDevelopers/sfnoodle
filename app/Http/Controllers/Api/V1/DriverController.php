@@ -3883,7 +3883,7 @@ class DriverController extends Controller
             }
 
             // Get sales invoices
-            $salesInvoices = $query->with(['customer:id,company,phone,paymentterm', 'salesInvoiceDetails.product:id,name'])
+            $salesInvoices = $query->with(['customer:id,company,phone,paymentterm', 'salesInvoiceDetails.product:id,name,code'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -3913,6 +3913,7 @@ class DriverController extends Controller
                         return [
                             'product_id' => $detail->product_id,
                             'product_name' => optional($detail->product)->name ?? 'N/A',
+                            'product_code' => $detail->product->code ?? 'N/A',
                             'quantity' => (float) $detail->quantity,
                             'price' => (float) $detail->price,
                             'total' => (float) $detail->totalprice,
