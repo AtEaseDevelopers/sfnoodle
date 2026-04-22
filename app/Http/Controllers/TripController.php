@@ -651,8 +651,7 @@ class TripController extends AppBaseController
             
             $documentsList[] = [
                 'doc_no' => $invoice->invoiceno,
-                'status' => 'Invoice',  // Hard-coded for active invoices
-                'actual_status' => $invoice->getStatusTextAttribute(), // Add actual status
+                'status' => $invoice->getStatusTextAttribute(),  // Hard-coded for active invoices
                 'company_name' => $customerName,
                 'paymentterm' => $invoice->paymentterm ?? '-',
                 'amount' => 'RM ' . number_format($invoiceDiscountedTotal, 2)
@@ -667,8 +666,7 @@ class TripController extends AppBaseController
                 
                 $documentsList[] = [
                     'doc_no' => $invoice->invoiceno,
-                    'status' => 'Cancelled',  // Show as Cancelled
-                    'actual_status' => $invoice->getStatusTextAttribute(),
+                    'status' => $invoice->getStatusTextAttribute(),  
                     'company_name' => $customerName,
                     'paymentterm' => $invoice->paymentterm ?? '-',
                     'amount' => 'RM 0.00'  // Amount is 0 for cancelled invoices
