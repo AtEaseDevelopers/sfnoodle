@@ -15,9 +15,12 @@
         ->where('id', $invoice_id)
         ->first();
 
-        $tripId = \Illuminate\Support\Facades\DB::table('drivers')
-        ->where('trip_id', $invoice->trip_id)
-        ->exists();
+         $tripId = false;
+        if ($invoice && $invoice->trip_id) {
+            $tripId = \Illuminate\Support\Facades\DB::table('drivers')
+                ->where('trip_id', $invoice->trip_id)
+                ->exists();
+        }
     @endphp
     
     @if($tripId)
