@@ -35,27 +35,42 @@ class InvoicePaymentDataTable extends DataTable
                 return $row->type;
             })
             ->addColumn('amount_formatted', function ($row) {
-                // Format amount to 2 decimal places
                 return number_format($row->amount, 2, '.', ',');
             })
             ->addColumn('approve_at_formatted', function ($row) {
-                // Format approve_at date if exists
                 return $row->approve_at ? \Carbon\Carbon::parse($row->approve_at)->format('Y-m-d H:i:s') : '-';
             })
             ->addColumn('created_at_formatted', function ($row) {
-                // Format created_at date to include time
                 return $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('Y-m-d H:i:s') : '-';
             })
             ->addColumn('action', 'invoice_payments.datatables_actions')
+            
+            // Add filter for invoice_no
+            ->filterColumn('invoice_no', function($query, $keyword) {
+                $query->whereHas('invoice', function($q) use ($keyword) {
+                    $q->where('invoiceno', 'like', "%{$keyword}%");
+                });
+            })
+            
+            // Add filter for payment_no
             ->filterColumn('payment_no', function($query, $keyword) {
                 $query->whereRaw("CONCAT('PR', LPAD(invoice_payments.id, 5, '0')) LIKE ?", ["%{$keyword}%"]);
             })
+            
+            // Add filter for approve_at
             ->filterColumn('approve_at_formatted', function($query, $keyword) {
-                // Add search functionality for approve_at
                 if (!empty($keyword)) {
                     $query->whereDate('approve_at', '=', $keyword);
                 }
             })
+            
+            // Add filter for customer company
+            ->filterColumn('customer.company', function($query, $keyword) {
+                $query->whereHas('customer', function($q) use ($keyword) {
+                    $q->where('company', 'like', "%{$keyword}%");
+                });
+            })
+            
             ->rawColumns(['action']);
     }
 
@@ -70,7 +85,7 @@ class InvoicePaymentDataTable extends DataTable
         return $model->newQuery()
             ->with(['invoice:id,invoiceno', 'customer'])
             ->select('invoice_payments.*')
-            ->orderBy('created_at', 'desc'); 
+            ->orderBy('created_at', 'desc');
     }
 
     /**
@@ -152,11 +167,11 @@ class InvoicePaymentDataTable extends DataTable
                         }'
                     ],
                     [
-                        'targets' => 5,
+                        'targets' => 5, // Amount column
                         'className' => 'dt-body-right'
                     ],
                     [
-                        'targets' => 6,
+                        'targets' => 6, // Type column
                         'render' => 'function(data, type){
                             if (data == 1) {
                                 return "Cash";
@@ -168,7 +183,7 @@ class InvoicePaymentDataTable extends DataTable
                         }'
                     ],
                     [
-                        'targets' => 7,
+                        'targets' => 7, // Status column
                         'render' => 'function(data, type){
                             if (data == 0) {
                                 return "Cancelled";
@@ -224,24 +239,27 @@ class InvoicePaymentDataTable extends DataTable
             [
                 'title' => trans('invoice_payments.date'),
                 'data' => 'created_at_formatted',
-                'name' => 'created_at_formatted'
+                'name' => 'created_at_formatted',
+                'searchable' => true
             ],
             [
                 'title' => trans('invoice_payments.customer'),
                 'data' => 'customer.company',
-                'name' => 'customer.company'
+                'name' => 'customer.company',
+                'searchable' => true
             ],
             [
                 'title' => trans('invoice_payments.invoice_no'),
                 'data' => 'invoice_no',
                 'name' => 'invoice_no',
-                'orderable' => false,
-                'searchable' => false
+                'orderable' => true,  // Changed to true
+                'searchable' => true   // Added searchable
             ],
             [
                 'title' => trans('invoice_payments.payment_no'),
                 'data' => 'payment_no',
-                'name' => 'payment_no'
+                'name' => 'payment_no',
+                'searchable' => true
             ],
             [
                 'title' => trans('invoice_payments.amount'),
@@ -253,19 +271,21 @@ class InvoicePaymentDataTable extends DataTable
             [
                 'title' => trans('invoice_payments.type'),
                 'data' => 'type',
-                'name' => 'type'
+                'name' => 'type',
+                'searchable' => true
             ],
             [
                 'title' => trans('invoice_payments.status'),
                 'data' => 'status',
-                'name' => 'status'
+                'name' => 'status',
+                'searchable' => true
             ],
             [
                 'title' => trans('invoice_payments.approve_by'),
                 'data' => 'approve_by',
-                'name' => 'approve_by'
+                'name' => 'approve_by',
+                'searchable' => true
             ],
-            
         ];
     }
 
