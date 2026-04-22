@@ -153,6 +153,9 @@ class AutoCountSyncController extends Controller
         DB::beginTransaction();
 
         try {
+            // Reset all products to inactive first; synced rows below will be set back to active.
+            Product::query()->update(['status' => 0]);
+
             foreach ($products as $row) {
                 $code = isset($row['ItemCode']) ? trim((string) $row['ItemCode']) : '';
                 $name = isset($row['Description']) ? trim((string) $row['Description']) : '';
@@ -167,10 +170,21 @@ class AutoCountSyncController extends Controller
                 $price = 0.00;
 
                 if (isset($row['uoms']) && is_array($row['uoms']) && count($row['uoms']) > 0) {
-                    // Use first UOM price
-                    $firstUom = $row['uoms'][0];
-                    if (isset($firstUom['price'])) {
-                        $price = (float) $firstUom['price'];
+                    // Prefer UOM price that matches SalesUOM; fallback to first UOM price.
+                    $matchedUom = null;
+                    if ($uom !== null && $uom !== '') {
+                        foreach ($row['uoms'] as $uomRow) {
+                            $uomName = isset($uomRow['name']) ? trim((string) $uomRow['name']) : '';
+                            if (strcasecmp($uomName, $uom) === 0) {
+                                $matchedUom = $uomRow;
+                                break;
+                            }
+                        }
+                    }
+
+                    $selectedUom = $matchedUom ?? $row['uoms'][0];
+                    if (isset($selectedUom['price'])) {
+                        $price = (float) $selectedUom['price'];
                     }
                 }
 
@@ -270,8 +284,13 @@ class AutoCountSyncController extends Controller
             $payloads[] = [
                 'invoice_id'   => $invoice->id,
                 'invoiceno'    => $invoice->invoiceno,
-                'date'         => $invoice->date ? $invoice->date->format('Y-m-d H:i:s') : null,
-                'customer'     => ['code' => $customer->code, 'tin' => $customer->tin ?? ''],
+                'date'         => $invoice->date
+                    ? ($invoice->date instanceof \DateTimeInterface
+                        ? $invoice->date->format('Y-m-d H:i:s')
+                        : \Illuminate\Support\Carbon::parse((string) $invoice->date)->format('Y-m-d H:i:s'))
+                    : null,
+                'customer'     => ['code' => $customer->code, 'name' => $customer->company, 'tin' => $customer->tin ?? ''],
+                'payment_term' => ((int) $invoice->paymentterm === \App\Models\Invoice::PAYMENT_TYPE_CREDIT) ? 'Credit' : 'Cash',
                 'sales_agent'  => $salesAgent,
                 'details'      => $details,
             ];
@@ -352,7 +371,7 @@ class AutoCountSyncController extends Controller
     public function getPendingInvoicePayments(Request $request): JsonResponse
     {
         $payments = InvoicePayment::query()
-            ->whereIn('type', ['Cash', '1'])
+            ->whereIn('type', ['Cash', 'Credit', '1', '2'])
             ->where('status', InvoicePayment::STATUS_COMPLETED)
             ->where(function ($q) {
                 $q->whereNull('autocount')->orWhere('autocount', '!=', 'Synced');
@@ -382,9 +401,14 @@ class AutoCountSyncController extends Controller
                 'payment_id'    => $payment->id,
                 'invoice_id'   => $payment->invoice_id,
                 'invoiceno'    => $invoice->invoiceno,
-                'date'         => $invoice->date ? $invoice->date->format('Y-m-d H:i:s') : ($payment->created_at?->format('Y-m-d H:i:s') ?? null),
+                'date'         => $invoice->date
+                    ? ($invoice->date instanceof \DateTimeInterface
+                        ? $invoice->date->format('Y-m-d H:i:s')
+                        : \Illuminate\Support\Carbon::parse((string) $invoice->date)->format('Y-m-d H:i:s'))
+                    : ($payment->created_at?->format('Y-m-d H:i:s') ?? null),
                 'customer_code'=> $customer->code,
                 'amount'       => (float) $payment->amount,
+                'payment_term' => in_array((string) $payment->type, ['Credit', '2'], true) ? 'Credit' : 'Cash',
                 'remark'       => $payment->remark ?? 'Payment',
             ];
         }
