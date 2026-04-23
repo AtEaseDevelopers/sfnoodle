@@ -7356,7 +7356,8 @@ class DriverController extends Controller
                     return [
                         'customer_id' => $customerId,
                         'customer_name' => $customerName,
-                        'total_amount' => number_format($totalAmount, 2),
+                        'total_amount' => (float) $totalAmount,
+                        'formatted_amount' => number_format($totalAmount, 2),
                         'invoice_count' => $invoiceCount
                     ];
                 })
@@ -7365,8 +7366,8 @@ class DriverController extends Controller
                 ->toArray();
             
             $result = [
-                'sales' => number_format($totalAmount, 2),
-                'credit' => number_format($totalCreditAmount, 2),
+                'sales' => round($totalAmount,2),
+                'credit' => round($totalCreditAmount,2),
         
                 'productsold' => $productsSold,
 
@@ -7473,7 +7474,8 @@ class DriverController extends Controller
                     return [
                         'customer_id' => $customerId,
                         'customer_name' => $customerName,
-                        'total_amount' => number_format($totalAmount, 2),
+                        'total_amount' => (float) $totalAmount,
+                        'formatted_amount' => number_format($totalAmount, 2),
                         'invoice_count' => $invoiceCount
                     ];
                 })
@@ -7608,7 +7610,8 @@ class DriverController extends Controller
                         return [
                             'customer_id' => $customerId,
                             'customer_name' => $customerName,
-                            'total_amount' => number_format($totalAmount, 2),
+                            'total_amount' => (float) $totalAmount,
+                            'formatted_amount' => number_format($totalAmount, 2),
                             'invoice_count' => $invoiceCount
                         ];
                     })
