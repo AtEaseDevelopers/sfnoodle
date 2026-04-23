@@ -160,10 +160,8 @@ class InventoryBalanceController extends AppBaseController
                     $inventoryTransaction->product_id = $productId;
                     $inventoryTransaction->quantity = $quantity;
                     $inventoryTransaction->remark = 'Stock In - Direct from inventory management (Request ID: ' . $inventoryRequest->id . ')';
-                    $inventoryTransaction->reference_type = 'App\\Models\\InventoryRequest';
-                    $inventoryTransaction->reference_id = $inventoryRequest->id;
                     $inventoryTransaction->save();
-                    
+                
                     $totalItemsProcessed++;
                 }
                 
