@@ -293,6 +293,13 @@ class CustomerDataTable extends DataTable
                 'width' => '80px'
             ]),
 
+            'price_category' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Price Category',
+                'data' => 'price_category',
+                'name' => 'price_category',
+                'width' => '120px'
+            ]),
+
             'driver' => new \Yajra\DataTables\Html\Column([
                 'title' => 'Sales Agent',
                 'data' => 'driver_name',

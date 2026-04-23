@@ -167,7 +167,12 @@ class SpecialPriceDataTable extends DataTable
                 'data' => 'product.name',
                 'name' => 'product.name'
             ]),
-
+            'price_category' => new \Yajra\DataTables\Html\Column([
+                'title' => 'Price Category',
+                'data' => 'price_category',
+                'name' => 'price_category',
+                'width' => '120px'
+            ]),
             'uom' => new \Yajra\DataTables\Html\Column([
                 'title' => 'UOM',
                 'data' => 'uom',  
