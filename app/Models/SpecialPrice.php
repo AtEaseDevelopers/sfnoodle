@@ -23,6 +23,7 @@ class SpecialPrice extends Model
     public $fillable = [
         'product_id',
         'customer_id',
+        'price_category',
         'uom',
         'price',
         'status'
@@ -37,6 +38,7 @@ class SpecialPrice extends Model
         'id' => 'integer',
         'product_id' => 'integer',
         'customer_id' => 'integer',
+        'price_category' => 'string',
         'price' => 'float',
         'status' => 'integer'
     ];
@@ -48,7 +50,8 @@ class SpecialPrice extends Model
      */
     public static $rules = [
         'product_id' => 'required',
-        'customer_id' => 'required',
+        'customer_id' => 'nullable',
+        'price_category' => 'nullable|string|max:255',
         'price' => 'required|numeric|numeric',
         'status' => 'required',
         'created_at' => 'nullable|nullable',
