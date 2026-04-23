@@ -7244,8 +7244,10 @@ class DriverController extends Controller
                 return $item->product->name ?? 'Unknown Product';
             })
             ->map(function($items, $productName) {
+                $firstItem = $items->first();
                 return [
                     'product_name' => $productName,
+                    'product_code' => $firstItem->product->code ?? '', 
                     'total_quantity' => $items->sum('quantity'),
                 ];
             })
@@ -7290,6 +7292,7 @@ class DriverController extends Controller
                     $firstDetail = $details->first();
                     return [
                         'name' => $firstDetail->product ? $firstDetail->product->name : 'Unknown Product',
+                        'code' => $firstDetail->product ? $firstDetail->product->code : '', 
                         'quantity' => $details->sum('quantity')
                     ];
                 })
@@ -7588,18 +7591,18 @@ class DriverController extends Controller
                         $firstDetail = $details->first();
                         return [
                             'name' => $firstDetail->product ? $firstDetail->product->name : 'Unknown Product',
+                            'code' => $firstDetail->product ? $firstDetail->product->code : '',
                             'quantity' => $details->sum('quantity')
                         ];
                     })
-                    ->values()
-                    ->toArray();
+                    ->values();
                 
                 // Process customer summary
-                $customerSummary = $invoices
+                 $customerSummary = $invoices
                     ->groupBy('customer_id')
                     ->map(function($customerInvoices, $customerId) {
                         $firstInvoice = $customerInvoices->first();
-                        $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : '-';
+                        $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : 'Unknown Customer';
                         
                         $totalAmount = $customerInvoices->sum(function($invoice) {
                             return $invoice->total;
@@ -7615,8 +7618,8 @@ class DriverController extends Controller
                             'invoice_count' => $invoiceCount
                         ];
                     })
-                    ->values()
                     ->sortByDesc('total_amount')
+                    ->values() // <-- THIS IS THE KEY FIX - converts to indexed array
                     ->toArray();
                 
                 // Compile summary for this day/trip
