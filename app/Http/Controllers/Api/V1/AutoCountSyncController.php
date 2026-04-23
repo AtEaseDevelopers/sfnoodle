@@ -54,6 +54,7 @@ class AutoCountSyncController extends Controller
                 $phone   = isset($row['phone']) ? trim((string) $row['phone']) : null;
                 $address = isset($row['Address']) ? trim((string) $row['Address']) : null;
                 $driver  = isset($row['SalesAgent']) ? trim((string) $row['SalesAgent']) : null;
+                $priceCategory = isset($row['PriceCategory']) ? trim((string) $row['PriceCategory']) : null;
                 $displayTerm = isset($row['DisplayTerm']) ? trim((string) $row['DisplayTerm']) : '';
                 $normalizedDisplayTerm = strtoupper(str_replace(['.', ' '], '', $displayTerm));
                 $paymentTerm = $normalizedDisplayTerm === 'COD' ? 'Cash' : 'Credit';
@@ -77,6 +78,7 @@ class AutoCountSyncController extends Controller
                     'phone'       => $phone,
                     'address'     => $address,
                     'driver'      => $driver,
+                    'price_category' => $priceCategory,
                     'status'      => 1,      // active
                     // tin / sst left null unless provided later
                 ];
@@ -602,6 +604,7 @@ class AutoCountSyncController extends Controller
                 $itemCode   = isset($row['ItemCode']) ? trim((string) $row['ItemCode']) : '';
                 $uom        = isset($row['UOM']) ? trim((string) $row['UOM']) : null;
                 $accNo      = isset($row['AccNo']) ? trim((string) $row['AccNo']) : '';
+                $priceCategory = isset($row['PriceCategory']) ? trim((string) $row['PriceCategory']) : '';
                 $fixedPrice = isset($row['FixedPrice']) ? (float) $row['FixedPrice'] : 0.0;
 
                 if ($itemCode === '' || $fixedPrice <= 0) {
@@ -625,14 +628,17 @@ class AutoCountSyncController extends Controller
                     continue;
                 }
 
-                // If customer is empty, skip as special_prices requires a customer_id
-                if ($accNo === '') {
+                // Must have at least customer code or price category target.
+                if ($accNo === '' && $priceCategory === '') {
                     $skipped++;
                     continue;
                 }
 
-                $customer = Customer::where('code', $accNo)->first();
-                if (!$customer) {
+                $customer = null;
+                if ($accNo !== '') {
+                    $customer = Customer::where('code', $accNo)->first();
+                }
+                if (!$customer && $accNo !== '' && $priceCategory === '') {
                     $errors[] = "Customer not found for AccNo {$accNo}";
                     $skipped++;
                     continue;
@@ -640,7 +646,8 @@ class AutoCountSyncController extends Controller
 
                 $attrs = [
                     'product_id'  => $product->id,
-                    'customer_id' => $customer->id,
+                    'customer_id' => $customer ? $customer->id : null,
+                    'price_category' => $priceCategory !== '' ? $priceCategory : null,
                 ];
 
                 $values = [

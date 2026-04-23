@@ -27,7 +27,8 @@ class Customer extends Model
         'status',
         'sst',
         'tin',
-        'driver'
+        'driver',
+        'price_category'
     ];
 
     /**
@@ -44,7 +45,8 @@ class Customer extends Model
         'status' => 'integer',
         'sst' => 'string',
         'tin' => 'string',
-        'driver' => 'string'
+        'driver' => 'string',
+        'price_category' => 'string'
 
     ];
 
@@ -61,6 +63,7 @@ class Customer extends Model
         'address' => 'nullable|string|max:65535|nullable|string|max:65535',
         'status' => 'required',
         'driver' => 'nullable|string|max:255',
+        'price_category' => 'nullable|string|max:255',
         'sst' => 'nullable|string|max:255',
         'tin' => 'nullable|string|max:255',
         'created_at' => 'nullable|nullable',
