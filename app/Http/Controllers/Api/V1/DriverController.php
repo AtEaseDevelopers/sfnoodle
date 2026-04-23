@@ -5232,7 +5232,7 @@ class DriverController extends Controller
                 $invoiceDetails[] = [
                     'product_id' => $productId,
                     'quantity' => $quantity,
-                    'price' => $unitPrice,
+                    'price' => (int) $unitPrice
                     'totalprice' => $itemTotal,
                     'remark' => $detail['remark'] ?? null,
                 ];
@@ -5246,7 +5246,7 @@ class DriverController extends Controller
                 'message' => __LINE__ . $this->message_separator . 'Invoice amount calculated successfully',
                 'data' => [
                     'details' => $invoiceDetails,
-                    'total_amount' => (int) $grandTotal
+                    'total_amount' => number_format($grandTotal, 2, '.', '')
                 ]
             ], 200);
 
