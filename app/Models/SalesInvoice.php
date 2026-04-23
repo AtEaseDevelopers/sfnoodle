@@ -419,37 +419,7 @@ class SalesInvoice extends Model
      */
     private function generateInvoiceNumberForConversion($driver_id = null)
     {
-        // Get current year and month
-        $year = date('y');
-        $month = date('m');
-        
-        // Get user's invoice code
-        $user = Auth::user();
-        
-         if ($driver_id) {
-            $user = \App\Models\Driver::find($driver_id);
-        } else {
-            $user = Auth::user();
-        }
-        
-        $userCode = $user->invoice_code ?? '';
-    
-        // Check existing invoices with AE prefix
-        $prefix = "AE{$year}{$month}/{$userCode}/";
-        
-        $latestInvoice = \App\Models\Invoice::orderBy('id', 'desc')
-            ->first();
-        
-        if ($latestInvoice) {
-            $numericPart = (int) substr($latestInvoice->invoiceno, strlen($prefix));
-            $nextNumber = $numericPart + 1;
-        } else {
-            $nextNumber = 1;
-        }
-        
-        $formattedNumber = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-        
-        return $prefix . $formattedNumber;
+        return \App\Models\Invoice::generateInvoiceNumber($driver_id);
     }
 
     /**

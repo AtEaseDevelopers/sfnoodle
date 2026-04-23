@@ -31,7 +31,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="productDetailsModalLabel">Product Details - <span id="modalDriverName"></span></h5>
+                    <h5 class="modal-title" id="productDetailsModalLabel">Product Details</span></h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -273,7 +273,7 @@
             background-color: rgba(0,0,0,.075);
         }
         
-        /* Multi-select driver styling */
+    /* Multi-select driver styling */
         .driver-item {
             display: flex;
             align-items: center;
@@ -734,5 +734,113 @@
         console.log('Modal opened, initializing...');
         initializeStockinItemsTable();
     });
+
+
+    // ========== PRODUCT DETAILS MODAL ==========
+    // Handle view details button click from the DataTable
+    $(document).on('click', '.view-details-btn', function() {
+        var driverId = $(this).data('id');
+        var driverName = $(this).data('name');
+                
+        // Clear previous data and show loading
+        $('#productDetailsBody').html(`
+            <tr>
+                <td colspan="4" class="text-center">
+                    <i class="fa fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Loading products...</p>
+                </td>
+            </tr>
+        `);
+        $('#modalTotalQuantity').text('0');
+        
+        // Make AJAX request to get products for this driver
+        $.ajax({
+            url: '{{ route("inventoryBalances.getProductsByDriver") }}',
+            type: 'GET',
+            data: { driver_id: driverId },
+            dataType: 'json',
+            success: function(response) {
+                console.log('API Response:', response);
+                
+                if (response.success) {
+                    var products = response.products;
+                    var tbody = $('#productDetailsBody');
+                    tbody.empty();
+                    
+                    if (products.length === 0) {
+                        tbody.html(`
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">
+                                    <i class="fa fa-inbox fa-2x mb-2 d-block"></i>
+                                    No products found for this driver
+                                </td>
+                            </tr>
+                        `);
+                        $('#modalTotalQuantity').text('0');
+                    } else {
+                        var totalQuantity = 0;
+                        
+                        $.each(products, function(index, product) {
+                            totalQuantity += parseFloat(product.quantity) || 0;
+                            
+                            var row = `
+                                <tr>
+                                    <td class="text-center">${index + 1}</td>
+                                    <td class="align-middle">${product.product_code || '-'}</td>
+                                    <td class="align-middle">${product.product_name || 'Unknown Product'}</td>
+                                    <td class="text-center font-weight-bold">${parseFloat(product.quantity).toLocaleString()}</td>
+                                </tr>
+                            `;
+                            tbody.append(row);
+                        });
+                        
+                        $('#modalTotalQuantity').text(totalQuantity.toLocaleString());
+                    }
+                } else {
+                    $('#productDetailsBody').html(`
+                        <tr>
+                            <td colspan="4" class="text-center text-danger">
+                                <i class="fa fa-exclamation-triangle fa-2x mb-2 d-block"></i>
+                                ${response.message || 'Failed to load products'}
+                            </td>
+                        </tr>
+                    `);
+                    $('#modalTotalQuantity').text('0');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', xhr, status, error);
+                $('#productDetailsBody').html(`
+                    <tr>
+                        <td colspan="4" class="text-center text-danger">
+                            <i class="fa fa-exclamation-circle fa-2x mb-2 d-block"></i>
+                            Error loading products. Please try again.
+                            <br><small class="text-muted">${xhr.status} - ${xhr.statusText}</small>
+                        </td>
+                    </tr>
+                `);
+                $('#modalTotalQuantity').text('0');
+            }
+        });
+        
+        // Show the modal
+        $('#productDetailsModal').modal('show');
+    });
+
+    // Optional: Add a search/filter functionality for the product details table
+    $(document).on('keyup', '#productSearchInput', function() {
+        var searchTerm = $(this).val().toLowerCase();
+        $('#productDetailsBody tr').each(function() {
+            var productCode = $(this).find('td:eq(1)').text().toLowerCase();
+            var productName = $(this).find('td:eq(2)').text().toLowerCase();
+            
+            if (productCode.includes(searchTerm) || productName.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
 </script>
 @endpush

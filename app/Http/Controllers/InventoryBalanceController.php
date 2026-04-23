@@ -106,6 +106,7 @@ class InventoryBalanceController extends AppBaseController
         $successCount = 0;
         $errorMessages = [];
         $totalItemsProcessed = 0;
+        $createdRequests = [];
         
         foreach ($driverIds as $driverId) {
             // Trim whitespace and convert to integer
@@ -117,6 +118,20 @@ class InventoryBalanceController extends AppBaseController
             }
             
             try {
+                // Create an INVENTORY REQUEST record for tracking (APPROVED status)
+                $inventoryRequest = \App\Models\InventoryRequest::create([
+                    'driver_id' => $driverId,
+                    'items' => $items, // Store items as JSON
+                    'status' => \App\Models\InventoryRequest::STATUS_APPROVED, // Directly approved
+                    'approved_by' => Auth::id(), // Current admin user
+                    'approved_at' => now(),
+                    'remarks' => 'Direct stock-in from inventory management',
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                $createdRequests[] = $inventoryRequest->id;
+                
                 foreach ($items as $item) {
                     $productId = $item['product_id'];
                     $quantity = $item['quantity'];
@@ -140,11 +155,13 @@ class InventoryBalanceController extends AppBaseController
                     
                     // Create an inventory transaction record
                     $inventoryTransaction = new InventoryTransaction();
-                    $inventoryTransaction->type = 1; // Stock In
+                    $inventoryTransaction->type = InventoryTransaction::TYPE_STOCK_IN; // 1 = Stock In
                     $inventoryTransaction->driver_id = $driverId;
                     $inventoryTransaction->product_id = $productId;
                     $inventoryTransaction->quantity = $quantity;
-                    $inventoryTransaction->remark = 'Stock In - Multiple items';
+                    $inventoryTransaction->remark = 'Stock In - Direct from inventory management (Request ID: ' . $inventoryRequest->id . ')';
+                    $inventoryTransaction->reference_type = 'App\\Models\\InventoryRequest';
+                    $inventoryTransaction->reference_id = $inventoryRequest->id;
                     $inventoryTransaction->save();
                     
                     $totalItemsProcessed++;
@@ -153,14 +170,18 @@ class InventoryBalanceController extends AppBaseController
                 $successCount++;
             } catch (\Exception $e) {
                 $errorMessages[] = "Driver ID {$driverId}: " . $e->getMessage();
+                \Log::error('Stock In failed for driver: ' . $driverId, [
+                    'error' => $e->getMessage(),
+                    'items' => $items
+                ]);
             }
         }
         
         if ($successCount > 0) {
             if (count($driverIds) == 1) {
-                Flash::success("Stock In completed successfully. " . count($items) . " item(s) added to driver.");
+                Flash::success("Stock In completed successfully. " . count($items) . " item(s) added to driver. Request ID(s): " . implode(', ', $createdRequests));
             } else {
-                Flash::success("{$successCount} out of " . count($driverIds) . " drivers processed successfully. Total items: {$totalItemsProcessed}");
+                Flash::success("{$successCount} out of " . count($driverIds) . " drivers processed successfully. Total items: {$totalItemsProcessed}. Request IDs: " . implode(', ', $createdRequests));
             }
         }
         

@@ -3572,10 +3572,8 @@ class DriverController extends Controller
         $customerIds = [];
         foreach ((array)$assignedCustomerIds as $item) {
             if (is_array($item) && isset($item['id'])) {
-                // Handle nested array format: [['id' => 1, 'sequence' => 1], ...]
                 $customerIds[] = $item['id'];
             } elseif (is_numeric($item)) {
-                // Handle flat array format: [1, 2, 3]
                 $customerIds[] = $item;
             }
         }
@@ -3583,7 +3581,7 @@ class DriverController extends Controller
         // Filter and reindex
         $customerIds = array_values(array_filter($customerIds, 'is_numeric'));
 
-        // Prepare validation rules
+        // Prepare validation rules - REMOVED price validation since we calculate it
         $validationRules = [
             'invoiceno' => 'required|string|max:255|unique:sales_invoices,invoiceno',
             'date' => 'required|date_format:d-m-Y',
@@ -3600,8 +3598,8 @@ class DriverController extends Controller
             'chequeno' => 'nullable|string|max:20',
             'details' => 'required|array|min:1',
             'details.*.product_id' => 'required|exists:products,id',
-            'details.*.quantity' => 'required|numeric|min:0.01',
-            'details.*.price' => 'required|numeric|min:0'
+            'details.*.quantity' => 'required|numeric|min:0.01'
+            // REMOVED: 'details.*.price' validation
         ];
 
         // Custom validation messages
@@ -3612,9 +3610,7 @@ class DriverController extends Controller
             'details.*.product_id.required' => 'Product is required for all items.',
             'details.*.product_id.exists' => 'Selected product does not exist.',
             'details.*.quantity.required' => 'Quantity is required for all items.',
-            'details.*.quantity.min' => 'Quantity must be at least 0.01.',
-            'details.*.price.required' => 'Price is required for all items.',
-            'details.*.price.min' => 'Price must be at least 0.'
+            'details.*.quantity.min' => 'Quantity must be at least 0.01.'
         ];
 
         // Validate request data
@@ -3628,60 +3624,9 @@ class DriverController extends Controller
                 'data' => null
             ], 200);
         }
-
-        // $insufficientProducts = [];
-        // $details = $request->input('details', []);
-        
-        // if (!empty($details)) {
-        //     foreach ($details as $index => $detail) {
-        //         $productId = $detail['product_id'];
-        //         $quantityNeeded = $detail['quantity'];
-                
-        //         // Get product name for error message
-        //         $product = Product::find($productId);
-                
-        //         // Check inventory balance
-        //         $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
-        //             ->where('product_id', $productId)
-        //             ->first();
-                
-        //         if (!$inventoryBalance) {
-        //             // No inventory record found for this product
-        //             $insufficientProducts[] = [
-        //                 'product_id' => $productId,
-        //                 'product_name' => $product ? $product->name : 'Unknown Product',
-        //                 'required_quantity' => $quantityNeeded,
-        //                 'available_quantity' => 0,
-        //                 'error' => 'No inventory record found'
-        //             ];
-        //         } elseif ($inventoryBalance->quantity < $quantityNeeded) {
-        //             // Insufficient quantity
-        //             $insufficientProducts[] = [
-        //                 'product_id' => $productId,
-        //                 'product_name' => $product ? $product->name : 'Unknown Product',
-        //                 'required_quantity' => $quantityNeeded,
-        //                 'available_quantity' => $inventoryBalance->quantity,
-        //                 'error' => 'Insufficient inventory'
-        //             ];
-        //         }
-        //     }
-        // }
-
-        // // If there are insufficient products, return error
-        // if (!empty($insufficientProducts)) {
-        //     return response()->json([
-        //         'result' => false,
-        //         'message' => __LINE__ . $this->message_separator . 'Insufficient inventory balance',
-        //         'errors' => [
-        //             'inventory' => ['Some products have insufficient inventory']
-        //         ],
-        //         'insufficient_products' => $insufficientProducts,
-        //         'data' => null
-        //     ], 200);
-        // }
         
         $customer = Customer::where('id', $request->input('customer_id'))->first();
-        DB::beginTransaction(); // Start transaction
+        DB::beginTransaction();
 
         try {
             $input = $request->all();
@@ -3691,32 +3636,47 @@ class DriverController extends Controller
             
             // Handle invoice number generation
             if (empty($input['invoiceno']) || $input['invoiceno'] == 'SYSTEM GENERATED IF BLANK') {
-                // Generate new invoice number with driver ID
                 $input['invoiceno'] = SalesInvoice::getNextInvoiceNumber($driver->id);
             } else {
-                // Check if the provided invoice number already exists
                 if (SalesInvoice::invoiceNumberExists($input['invoiceno'])) {
-                    // If exists, generate a new one with driver ID
                     $input['invoiceno'] = SalesInvoice::getNextInvoiceNumber($driver->id);
                 }
             }
             
             // Set driver information
             $input['created_by'] = $driver->id;
-            $input['is_driver'] = true; // Mark as created by driver
-            
-            // Set default status
+            $input['is_driver'] = true;
             $input['status'] = SalesInvoice::STATUS_PENDING;
 
-            // Calculate total
+            // Calculate total using the pricing logic (SAME as createInvoice)
             $total = 0;
+            $salesDetails = [];
+            
             foreach ($input['details'] as $detail) {
-                $total += ($detail['quantity'] * $detail['price']);
+                $productId = $detail['product_id'];
+                $quantity = $detail['quantity'];
+                $unitPrice = $detail['price'];
+
+                // Get the product
+                $product = Product::find($productId);
+                
+                // Calculate price using the same logic as createInvoice
+                $priceCalculation = $this->calculateProductPriceForInvoice($product, $quantity, $customer->id);
+                
+                $itemTotal = $priceCalculation['total_price'];
+                $total += $itemTotal;
+                
+                $salesDetails[] = [
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'price' => $unitPrice,
+                    'totalprice' => $itemTotal,
+                ];
             }
 
             $input['total'] = $total;
             $input['customer_id'] = $customer->id;
-            $input['paymentterm'] = $customer->paymentterm ;
+            $input['paymentterm'] = $customer->paymentterm;
             $input['trip_id'] = $driver->trip_id;
             $input['driver_id'] = $driver->id;
 
@@ -3724,21 +3684,21 @@ class DriverController extends Controller
             $salesInvoice = SalesInvoice::create($input);
 
             // Create sales invoice details
-            if (isset($input['details']) && is_array($input['details'])) {
-                foreach ($input['details'] as $detail) {
+            if (!empty($salesDetails)) {
+                foreach ($salesDetails as $detail) {
+                    // Remove price_breakdown before saving to database
+                    unset($detail['price_breakdown']);
                     SalesInvoiceDetails::create([
                         'sales_invoice_id' => $salesInvoice->id,
                         'product_id' => $detail['product_id'],
                         'quantity' => $detail['quantity'],
                         'price' => $detail['price'],
-                        'totalprice' => $detail['quantity'] * $detail['price']
+                        'totalprice' => $detail['totalprice']
                     ]);
                 }
             }
 
-            
-
-            DB::commit(); // Commit transaction if everything is successful
+            DB::commit();
 
             // Prepare response data
             $responseData = [
@@ -3746,8 +3706,10 @@ class DriverController extends Controller
                 'invoiceno' => $salesInvoice->invoiceno,
                 'date' => Carbon::parse($salesInvoice->date)->format('d-m-Y'),
                 'customer_id' => $salesInvoice->customer_id,
-                'total' => $salesInvoice->total,
+                'customer_name' => $customer->company ?? 'N/A',
+                'total' => (float) $salesInvoice->total,
                 'status' => $salesInvoice->getStatusTextAttribute(),
+                'paymentterm' => $salesInvoice->paymentterm,
                 'remark' => $salesInvoice->remark,
                 'created_at' => $salesInvoice->created_at->format('Y-m-d H:i:s'),
                 'items' => $salesInvoice->salesInvoiceDetails->map(function($detail) {
@@ -3755,8 +3717,8 @@ class DriverController extends Controller
                         'product_id' => $detail->product_id,
                         'product_name' => $detail->product->name ?? 'N/A',
                         'quantity' => $detail->quantity,
-                        'price' => $detail->price,
-                        'total' => $detail->totalprice
+                        'price' => (float) $detail->price,
+                        'total' => (float) $detail->totalprice
                     ];
                 })->toArray()
             ];
@@ -3768,9 +3730,8 @@ class DriverController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            DB::rollBack(); // Rollback transaction on error
+            DB::rollBack();
             
-            // Log error for debugging
             \Log::error('Sales order creation failed: ' . $e->getMessage(), [
                 'driver_id' => $driver->id ?? 'N/A',
                 'request_data' => $request->all()
@@ -3883,7 +3844,7 @@ class DriverController extends Controller
             }
 
             // Get sales invoices
-            $salesInvoices = $query->with(['customer:id,company,phone,paymentterm', 'salesInvoiceDetails.product:id,name'])
+            $salesInvoices = $query->with(['customer:id,company,phone,paymentterm', 'salesInvoiceDetails.product:id,name,code'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -3900,7 +3861,7 @@ class DriverController extends Controller
                         'paymentterm' => strtolower($invoice->customer->paymentterm ?? ''),
                         'phone' => $invoice->customer->phone ?? '',
                     ],                    
-                    'paymentterm' => $invoice->paymentterm,
+                    'paymentterm' => strtolower($invoice->paymentterm ?? ''),
                     'status' => $invoice->getStatusTextAttribute(),
                     'remark' => $invoice->remark,
                     'total' => number_format($invoice->total, 2),
@@ -3913,6 +3874,7 @@ class DriverController extends Controller
                         return [
                             'product_id' => $detail->product_id,
                             'product_name' => optional($detail->product)->name ?? 'N/A',
+                            'product_code' => $detail->product->code ?? 'N/A',
                             'quantity' => (float) $detail->quantity,
                             'price' => (float) $detail->price,
                             'total' => (float) $detail->totalprice,
@@ -4341,15 +4303,38 @@ class DriverController extends Controller
         }
     }
 
-    /**
-     * Convert to invoice with payment proof (for Cash payments)
-     */
-    private function convertWithPayment(Request $request, $salesInvoice, $driver , $details)
+    private function convertWithPayment(Request $request, $salesInvoice, $driver, $details)
     {
+        // Calculate the total from details (using same pricing logic)
+        $customer = $salesInvoice->customer;
+        $calculatedTotal = 0;
+        $calculatedDetails = [];
+        
+        foreach ($details as $detail) {
+            $productId = $detail['product_id'];
+            $quantity = $detail['quantity'];
+            $unitPrice = $detail['price'];
+
+            $product = Product::find($productId);
+            
+            // Calculate price using the same logic
+            $priceCalculation = $this->calculateProductPriceForInvoice($product, $quantity, $customer->id);
+            
+            $itemTotal = $priceCalculation['total_price'];
+            $calculatedTotal += $itemTotal;
+            
+            $calculatedDetails[] = [
+                'product_id' => $productId,
+                'quantity' => $quantity,
+                'price' => $unitPrice,
+                'totalprice' => $itemTotal
+            ];
+        }
+        
         // Validate request for cash payment
         $validator = Validator::make($request->all(), [
             'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf,gif|max:5120',
-            'amount' => 'required|numeric',
+            'amount' => 'sometimes|numeric|min:0', // Made optional
             'remark' => 'nullable|string|max:255'
         ]);
 
@@ -4365,8 +4350,8 @@ class DriverController extends Controller
         DB::beginTransaction();
 
         try {
-            // Convert to invoice
-            $invoice = $salesInvoice->convertToInvoice($driver->id, $details);
+            // Convert to invoice using calculated details
+            $invoice = $salesInvoice->convertToInvoice($driver->id, $calculatedDetails);
             
             if (!$invoice) {
                 DB::rollBack();
@@ -4385,48 +4370,46 @@ class DriverController extends Controller
                 $attachmentPath = $file->storeAs('invoice_payments', $fileName, 'public');
             }
 
+            // Use the calculated total for payment amount
+            $paymentAmount = $calculatedTotal;
+
             // Create APPROVED invoice payment record for cash
             $invoicePayment = new InvoicePayment();
             $invoicePayment->invoice_id = $invoice->id;
-            $invoicePayment->type = $salesInvoice->paymentterm; // Should be 'Cash'
+            $invoicePayment->type = 2; // Cash type (integer)
             $invoicePayment->customer_id = $salesInvoice->customer_id;
-            $invoicePayment->amount = $request->amount;
+            $invoicePayment->amount = $paymentAmount; // Use calculated total
             $invoicePayment->status = 1; // Approved for cash payment
             
             if ($attachmentPath) {
                 $invoicePayment->attachment = $attachmentPath;
             }
             
-            // Set driver information (since this is called from driver API)
             $invoicePayment->driver_id = $driver->id;
-            $invoicePayment->user_id = null; // Created by driver, not admin user
-            
+            $invoicePayment->user_id = null;
             $invoicePayment->approve_by = $driver->name ?? 'Driver';
-            $invoicePayment->approve_at = now(); // Approved immediately for cash
-            $invoicePayment->remark = $request->remark ?? 'Cash payment with proof';
+            $invoicePayment->approve_at = now();
+            $invoicePayment->remark = $request->remark ?? 'Cash payment for converted sales order: ' . $salesInvoice->invoiceno;
             $invoicePayment->save();
 
-            DB::commit();
-
-            $details = $salesInvoice->salesInvoiceDetails;
-             // Create inventory transactions and deduct driver inventory balance with the invoice items
-            if (!empty($details)) {
-                foreach ($details as $detail) {
-                    $productId = $detail->product_id;
-                    $quantity = $detail->quantity;
+            // Create inventory transactions and deduct driver inventory balance
+            if (!empty($calculatedDetails)) {
+                foreach ($calculatedDetails as $detail) {
+                    $productId = $detail['product_id'];
+                    $quantity = $detail['quantity'];
                     
                     // 1. Create inventory transaction record
                     try {
-                        InventoryTransaction::create([
+                        InventoryTransaction::createTransaction(
                             $driver->id,
                             $productId,
                             $quantity,
                             InventoryTransaction::TYPE_INVOICE,
-                           'Sales order converted to invoice: ' . $invoice->invoiceno,
-                            $invoice->id,
-                        ]);
+                            'Sales order converted to invoice: ' . $invoice->invoiceno,
+                            $invoice->id
+                        );
                     } catch (\Exception $e) {
-                        \Log::error('Failed to create inventory transaction for sales order conversion', [
+                        \Log::error('Failed to create inventory transaction', [
                             'error' => $e->getMessage(),
                             'driver_id' => $driver->id,
                             'product_id' => $productId,
@@ -4434,7 +4417,7 @@ class DriverController extends Controller
                         ]);
                     }
                     
-                    // 2. Update inventory balance for each product
+                    // 2. Update inventory balance
                     try {
                         $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
                             ->where('product_id', $productId)
@@ -4444,16 +4427,14 @@ class DriverController extends Controller
                             $inventoryBalance->quantity -= $quantity;
                             $inventoryBalance->save();
                         } else {
-                            // Create new record (shouldn't normally happen)
                             InventoryBalance::create([
                                 'driver_id' => $driver->id,
                                 'product_id' => $productId,
                                 'quantity' => -$quantity
                             ]);
-                            
                         }
                     } catch (\Exception $e) {
-                        \Log::error('Failed to update inventory balance during sales order conversion', [
+                        \Log::error('Failed to update inventory balance', [
                             'error' => $e->getMessage(),
                             'driver_id' => $driver->id,
                             'product_id' => $productId,
@@ -4463,16 +4444,19 @@ class DriverController extends Controller
                 }
             }
 
+            DB::commit();
+
             return response()->json([
                 'result' => true,
-                'message' => __LINE__ . $this->message_separator . 'Sales order converted successfully with payment proof',
+                'message' => __LINE__ . $this->message_separator . 'Sales order converted successfully with payment',
                 'data' => [
                     'invoice_id' => $invoice->id,
                     'invoice_no' => $invoice->invoiceno,
-                    // 'credit_amount' => $driver->credit_amount,
                     'payment_status' => 'approved',
-                    'payment_amount' => $request->amount,
-                    'payment_type' => 'Cash'
+                    'payment_amount' => $paymentAmount,
+                    'payment_type' => 'Cash',
+                    'calculated_total' => $calculatedTotal,
+                    'items_count' => count($calculatedDetails)
                 ]
             ], 200);
 
@@ -4486,16 +4470,39 @@ class DriverController extends Controller
         }
     }
 
-    /**
-     * Convert to invoice only (for Credit payments)
-     */
     private function convertToInvoiceOnly($salesInvoice, $driver, $details)
     {
+        // Calculate the total from details (using same pricing logic)
+        $customer = $salesInvoice->customer;
+        $calculatedTotal = 0;
+        $calculatedDetails = [];
+        
+        foreach ($details as $detail) {
+            $productId = $detail['product_id'];
+            $quantity = $detail['quantity'];
+            $unitPrice = $detail['price'];
+
+            $product = Product::find($productId);
+            
+            // Calculate price using the same logic
+            $priceCalculation = $this->calculateProductPriceForInvoice($product, $quantity, $customer->id);
+            
+            $itemTotal = $priceCalculation['total_price'];
+            $calculatedTotal += $itemTotal;
+            
+            $calculatedDetails[] = [
+                'product_id' => $productId,
+                'quantity' => $quantity,
+                'price' => $unitPrice,
+                'totalprice' => $itemTotal
+            ];
+        }
+        
         DB::beginTransaction();
 
         try {
-            // Convert to invoice (this only creates the invoice, not payment)
-            $invoice = $salesInvoice->convertToInvoice($driver->id, $details);
+            // Convert to invoice using calculated details
+            $invoice = $salesInvoice->convertToInvoice($driver->id, $calculatedDetails);
 
             if (!$invoice) {
                 DB::rollBack();
@@ -4506,31 +4513,24 @@ class DriverController extends Controller
                 ], 200);
             }
 
-            // Update driver credit amount (for credit sales)
-            // $driver->credit_amount = ($driver->credit_amount ?? 0) + $salesInvoice->total;
-            // $driver->save();
-
-            DB::commit();
-
-            $details = $salesInvoice->salesInvoiceDetails;
-            // Create inventory transactions and deduct driver inventory balance with the invoice items
-            if (!empty($details)) {
-                foreach ($details as $detail) {
-                    $productId = $detail->product_id;
-                    $quantity = $detail->quantity;
+            // Create inventory transactions and deduct driver inventory balance
+            if (!empty($calculatedDetails)) {
+                foreach ($calculatedDetails as $detail) {
+                    $productId = $detail['product_id'];
+                    $quantity = $detail['quantity'];
                     
                     // 1. Create inventory transaction record
                     try {
-                        InventoryTransaction::create([
+                        InventoryTransaction::createTransaction(
                             $driver->id,
                             $productId,
                             $quantity,
                             InventoryTransaction::TYPE_INVOICE,
-                            'Sales order converted to invoice: ' . $invoice->invoiceno,
-                            $invoice->id,
-                        ]);
+                            'Sales order converted to invoice (Credit): ' . $invoice->invoiceno,
+                            $invoice->id
+                        );
                     } catch (\Exception $e) {
-                        \Log::error('Failed to create inventory transaction for credit sales order conversion', [
+                        \Log::error('Failed to create inventory transaction for credit conversion', [
                             'error' => $e->getMessage(),
                             'driver_id' => $driver->id,
                             'product_id' => $productId,
@@ -4538,7 +4538,7 @@ class DriverController extends Controller
                         ]);
                     }
                     
-                    // 2. Update inventory balance for each product
+                    // 2. Update inventory balance
                     try {
                         $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
                             ->where('product_id', $productId)
@@ -4548,16 +4548,14 @@ class DriverController extends Controller
                             $inventoryBalance->quantity -= $quantity;
                             $inventoryBalance->save();
                         } else {
-                            // Create new record (shouldn't normally happen)
                             InventoryBalance::create([
                                 'driver_id' => $driver->id,
                                 'product_id' => $productId,
                                 'quantity' => -$quantity
                             ]);
-                            
                         }
                     } catch (\Exception $e) {
-                        \Log::error('Failed to update inventory balance during credit sales order conversion', [
+                        \Log::error('Failed to update inventory balance for credit conversion', [
                             'error' => $e->getMessage(),
                             'driver_id' => $driver->id,
                             'product_id' => $productId,
@@ -4567,13 +4565,17 @@ class DriverController extends Controller
                 }
             }
 
+            DB::commit();
+
             return response()->json([
                 'result' => true,
                 'message' => __LINE__ . $this->message_separator . 'Sales order converted successfully for credit',
                 'data' => [
+                    'invoice_id' => $invoice->id,
                     'invoice_no' => $invoice->invoiceno,
-                    // 'credit_amount' => $driver->credit_amount,
-                    'payment_amount' => $salesInvoice->total,
+                    'payment_type' => $salesInvoice->paymentterm,
+                    'calculated_total' => $calculatedTotal,
+                    'items_count' => count($calculatedDetails)
                 ]
             ], 200);
 
@@ -4876,16 +4878,15 @@ class DriverController extends Controller
 
         $paymentTerm = $customer->paymentterm;
 
-        // Define validation rules (NO status field required)
+        // Define validation rules
         $validationRules = [
-            'invoiceno' => 'required|string|max:255',
+            'invoiceno' => 'required|string|max:255|unique:invoices,invoiceno',
             'date' => 'required|date_format:d-m-Y',
             'customer_id' => 'required|exists:customers,id',
             'remark' => 'nullable|string|max:255',
             'details' => 'required|array|min:1',
             'details.*.product_id' => 'required|exists:products,id',
-            'details.*.quantity' => 'required|numeric|min:0.01',
-            'details.*.price' => 'required|numeric|min:0'
+            'details.*.quantity' => 'required|numeric|min:0.01'
         ];
         
         // Add payment validation for cash
@@ -4923,7 +4924,6 @@ class DriverController extends Controller
                     ->first();
                 
                 if (!$inventoryBalance) {
-                    // No inventory record found for this product
                     $insufficientProducts[] = [
                         'product_id' => $productId,
                         'product_name' => $product ? $product->name : 'Unknown Product',
@@ -4932,7 +4932,6 @@ class DriverController extends Controller
                         'error' => 'No inventory record found'
                     ];
                 } elseif ($inventoryBalance->quantity < $quantityNeeded) {
-                    // Insufficient quantity
                     $insufficientProducts[] = [
                         'product_id' => $productId,
                         'product_name' => $product ? $product->name : 'Unknown Product',
@@ -4975,36 +4974,45 @@ class DriverController extends Controller
             $input['created_by'] = $driver->id;
             $input['is_driver'] = true;
             $input['paymentterm'] = $paymentTerm;
-            
-            // Status is automatically set to COMPLETED by model boot method
-            // No need to set it explicitly
 
-            // Calculate total
+            // Calculate total from invoice details sum
             $total = 0;
-            $details = [];
-            if (isset($input['details']) && is_array($input['details'])) {
-                foreach ($input['details'] as $detail) {
-                    $itemTotal = $detail['quantity'] * $detail['price'];
-                    $total += $itemTotal;
-                    
-                    $details[] = [
-                        'product_id' => $detail['product_id'],
-                        'quantity' => $detail['quantity'],
-                        'price' => $detail['price'],
-                        'totalprice' => $itemTotal
-                    ];
-                }
-            }
-            $input['total'] = $total;
-            $input['trip_id'] = $driver->trip_id; //store trip id for invoice
-            $input['driver_id'] = $driver->id; //store trip id for invoice
+            $invoiceDetails = [];
+            
+            foreach ($input['details'] as $detail) {
+                $productId = $detail['product_id'];
+                $quantity = $detail['quantity'];
+                $unitPrice = $detail['price'];
 
-            // Create invoice (status will be automatically set to COMPLETED)
+                // Get the product
+                $product = Product::find($productId);
+                
+                // Calculate price using the logic
+                $priceCalculation = $this->calculateProductPriceForInvoice($product, $quantity, $customer->id);
+                
+                $itemTotal = $priceCalculation['total_price'];
+                $total += $itemTotal;  // Sum all item totals to get invoice total
+                
+                $invoiceDetails[] = [
+                    'product_id' => $productId,
+                    'quantity' => $quantity,
+                    'price' => $unitPrice,
+                    'totalprice' => $itemTotal,  // This is the amount for this item
+                    'remark' => $detail['remark'] ?? null,
+                ];
+            }
+            
+            // Set invoice total from sum of all item totals
+            $input['total'] = $total;
+            $input['trip_id'] = $driver->trip_id;
+            $input['driver_id'] = $driver->id;
+
+            // Create invoice
             $invoice = Invoice::create($input);
 
             // Create invoice details
-            if (!empty($details)) {
-                foreach ($details as $detail) {
+            if (!empty($invoiceDetails)) {
+                foreach ($invoiceDetails as $detail) {
                     InvoiceDetail::create(array_merge(
                         $detail,
                         ['invoice_id' => $invoice->id]
@@ -5016,20 +5024,18 @@ class DriverController extends Controller
             if ($paymentTerm == 'Cash') {
                 $attachmentPath = null;
                 
-                // Handle attachment upload
                 if ($request->hasFile('payment_attachment')) {
                     $file = $request->file('payment_attachment');
                     $fileName = time() . '_' . $file->getClientOriginalName();
                     $attachmentPath = $file->storeAs('invoice_payments', $fileName, 'public');
                 }
 
-                // Create approved invoice payment
                 $invoicePayment = new \App\Models\InvoicePayment();
                 $invoicePayment->invoice_id = $invoice->id;
-                $invoicePayment->type = 'Cash';
+                $invoicePayment->type = 2; // Cash type
                 $invoicePayment->customer_id = $invoice->customer_id;
-                $invoicePayment->amount = $total;
-                $invoicePayment->status = 1; // Approved
+                $invoicePayment->amount = $total; // Use the total calculated from invoice details sum
+                $invoicePayment->status = 1; // Completed
                 
                 if ($attachmentPath) {
                     $invoicePayment->attachment = $attachmentPath;
@@ -5039,25 +5045,20 @@ class DriverController extends Controller
                 $invoicePayment->user_id = null;
                 $invoicePayment->approve_by = $driver->name;
                 $invoicePayment->approve_at = now();
-                $invoicePayment->remark = $request->input('payment_remark', 'Cash payment');
+                $invoicePayment->remark = $request->input('payment_remark', 'Cash payment for invoice: ' . $invoice->invoiceno);
                 $invoicePayment->save();
             }
 
-            // Update driver credit amount
-            // $driver->credit_amount = ($driver->credit_amount ?? 0) + $total;
-            // $driver->save();
-
             DB::commit();
 
-            //deduct driver inventory balance with the invoice items
-            if (!empty($details)) {
-                foreach ($details as $detail) {
-                    // 1. Create inventory transaction record for each product
+            // Deduct driver inventory balance
+            if (!empty($invoiceDetails)) {
+                foreach ($invoiceDetails as $detail) {
                     try {
                         InventoryTransaction::createTransaction(
                             $driver->id,
-                            $detail['product_id'], // ✅ Use product_id from invoice detail
-                            $detail['quantity'],    // ✅ Use quantity from invoice detail
+                            $detail['product_id'],
+                            $detail['quantity'],
                             InventoryTransaction::TYPE_INVOICE,
                             'Create Invoice with ID: ' . $invoice->invoiceno,
                             $invoice->id
@@ -5068,11 +5069,9 @@ class DriverController extends Controller
                             'product_id' => $detail['product_id'],
                             'invoice_id' => $invoice->id
                         ]);
-                        // Continue with other products even if one fails
                         continue;
                     }
                     
-                    // 2. Update inventory balance for each product
                     try {
                         $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
                             ->where('product_id', $detail['product_id'])
@@ -5082,15 +5081,7 @@ class DriverController extends Controller
                             $inventoryBalance->quantity -= $detail['quantity'];
                             $inventoryBalance->save();
                         } else {
-                            // This shouldn't happen since we checked inventory balance earlier,
-                            // but create record if it doesn't exist (with negative quantity)
                             InventoryBalance::create([
-                                'driver_id' => $driver->id,
-                                'product_id' => $detail['product_id'],
-                                'quantity' => -$detail['quantity'] // Negative since it's stock out
-                            ]);
-                            
-                            \Log::warning('Created new inventory balance record for product during invoice creation', [
                                 'driver_id' => $driver->id,
                                 'product_id' => $detail['product_id'],
                                 'quantity' => -$detail['quantity']
@@ -5102,7 +5093,6 @@ class DriverController extends Controller
                             'product_id' => $detail['product_id'],
                             'quantity' => $detail['quantity']
                         ]);
-                        // Continue with other products
                         continue;
                     }
                 }
@@ -5117,13 +5107,13 @@ class DriverController extends Controller
                 'customer_name' => optional($invoice->customer)->company ?? 'N/A',
                 'total' => (float) $invoice->total,
                 'paymentterm' => $invoice->paymentterm,
-                'status' => $invoice->status, // Will be 0 (COMPLETED)
-                'status_text' => $invoice->getStatusTextAttribute(), // "Completed"
+                'status' => $invoice->status,
+                'status_text' => $invoice->getStatusTextAttribute(),
                 'created_by_driver' => true,
                 'driver_id' => $driver->id,
-                // 'driver_credit_amount' => $driver->credit_amount,
                 'payment_created' => $paymentTerm == 'Cash',
-                'items_count' => count($details),
+                'payment_amount' => $paymentTerm == 'Cash' ? (float) $total : null, // Return the payment amount
+                'items_count' => count($invoiceDetails),
                 'created_at' => $invoice->created_at->format('Y-m-d H:i:s')
             ];
 
@@ -5228,7 +5218,8 @@ class DriverController extends Controller
             foreach ($input['details'] as $detail) {
                 $productId = $detail['product_id'];
                 $quantity = $detail['quantity'];
-                
+                $unitPrice = $detail['price'];
+
                 // Get the product
                 $product = Product::find($productId);
                 
@@ -5241,7 +5232,7 @@ class DriverController extends Controller
                 $invoiceDetails[] = [
                     'product_id' => $productId,
                     'quantity' => $quantity,
-                    'price' => $priceCalculation['unit_price'], // Average unit price for display
+                    'price' => (int) $unitPrice,
                     'totalprice' => $itemTotal,
                     'remark' => $detail['remark'] ?? null,
                 ];
@@ -5460,6 +5451,7 @@ class DriverController extends Controller
             ], 200);
         }
     }
+
     public function getInvoiceById(Request $request, $id)
     {
         // Validate session
@@ -5791,7 +5783,7 @@ class DriverController extends Controller
             // Start transaction
             DB::beginTransaction();
 
-            // Cancel the invoice
+            // Cancel the invoice and will proceed to reverse inventory and other related data in the cancel() method of the Invoice model
             $invoice->cancel();
 
             // Store cancellation reason if provided

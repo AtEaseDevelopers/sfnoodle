@@ -285,12 +285,21 @@ class TripController extends AppBaseController
         }
         $stockInItems = collect($stockInItems);
         
-        // Sales: From invoices during trip with DISCOUNTED quantities
+        // ================================================
+        // IMPORTANT: Get ONLY NON-CANCELLED invoices for calculations
+        // ================================================
         $invoices = Invoice::where('trip_id', $trip_id)
+            ->where('status', '!=', Invoice::STATUS_CANCELLED) // EXCLUDE cancelled invoices
             ->with(['invoiceDetails.product', 'customer'])
             ->get();
         
-        // Calculate discounted sales per product
+        // Get cancelled invoices separately for display only
+        $cancelledInvoices = Invoice::where('trip_id', $trip_id)
+            ->where('status', Invoice::STATUS_CANCELLED)
+            ->with(['invoiceDetails.product', 'customer'])
+            ->get();
+        
+        // Calculate discounted sales per product (only from non-cancelled invoices)
         $salesByProduct = [];
         $invoiceTotals = [];
         $totalDiscountedAmount = 0;
@@ -514,7 +523,7 @@ class TripController extends AppBaseController
             return strcmp($a['product_name'], $b['product_name']);
         });
         
-        // Prepare full report
+        // Prepare full report - include both active and cancelled invoices
         $report = [
             'trip_info' => [
                 'trip_id' => 'T-' . (string)$trip->uuid,
@@ -525,13 +534,15 @@ class TripController extends AppBaseController
             'stock_summary' => $stockSummary,
             'sales_summary' => [
                 'total_invoices' => $invoices->count(),
+                'total_cancelled_invoices' => $cancelledInvoices->count(),
                 'total_sales_orders' => $salesOrder->count(),
-                'total_amount' => $totalDiscountedAmount, // Use discounted total
-                'total_credit' => $totalCreditAmount, // Use discounted total for credit
-                'total_cash' => $totalCashAmount, // Use discounted total for cash
-                'invoices' => $invoices,
+                'total_amount' => $totalDiscountedAmount,
+                'total_credit' => $totalCreditAmount,
+                'total_cash' => $totalCashAmount,
+                'invoices' => $invoices, // Only non-cancelled for calculations
+                'cancelled_invoices' => $cancelledInvoices, // Cancelled invoices for display
                 'sales_orders' => $salesOrder,
-                'invoice_totals' => $invoiceTotals // Pass individual invoice totals
+                'invoice_totals' => $invoiceTotals
             ],
             'sales_by_product' => $sales->map(function($item) {
                 return [
@@ -552,7 +563,6 @@ class TripController extends AppBaseController
             $notification = Notification::find($notificationId);
             
             if ($notification && !$notification->is_read) {
-                // Mark the notification as read
                 $notification->update(['is_read' => true]);
             }
         }
@@ -574,13 +584,11 @@ class TripController extends AppBaseController
         foreach ($report['sales_by_product'] as $salesItem) {
             $product = Product::find($salesItem['product_id']);
             if ($product) {
-                // Get total discounted amount for this product from invoices
                 $totalAmount = 0;
                 foreach ($report['sales_summary']['invoices'] as $invoice) {
                     $invoiceId = $invoice->id;
                     $invoiceDiscountedTotal = $report['sales_summary']['invoice_totals'][$invoiceId] ?? 0;
                     
-                    // Calculate proportion for this product
                     $invoiceTotal = 0;
                     $productTotal = 0;
                     
@@ -589,12 +597,10 @@ class TripController extends AppBaseController
                         $invoiceTotal += $detailTotal;
                         
                         if ($detail->product_id == $salesItem['product_id']) {
-                            // Calculate discounted amount for this specific product
                             $productTotal += $this->calculateProductDiscountedTotal($product, $detail->quantity, $invoice->customer_id, $detail->price);
                         }
                     }
                     
-                    // If we have invoice totals, calculate proportion
                     if ($invoiceTotal > 0) {
                         $totalAmount += ($productTotal > 0) ? $productTotal : ($invoiceDiscountedTotal * ($detail->totalprice / $invoiceTotal));
                     }
@@ -607,12 +613,11 @@ class TripController extends AppBaseController
                     'name' => $product->name,
                     'quantity' => $salesItem['total_sales'],
                     'uom' => $product->category ?? '',
-                    'amount' =>number_format($totalAmount, 2)
+                    'amount' => number_format($totalAmount, 2)
                 ];
             }
         }
 
-        
         // Format stock summary
         $stockSummaryData = [];
         foreach ($report['stock_summary'] as $stock) {
@@ -621,44 +626,66 @@ class TripController extends AppBaseController
                 'brand' => $product->code ?? '',
                 'open' => $stock['open'],
                 'stock_in' => $stock['stock_in'],
-                'sales' => -$stock['sales'], // Negative as in sample
+                'sales' => -$stock['sales'],
                 'return' => $stock['return'],
                 'variance' => $stock['variance'],
-                'stock_out' => 0, // As per your requirement
-                'close' => $stock['stock_count'] // Use actual stock count
+                'stock_out' => 0,
+                'close' => $stock['stock_count']
             ];
         }
-        // Format invoices list
-        $invoicesList = [];
-        $totalInvoicesDiscountedAmount = 0;
         
+        // ================================================
+        // Format invoices list - Include BOTH active and cancelled invoices
+        // ================================================
+        $documentsList = [];
+        $totalDocumentsAmount = 0;
+        
+        // Add active (completed) invoices
         foreach ($report['sales_summary']['invoices'] as $invoice) {
-            // Get customer name
             $customer = Customer::find($invoice->customer_id);
             $customerName = $customer ? $customer->company : 'N/A';
             
-            // Get DISCOUNTED invoice total from the report (not the stored total)
+            // Get DISCOUNTED invoice total
             $invoiceDiscountedTotal = $report['sales_summary']['invoice_totals'][$invoice->id] ?? 0;
-            $totalInvoicesDiscountedAmount += $invoiceDiscountedTotal;
+            $totalDocumentsAmount += $invoiceDiscountedTotal;
             
-            $invoicesList[] = [
+            $documentsList[] = [
                 'doc_no' => $invoice->invoiceno,
-                'status' => 'Invoice',
+                'status' => $invoice->getStatusTextAttribute(),  // Hard-coded for active invoices
                 'company_name' => $customerName,
                 'paymentterm' => $invoice->paymentterm ?? '-',
                 'amount' => 'RM ' . number_format($invoiceDiscountedTotal, 2)
             ];
         }
         
-        // Format sales orders list
+        // Add cancelled invoices with amount 0
+        if (isset($report['sales_summary']['cancelled_invoices'])) {
+            foreach ($report['sales_summary']['cancelled_invoices'] as $invoice) {
+                $customer = Customer::find($invoice->customer_id);
+                $customerName = $customer ? $customer->company : 'N/A';
+                
+                $documentsList[] = [
+                    'doc_no' => $invoice->invoiceno,
+                    'status' => $invoice->getStatusTextAttribute(),  
+                    'company_name' => $customerName,
+                    'paymentterm' => $invoice->paymentterm ?? '-',
+                    'amount' => 'RM 0.00'  // Amount is 0 for cancelled invoices
+                ];
+            }
+        }
+        
+        // Sort documents by document number (optional)
+        usort($documentsList, function($a, $b) {
+            return strcmp($a['doc_no'], $b['doc_no']);
+        });
+        
+        // Format sales orders list (if needed)
         $salesOrdersList = [];
         foreach ($report['sales_summary']['sales_orders'] as $salesOrder) {
-            // Get customer name
             $customer = Customer::find($salesOrder->customer_id);
             $customerName = $customer ? $customer->company : 'N/A';
             
-            // Calculate sales order total (you might need to load sales order details)
-            $salesOrderTotal = 0; // You'll need to calculate this from sales_order_details
+            $salesOrderTotal = 0;
             
             $salesOrdersList[] = [
                 'doc_no' => $salesOrder->invoiceno,
@@ -669,19 +696,14 @@ class TripController extends AppBaseController
             ];
         }
         
-        // Combine invoices and sales orders
-        $documentsList = array_merge($invoicesList);
-
         // Prepare data for PDF
         $data = [
-            // Company Information (fixed as per sample)
             'company_name' => 'SF Noodles Sdn. Bhd.',
             'roc_no' => '(FKA Soon Fatt Foods Sdn Bhd) ROC No. 201001017887',
             'address' => '48, Jin TPP 1/18, Taman Industri Puchong, 47100 Puchong, Selangor',
             'phone' => 't: 03-80611490 / 012-3111531',
             'email' => 'email: account@sfnoodles.com',
             
-            // Trip Information
             'salesman' => $driver->name ?? 'N/A',
             'printed_time' => Carbon::now()->format('d M Y h:i A'),
             'trip_id' => 'T-' . $trip->uuid,
@@ -690,14 +712,12 @@ class TripController extends AppBaseController
                         Carbon::parse($report['trip_info']['end_time'])->format('d M Y h:i A') : 
                         Carbon::now()->format('d M Y h:i A'),
             
-            // Sales Summary
             'sales_summary' => $productDetails,
             'total_quantity' => array_sum(array_column($productDetails, 'quantity')),
-            'total_amount' => 'RM ' .number_format(array_sum(array_map(function($item) {
-                return floatval(str_replace('RM ', '', $item['amount']));
+            'total_amount' => 'RM ' . number_format(array_sum(array_map(function($item) {
+                return floatval($item['amount']);
             }, $productDetails)), 2),
             
-            // Stock Summary
             'stock_summary' => $stockSummaryData,
             'total_open' => array_sum(array_column($stockSummaryData, 'open')),
             'total_stock_in' => array_sum(array_column($stockSummaryData, 'stock_in')),
@@ -707,21 +727,19 @@ class TripController extends AppBaseController
             'total_stock_out' => array_sum(array_column($stockSummaryData, 'stock_out')),
             'total_close' => array_sum(array_column($stockSummaryData, 'close')),
             
-            // Documents List
             'documents_list' => $documentsList,
             'total_documents' => count($documentsList),
-            'total_documents_amount' => 'RM ' . number_format(array_sum(array_map(function($item) {
-                return floatval(str_replace('RM ', '', $item['amount']));
-            }, $documentsList)), 2),
-            // Report totals
+            'total_documents_amount' => 'RM ' . number_format($totalDocumentsAmount, 2),
+            
             'total_cash' => 'RM ' . number_format($report['sales_summary']['total_cash'], 2),
             'total_credit' => 'RM ' . number_format($report['sales_summary']['total_credit'], 2),
-
-            'grand_total' => 'RM ' . number_format($report['sales_summary']['total_amount'], 2)
+            'grand_total' => 'RM ' . number_format($report['sales_summary']['total_amount'], 2),
+            
+            // Add cancelled invoices count for display
+            'total_cancelled_invoices' => $report['sales_summary']['total_cancelled_invoices'] ?? 0
         ];
         
-
-        try{
+        try {
             $pdf = Pdf::loadView('reports.print', $data);
             return $pdf->setPaper('a4', 'portrait')
                     ->setOptions([
@@ -729,16 +747,11 @@ class TripController extends AppBaseController
                         'isRemoteEnabled' => true,
                         'defaultFont' => 'sans-serif'
                     ])
-                    ->stream('trip_summary_' .$driver->name.'_'. $trip->date . '.pdf');
-
-            return view('reports.print', $data);
-        }
-        catch(Exception $e){
+                    ->stream('trip_summary_' . $driver->name . '_' . $trip->date . '.pdf');
+        } catch(Exception $e) {
             dd($e->getMessage());
-
             abort(404);
         }
-
     }
     
     private function calculateProductDiscountedTotal($product, $quantity, $customerId, $storedPrice)

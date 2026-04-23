@@ -29,16 +29,10 @@ class InventoryBalanceDataTable extends DataTable
                     ->count();
                 return '<span class="badge badge-secondary">' . $count . '</span>';
             })
-            ->addColumn('action', function($driver) {
-                $viewBtn = '<button type="button" 
-                               class="btn btn-sm btn-outline-primary view-products" 
-                               data-driver-id="' . $driver->id . '"
-                               data-driver-name="' . e($driver->name) . '"
-                               data-toggle="modal" 
-                               data-target="#productDetailsModal">
-                                <i class="fa fa-eye"></i> View Details
-                            </button>';
-                return $viewBtn;
+            ->addColumn('action', function($row) {
+                return '<button type="button" class="btn btn-info btn-sm view-details-btn" data-id="' . $row->id . '" data-name="' . e($row->driver->name ?? 'N/A') . '">
+                            <i class="fa fa-eye"></i> View Products
+                        </button>';
             })
             ->rawColumns(['total_quantity', 'product_count', 'action'])
             ->addIndexColumn();
