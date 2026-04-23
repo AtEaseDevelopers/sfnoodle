@@ -5232,7 +5232,7 @@ class DriverController extends Controller
                 $invoiceDetails[] = [
                     'product_id' => $productId,
                     'quantity' => $quantity,
-                    'price' => (int) $unitPrice
+                    'price' => (int) $unitPrice,
                     'totalprice' => $itemTotal,
                     'remark' => $detail['remark'] ?? null,
                 ];
