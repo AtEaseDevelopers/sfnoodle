@@ -28,6 +28,12 @@
     ], null, ['class' => 'form-control']) }}
 </div>
 
+<!-- Price Category Field -->
+<div class="form-group col-sm-6">
+    {!! Form::label('price_category', 'Price Category') !!}:
+    {!! Form::text('price_category', null, ['class' => 'form-control', 'maxlength' => 255, 'placeholder' => 'Enter price category...']) !!}
+</div>
+
 <!-- Phone Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('phone', 'Phone') !!}:

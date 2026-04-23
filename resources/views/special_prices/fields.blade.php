@@ -10,6 +10,12 @@
     {!! Form::select('customer_id', $customerItems, null, ['class' => 'form-control', 'placeholder' => 'Pick a Customer...']) !!}
 </div>
 
+<!-- Price Category Field -->
+<div class="form-group col-sm-6">
+    {!! Form::label('price_category', 'Price Category') !!}:
+    {!! Form::text('price_category', null, ['class' => 'form-control', 'maxlength' => 255, 'placeholder' => 'Enter price category...']) !!}
+</div>
+
 <!-- Price Field -->
 <div class="form-group col-sm-6">
     {!! Form::label('price', __('special_prices.price')) !!}

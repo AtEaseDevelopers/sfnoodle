@@ -194,7 +194,9 @@ class CustomerController extends AppBaseController
             'status' => 'required',
             'created_at' => 'nullable',
             'updated_at' => 'nullable',
-            'driver' => 'nullable|string|max:255'
+            'driver' => 'nullable|string|max:255',
+            'price_category' => 'nullable|string|max:255' // Add this line
+
         ];
         
         // Validate using model rules
@@ -220,7 +222,7 @@ class CustomerController extends AppBaseController
         $customer->driver = $input['driver'] ?? null;
         $customer->sst = $input['sst'] ?? null;
         $customer->tin = $input['tin'] ?? null;
-
+        $customer->price_category = $input['price_category'] ?? null;
         $customer->save();
 
         // Handle driver assignment
