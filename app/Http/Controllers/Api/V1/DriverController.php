@@ -5246,7 +5246,7 @@ class DriverController extends Controller
                 'message' => __LINE__ . $this->message_separator . 'Invoice amount calculated successfully',
                 'data' => [
                     'details' => $invoiceDetails,
-                    'total_amount' => number_format($grandTotal, 2, '.', '')
+                    'total_amount' => (int) $grandTotal
                 ]
             ], 200);
 
