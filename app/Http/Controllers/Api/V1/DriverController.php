@@ -5137,7 +5137,7 @@ class DriverController extends Controller
             ], 200);
         }
     }
-
+    
     public function calculateInvoiceAmount(Request $request)
     {
         // Validate session

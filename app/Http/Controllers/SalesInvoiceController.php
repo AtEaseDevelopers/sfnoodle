@@ -691,103 +691,52 @@ class SalesInvoiceController extends AppBaseController
         $originalTotal = 0;
         $offerAmount = 0;
         
-        // Process each purchased item with tiered pricing
+        // Process each purchased item with tiered pricing - FIXED: use salesInvoiceDetails
         foreach ($salesInvoice->salesInvoiceDetails as $detail) {
             $product = $detail->product;
-            if (!$product) {
-                continue;
-            }
             $quantity = $detail->quantity;
-            $regularPrice = $product->price ?? 0;
+            $regularPrice = $product->price;
             
-            // Check for special price for this customer
-            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                ->where('customer_id', $salesInvoice->customer_id)
-                ->where('status', 1)
-                ->first();
+            // Use the existing calculateProductPriceForInvoice function
+            $priceCalculation = $this->calculateProductPriceForInvoice(
+                $product, 
+                $quantity, 
+                $salesInvoice->customer_id
+            );
             
-            $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+            $discountedTotal = $priceCalculation['total_price'];
+            $regularTotal = $quantity * $regularPrice;
             
-            // Get tiered pricing
-            $tieredPricing = $product->tiered_pricing;
+            $originalTotal += $regularTotal;
+            $offerAmount += ($regularTotal - $discountedTotal);
             
-            if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                // Sort tiers by quantity ascending
-                usort($tieredPricing, function($a, $b) {
-                    return $a['quantity'] - $b['quantity'];
-                });
-                
-                $remainingQuantity = $quantity;
-                
-                // Apply tiered pricing for each tier
-                foreach ($tieredPricing as $tier) {
-                    if ($remainingQuantity <= 0) {
-                        break;
-                    }
-                    
-                    $tierQuantity = $tier['quantity'];
-                    $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
-                    
-                    // Calculate how many full tier packages fit into remaining quantity
-                    $numberOfPackages = floor($remainingQuantity / $tierQuantity);
-                    
-                    if ($numberOfPackages > 0) {
-                        $quantityInThisTier = $numberOfPackages * $tierQuantity;
-                        $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
-                        $regularTotalForThisTier = $quantityInThisTier * $basePrice;
-                        
-                        $originalTotal += $regularTotalForThisTier;
-                        $offerAmount += ($regularTotalForThisTier - $itemTotal);
-                        
-                        // Add as a single line item with quantity = number of packages
-                        $allItems[] = [
-                            'product_code' => $product->code,
-                            'product_name' => $product->name,
-                            'quantity' => $numberOfPackages, // Number of packages
-                            'price' => $tierPrice, // Package price
-                            'totalprice' => $itemTotal,
-                            'is_foc' => false,
-                            'display_name' => $product->code . " ({$tierQuantity} units)",
-                            'tier_quantity' => $tierQuantity,
-                            'has_offer' => true
-                        ];
-                        
-                        $remainingQuantity -= $quantityInThisTier;
-                    }
+            // Get the effective unit price
+            $effectiveUnitPrice = $priceCalculation['unit_price'];
+            
+            // Check if special price was applied
+            $hasSpecialPrice = false;
+            
+            // Check breakdown to see if special price was used
+            foreach ($priceCalculation['breakdown'] as $breakdown) {
+                if (isset($breakdown['price_source']) && $breakdown['price_source'] == 'special_price') {
+                    $hasSpecialPrice = true;
+                    break;
                 }
-                
-                // Handle remaining quantity with base price (special or regular)
-                if ($remainingQuantity > 0) {
-                    $itemTotal = $remainingQuantity * $basePrice;
-                    $originalTotal += $itemTotal;
-                    
-                    $allItems[] = [
-                        'product_code' => $product->code,
-                        'product_name' => $product->name,
-                        'quantity' => $remainingQuantity,
-                        'price' => $basePrice,
-                        'totalprice' => $itemTotal,
-                        'is_foc' => false,
-                        'display_name' => $product->code,
-                        'has_offer' => false
-                    ];
-                }
-            } else {
-                // No tiered pricing, use base price (special or regular)
-                $itemTotal = $quantity * $basePrice;
-                $originalTotal += $itemTotal;
-                
-                $allItems[] = [
-                    'product_code' => $product->code,
-                    'product_name' => $product->name,
-                    'quantity' => $quantity,
-                    'price' => $basePrice,
-                    'totalprice' => $itemTotal,
-                    'is_foc' => false,
-                    'display_name' => $product->code,
-                    'has_offer' => false
-                ];
             }
+            
+            // Display logic - show as a single line with the calculated unit price
+            $allItems[] = [
+                'product_code' => $product->code,
+                'product_name' => $product->name,
+                'quantity' => $quantity,
+                'price' => $effectiveUnitPrice,
+                'totalprice' => $discountedTotal,
+                'is_foc' => false,
+                'display_name' => $product->code . ($hasSpecialPrice ? ' (Special Price)' : ''),
+                'has_offer' => ($regularTotal > $discountedTotal),
+                'regular_price' => $regularPrice,
+                'discount_amount' => ($regularTotal - $discountedTotal)
+            ];
         }
         
         // Add FOC items
@@ -850,6 +799,102 @@ class SalesInvoiceController extends AppBaseController
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             abort(500, 'Error generating PDF: ' . $e->getMessage());
         }
+    }
+    
+    private function calculateProductPriceForInvoice($product, $quantity, $customerId)
+    {
+        $customer = Customer::find($customerId);
+        $specialPrices = SpecialPrice::where('product_id', $product->id)
+            ->where('status', 1)
+            ->get();
+
+        $specialPrice = null;
+
+        // First priority: Check for direct customer match
+        foreach ($specialPrices as $sp) {
+            if ($sp->customer_id == $customerId) {
+                $specialPrice = $sp;
+                break; // Customer-specific takes highest priority
+            }
+        }
+
+        // Second priority: Check for price category match (if no customer-specific found)
+        if (!$specialPrice && $customer && $customer->price_category) {
+            foreach ($specialPrices as $sp) {
+                if ($sp->price_category && $sp->price_category == $customer->price_category) {
+                    $specialPrice = $sp;
+                    break; // Use the first matching category
+                }
+            }
+        }
+        $basePrice = $specialPrice ? $specialPrice->price : $product->price;
+
+        $totalPrice = 0;
+        $breakdown = [];
+        $remainingQuantity = $quantity;
+        
+        // Check for tiered pricing
+        $tieredPricing = $product->tiered_pricing;
+        
+        if (!empty($tieredPricing) && is_array($tieredPricing)) {
+            // Sort tiers by quantity ascending (smallest first)
+            usort($tieredPricing, function($a, $b) {
+                return $a['quantity'] - $b['quantity'];
+            });
+            
+            // Apply tiered pricing for each tier
+            foreach ($tieredPricing as $tier) {
+                if ($remainingQuantity <= 0) {
+                    break;
+                }
+                
+                $tierQuantity = $tier['quantity'];
+                $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
+                
+                // Calculate how many full tier packages fit into remaining quantity
+                $numberOfPackages = floor($remainingQuantity / $tierQuantity);
+                
+                if ($numberOfPackages > 0) {
+                    $quantityInThisTier = $numberOfPackages * $tierQuantity;
+                    $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                    
+                    $totalPrice += $itemTotal;
+                    $remainingQuantity -= $quantityInThisTier;
+                    
+                    $breakdown[] = [
+                        'type' => 'tiered',
+                        'tier_quantity' => $tierQuantity,
+                        'packages' => $numberOfPackages,
+                        'quantity' => $quantityInThisTier,
+                        'package_price' => $tierPrice,
+                        'total' => $itemTotal
+                    ];
+                }
+            }
+        }
+        
+        // Handle remaining quantity with base price (special or regular)
+        if ($remainingQuantity > 0) {
+            $itemTotal = $remainingQuantity * $basePrice;
+            $totalPrice += $itemTotal;
+            
+            $breakdown[] = [
+                'type' => 'base',
+                'quantity' => $remainingQuantity,
+                'unit_price' => $basePrice,
+                'total' => $itemTotal,
+                'price_source' => $specialPrice ? 'special_price' : 'default_price'
+            ];
+        }
+        
+        // Calculate average unit price for display
+        $unitPrice = $quantity > 0 ? $totalPrice / $quantity : 0;
+        
+        return [
+            'total_price' => $totalPrice,
+            'unit_price' => round($unitPrice, 2),
+            'breakdown' => $breakdown
+        ];
     }
     
     /** 

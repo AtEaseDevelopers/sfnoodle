@@ -229,7 +229,7 @@ class TripController extends AppBaseController
     }
 
 
-    public static function generateTripReport($trip_id) 
+    public function generateTripReport($trip_id) 
     {
         $trip = Trip::where('uuid', $trip_id)->first();
         
@@ -286,21 +286,21 @@ class TripController extends AppBaseController
         $stockInItems = collect($stockInItems);
         
         // ================================================
-        // IMPORTANT: Get ONLY NON-CANCELLED invoices for calculations
+        // Get invoices for this trip
         // ================================================
         $invoices = Invoice::where('trip_id', $trip_id)
-            ->where('status', '!=', Invoice::STATUS_CANCELLED) // EXCLUDE cancelled invoices
+            ->where('status', '!=', Invoice::STATUS_CANCELLED)
             ->with(['invoiceDetails.product', 'customer'])
             ->get();
         
-        // Get cancelled invoices separately for display only
         $cancelledInvoices = Invoice::where('trip_id', $trip_id)
             ->where('status', Invoice::STATUS_CANCELLED)
             ->with(['invoiceDetails.product', 'customer'])
             ->get();
-        
-        // Calculate discounted sales per product (only from non-cancelled invoices)
+                
+        // Calculate discounted sales per product and product amounts
         $salesByProduct = [];
+        $productAmounts = []; // Store total amount for each product
         $invoiceTotals = [];
         $totalDiscountedAmount = 0;
         $totalCashAmount = 0;
@@ -312,55 +312,28 @@ class TripController extends AppBaseController
             foreach ($invoice->invoiceDetails as $detail) {
                 $product = $detail->product;
                 $quantity = $detail->quantity;
-                $regularPrice = $product->price;
                 
-                // Check for special price
-                $specialPrice = SpecialPrice::where('product_id', $product->id)
-                    ->where('customer_id', $invoice->customer_id)
-                    ->where('status', 1)
-                    ->first();
+                // Use the same calculation logic as invoice creation
+                $priceCalculation = $this->calculateProductPriceForInvoice(
+                    $product, 
+                    $quantity, 
+                    $invoice->customer_id
+                );
                 
-                $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
-                $tieredPricing = $product->tiered_pricing;
-                
-                $itemDiscountedTotal = 0;
-                
-                if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                    // Sort tiers by quantity descending
-                    usort($tieredPricing, function($a, $b) {
-                        return $b['quantity'] - $a['quantity'];
-                    });
-                    
-                    $remainingQuantity = $quantity;
-                    
-                    foreach ($tieredPricing as $tier) {
-                        if ($remainingQuantity <= 0) break;
-                        
-                        $tierQuantity = $tier['quantity'];
-                        $tierPrice = $tier['price'];
-                        $numberOfPackages = floor($remainingQuantity / $tierQuantity);
-                        
-                        if ($numberOfPackages > 0) {
-                            $quantityInTier = $numberOfPackages * $tierQuantity;
-                            $itemDiscountedTotal += $numberOfPackages * $tierPrice;
-                            $remainingQuantity -= $quantityInTier;
-                        }
-                    }
-                    
-                    if ($remainingQuantity > 0) {
-                        $itemDiscountedTotal += $remainingQuantity * $basePrice;
-                    }
-                } else {
-                    $itemDiscountedTotal = $quantity * $basePrice;
-                }
-                
+                $itemDiscountedTotal = $priceCalculation['total_price'];
                 $invoiceDiscountedTotal += $itemDiscountedTotal;
                 
-                // Accumulate sales by product (quantity only, not amount)
+                // Accumulate sales by product (quantity)
                 if (!isset($salesByProduct[$detail->product_id])) {
                     $salesByProduct[$detail->product_id] = 0;
                 }
                 $salesByProduct[$detail->product_id] += $quantity;
+                
+                // Accumulate product amounts
+                if (!isset($productAmounts[$detail->product_id])) {
+                    $productAmounts[$detail->product_id] = 0;
+                }
+                $productAmounts[$detail->product_id] += $itemDiscountedTotal;
             }
             
             $invoiceTotals[$invoice->id] = $invoiceDiscountedTotal;
@@ -374,12 +347,13 @@ class TripController extends AppBaseController
             }
         }
         
-        // Convert sales by product to collection
+        // Convert sales by product to collection with amounts
         $sales = collect();
         foreach ($salesByProduct as $productId => $totalSales) {
             $sales->push((object)[
                 'product_id' => $productId,
-                'total_sales' => $totalSales
+                'total_sales' => $totalSales,
+                'total_amount' => $productAmounts[$productId] ?? 0
             ]);
         }
         
@@ -523,7 +497,7 @@ class TripController extends AppBaseController
             return strcmp($a['product_name'], $b['product_name']);
         });
         
-        // Prepare full report - include both active and cancelled invoices
+        // Prepare full report with pre-calculated product amounts
         $report = [
             'trip_info' => [
                 'trip_id' => 'T-' . (string)$trip->uuid,
@@ -539,15 +513,16 @@ class TripController extends AppBaseController
                 'total_amount' => $totalDiscountedAmount,
                 'total_credit' => $totalCreditAmount,
                 'total_cash' => $totalCashAmount,
-                'invoices' => $invoices, // Only non-cancelled for calculations
-                'cancelled_invoices' => $cancelledInvoices, // Cancelled invoices for display
+                'invoices' => $invoices,
+                'cancelled_invoices' => $cancelledInvoices,
                 'sales_orders' => $salesOrder,
                 'invoice_totals' => $invoiceTotals
             ],
             'sales_by_product' => $sales->map(function($item) {
                 return [
                     'product_id' => $item->product_id,
-                    'total_sales' => $item->total_sales
+                    'total_sales' => $item->total_sales,
+                    'total_amount' => $item->total_amount // Pre-calculated amount
                 ];
             })
         ];
@@ -571,42 +546,20 @@ class TripController extends AppBaseController
             throw new \Exception('Trip not found');
         }
 
-        // Get report data (using your existing function)
+        // Get report data (already has all calculations done)
         $report = $this->generateTripReport($trip_id);
         
         // Get driver info
         $driver = Driver::find($trip->driver_id);
         
-        // Get product names for sales summary
+        // Get product names for sales summary - using pre-calculated amounts
         $productDetails = [];
-        $totalDiscountedSales = 0;
-
+        
         foreach ($report['sales_by_product'] as $salesItem) {
             $product = Product::find($salesItem['product_id']);
             if ($product) {
-                $totalAmount = 0;
-                foreach ($report['sales_summary']['invoices'] as $invoice) {
-                    $invoiceId = $invoice->id;
-                    $invoiceDiscountedTotal = $report['sales_summary']['invoice_totals'][$invoiceId] ?? 0;
-                    
-                    $invoiceTotal = 0;
-                    $productTotal = 0;
-                    
-                    foreach ($invoice->invoiceDetails as $detail) {
-                        $detailTotal = $detail->quantity * $detail->price;
-                        $invoiceTotal += $detailTotal;
-                        
-                        if ($detail->product_id == $salesItem['product_id']) {
-                            $productTotal += $this->calculateProductDiscountedTotal($product, $detail->quantity, $invoice->customer_id, $detail->price);
-                        }
-                    }
-                    
-                    if ($invoiceTotal > 0) {
-                        $totalAmount += ($productTotal > 0) ? $productTotal : ($invoiceDiscountedTotal * ($detail->totalprice / $invoiceTotal));
-                    }
-                }
-                
-                $totalDiscountedSales += $totalAmount;
+                // Use pre-calculated amount from the report
+                $totalAmount = $salesItem['total_amount'];
                 
                 $productDetails[] = [
                     'code' => $product->code,
@@ -634,9 +587,7 @@ class TripController extends AppBaseController
             ];
         }
         
-        // ================================================
-        // Format invoices list - Include BOTH active and cancelled invoices
-        // ================================================
+        // Format invoices list - using pre-calculated totals
         $documentsList = [];
         $totalDocumentsAmount = 0;
         
@@ -645,13 +596,13 @@ class TripController extends AppBaseController
             $customer = Customer::find($invoice->customer_id);
             $customerName = $customer ? $customer->company : 'N/A';
             
-            // Get DISCOUNTED invoice total
+            // Use pre-calculated invoice total from report
             $invoiceDiscountedTotal = $report['sales_summary']['invoice_totals'][$invoice->id] ?? 0;
             $totalDocumentsAmount += $invoiceDiscountedTotal;
             
             $documentsList[] = [
                 'doc_no' => $invoice->invoiceno,
-                'status' => $invoice->getStatusTextAttribute(),  // Hard-coded for active invoices
+                'status' => $invoice->getStatusTextAttribute(),
                 'company_name' => $customerName,
                 'paymentterm' => $invoice->paymentterm ?? '-',
                 'amount' => 'RM ' . number_format($invoiceDiscountedTotal, 2)
@@ -669,30 +620,28 @@ class TripController extends AppBaseController
                     'status' => $invoice->getStatusTextAttribute(),  
                     'company_name' => $customerName,
                     'paymentterm' => $invoice->paymentterm ?? '-',
-                    'amount' => 'RM 0.00'  // Amount is 0 for cancelled invoices
+                    'amount' => 'RM 0.00'
                 ];
             }
         }
         
-        // Sort documents by document number (optional)
+        // Sort documents by document number
         usort($documentsList, function($a, $b) {
             return strcmp($a['doc_no'], $b['doc_no']);
         });
         
-        // Format sales orders list (if needed)
+        // Format sales orders list
         $salesOrdersList = [];
         foreach ($report['sales_summary']['sales_orders'] as $salesOrder) {
             $customer = Customer::find($salesOrder->customer_id);
             $customerName = $customer ? $customer->company : 'N/A';
-            
-            $salesOrderTotal = 0;
             
             $salesOrdersList[] = [
                 'doc_no' => $salesOrder->invoiceno,
                 'status' => 'Sales Order',
                 'company_name' => $customerName,
                 'outstanding' => '-',
-                'amount' => 'RM ' . number_format($salesOrderTotal, 2)
+                'amount' => 'RM 0.00'
             ];
         }
         
@@ -735,7 +684,6 @@ class TripController extends AppBaseController
             'total_credit' => 'RM ' . number_format($report['sales_summary']['total_credit'], 2),
             'grand_total' => 'RM ' . number_format($report['sales_summary']['total_amount'], 2),
             
-            // Add cancelled invoices count for display
             'total_cancelled_invoices' => $report['sales_summary']['total_cancelled_invoices'] ?? 0
         ];
         
@@ -753,49 +701,101 @@ class TripController extends AppBaseController
             abort(404);
         }
     }
-    
-    private function calculateProductDiscountedTotal($product, $quantity, $customerId, $storedPrice)
+
+    private function calculateProductPriceForInvoice($product, $quantity, $customerId)
     {
-        $regularPrice = $product->price;
-        
-        // Check for special price
-        $specialPrice = SpecialPrice::where('product_id', $product->id)
-            ->where('customer_id', $customerId)
+        $customer = Customer::find($customerId);
+        $specialPrices = SpecialPrice::where('product_id', $product->id)
             ->where('status', 1)
-            ->first();
+            ->get();
+
+        $specialPrice = null;
+
+        // First priority: Check for direct customer match
+        foreach ($specialPrices as $sp) {
+            if ($sp->customer_id == $customerId) {
+                $specialPrice = $sp;
+                break; // Customer-specific takes highest priority
+            }
+        }
+
+        // Second priority: Check for price category match (if no customer-specific found)
+        if (!$specialPrice && $customer && $customer->price_category) {
+            foreach ($specialPrices as $sp) {
+                if ($sp->price_category && $sp->price_category == $customer->price_category) {
+                    $specialPrice = $sp;
+                    break; // Use the first matching category
+                }
+            }
+        }
+        $basePrice = $specialPrice ? $specialPrice->price : $product->price;
+
+        $totalPrice = 0;
+        $breakdown = [];
+        $remainingQuantity = $quantity;
         
-        $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+        // Check for tiered pricing
         $tieredPricing = $product->tiered_pricing;
         
         if (!empty($tieredPricing) && is_array($tieredPricing)) {
+            // Sort tiers by quantity ascending (smallest first)
             usort($tieredPricing, function($a, $b) {
-                return $b['quantity'] - $a['quantity'];
+                return $a['quantity'] - $b['quantity'];
             });
             
-            $remainingQuantity = $quantity;
-            $total = 0;
-            
+            // Apply tiered pricing for each tier
             foreach ($tieredPricing as $tier) {
-                if ($remainingQuantity <= 0) break;
+                if ($remainingQuantity <= 0) {
+                    break;
+                }
                 
                 $tierQuantity = $tier['quantity'];
-                $tierPrice = $tier['price'];
+                $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
+                
+                // Calculate how many full tier packages fit into remaining quantity
                 $numberOfPackages = floor($remainingQuantity / $tierQuantity);
                 
                 if ($numberOfPackages > 0) {
-                    $total += $numberOfPackages * $tierPrice;
-                    $remainingQuantity -= ($numberOfPackages * $tierQuantity);
+                    $quantityInThisTier = $numberOfPackages * $tierQuantity;
+                    $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                    
+                    $totalPrice += $itemTotal;
+                    $remainingQuantity -= $quantityInThisTier;
+                    
+                    $breakdown[] = [
+                        'type' => 'tiered',
+                        'tier_quantity' => $tierQuantity,
+                        'packages' => $numberOfPackages,
+                        'quantity' => $quantityInThisTier,
+                        'package_price' => $tierPrice,
+                        'total' => $itemTotal
+                    ];
                 }
             }
-            
-            if ($remainingQuantity > 0) {
-                $total += $remainingQuantity * $basePrice;
-            }
-            
-            return $total;
         }
         
-        return $quantity * $basePrice;
+        // Handle remaining quantity with base price (special or regular)
+        if ($remainingQuantity > 0) {
+            $itemTotal = $remainingQuantity * $basePrice;
+            $totalPrice += $itemTotal;
+            
+            $breakdown[] = [
+                'type' => 'base',
+                'quantity' => $remainingQuantity,
+                'unit_price' => $basePrice,
+                'total' => $itemTotal,
+                'price_source' => $specialPrice ? 'special_price' : 'default_price'
+            ];
+        }
+        
+        // Calculate average unit price for display
+        $unitPrice = $quantity > 0 ? $totalPrice / $quantity : 0;
+        
+        return [
+            'total_price' => $totalPrice,
+            'unit_price' => round($unitPrice, 2),
+            'breakdown' => $breakdown
+        ];
     }
-
+    
 }   

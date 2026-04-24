@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\Invoice;
+use App\Models\Customer;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
 
@@ -50,20 +51,42 @@ class InvoiceDataTable extends DataTable
      * @param Invoice $invoice
      * @return float
      */
+
+    
     private function calculateDiscountedTotal($invoice)
     {
         $total = 0;
+        $customer = Customer::find($invoice->customer_id);
         
         foreach ($invoice->invoiceDetails as $detail) {
             $product = $detail->product;
             $quantity = $detail->quantity;
             $regularPrice = $product->price;
             
-            // Check for special price for this customer
-            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                ->where('customer_id', $invoice->customer_id)
+            // Get all special prices for this product
+            $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
                 ->where('status', 1)
-                ->first();
+                ->get();
+            
+            $specialPrice = null;
+            
+            // First priority: Check for direct customer match
+            foreach ($specialPrices as $sp) {
+                if ($sp->customer_id == $invoice->customer_id) {
+                    $specialPrice = $sp;
+                    break;
+                }
+            }
+            
+            // Second priority: Check for price category match (if no customer-specific found)
+            if (!$specialPrice && $customer && $customer->price_category) {
+                foreach ($specialPrices as $sp) {
+                    if ($sp->price_category && $sp->price_category == $customer->price_category) {
+                        $specialPrice = $sp;
+                        break;
+                    }
+                }
+            }
             
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
             
