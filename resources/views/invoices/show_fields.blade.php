@@ -16,6 +16,14 @@
     <p>{{ $invoice->customer->company ?? '' }}</p>
 </div>
 
+<!-- Price Category Display -->
+@if($invoice->customer && $invoice->customer->price_category)
+<div class="form-group">
+    {!! Form::label('price_category', 'Price Category') !!}:
+    <p><span class="badge badge-info">{{ $invoice->customer->price_category }}</span></p>
+</div>
+@endif
+
 <!-- Creator Information -->
 <div class="form-group">
     {!! Form::label('created_by', 'Created By') !!}:
@@ -69,7 +77,10 @@
             </thead>
             <tbody>
                 @php
-                    // Calculate tiered pricing and FOC items for display
+                    // Get customer with price category
+                    $customer = $invoice->customer;
+                    
+                    // Prepare purchased items for FOC calculation
                     $purchasedItems = [];
                     foreach ($invoicedetails as $detail) {
                         $purchasedItems[] = [
@@ -85,25 +96,48 @@
                     $originalTotal = 0;
                     $offerAmount = 0;
                     
-                    // Process each purchased item with tiered pricing
+                    // Process each purchased item with tiered pricing and special price logic
                     foreach ($invoicedetails as $detail) {
                         $product = \App\Models\Product::find($detail['product_id']);
                         $quantity = $detail['quantity'];
                         $regularPrice = $product->price;
                         
-                        // Check for special price
-                        $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                            ->where('customer_id', $invoice->customer_id)
+                        // Get all special prices for this product
+                        $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
                             ->where('status', 1)
-                            ->first();
+                            ->get();
+                        
+                        $specialPrice = null;
+                        
+                        // First priority: Check for direct customer match
+                        foreach ($specialPrices as $sp) {
+                            if ($sp->customer_id == $invoice->customer_id) {
+                                $specialPrice = $sp;
+                                break;
+                            }
+                        }
+                        
+                        // Second priority: Check for price category match
+                        if (!$specialPrice && $customer && $customer->price_category) {
+                            foreach ($specialPrices as $sp) {
+                                if ($sp->price_category && $sp->price_category == $customer->price_category) {
+                                    $specialPrice = $sp;
+                                    break;
+                                }
+                            }
+                        }
                         
                         $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+                        $hasSpecialPrice = $specialPrice ? true : false;
+                        $specialPriceType = $specialPrice ? 
+                            ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific') : null;
+                        
                         $tieredPricing = $product->tiered_pricing;
                         
                         if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                            // Sort tiers by quantity descending
+                            // Sort tiers by quantity ascending (smallest first)
                             usort($tieredPricing, function($a, $b) {
-                                return $b['quantity'] - $a['quantity'];
+                                return $a['quantity'] - $b['quantity'];
                             });
                             
                             $remainingQuantity = $quantity;
@@ -123,13 +157,19 @@
                                     $originalTotal += $regularTotalForThisTier;
                                     $offerAmount += ($regularTotalForThisTier - $itemTotal);
                                     
+                                    $displayName = $product->name . " ({$tierQuantity} units)";
+                                    if ($hasSpecialPrice) {
+                                        $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                                    }
+                                    
                                     $displayItems[] = [
-                                        'display_name' => $product->name . " ({$tierQuantity} units)",
+                                        'display_name' => $displayName,
                                         'quantity' => $numberOfPackages,
                                         'price' => $tierPrice,
                                         'totalprice' => $itemTotal,
                                         'is_foc' => false,
-                                        'has_offer' => true
+                                        'has_offer' => true,
+                                        'has_special_price' => $hasSpecialPrice
                                     ];
                                     
                                     $remainingQuantity -= $quantityInTier;
@@ -141,13 +181,19 @@
                                 $itemTotal = $remainingQuantity * $basePrice;
                                 $originalTotal += $itemTotal;
                                 
+                                $displayName = $product->name;
+                                if ($hasSpecialPrice) {
+                                    $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                                }
+                                
                                 $displayItems[] = [
-                                    'display_name' => $product->name,
+                                    'display_name' => $displayName,
                                     'quantity' => $remainingQuantity,
                                     'price' => $basePrice,
                                     'totalprice' => $itemTotal,
                                     'is_foc' => false,
-                                    'has_offer' => false
+                                    'has_offer' => false,
+                                    'has_special_price' => $hasSpecialPrice
                                 ];
                             }
                         } else {
@@ -155,13 +201,19 @@
                             $itemTotal = $quantity * $basePrice;
                             $originalTotal += $itemTotal;
                             
+                            $displayName = $product->name;
+                            if ($hasSpecialPrice) {
+                                $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                            }
+                            
                             $displayItems[] = [
-                                'display_name' => $product->name,
+                                'display_name' => $displayName,
                                 'quantity' => $quantity,
                                 'price' => $basePrice,
                                 'totalprice' => $itemTotal,
                                 'is_foc' => false,
-                                'has_offer' => false
+                                'has_offer' => false,
+                                'has_special_price' => $hasSpecialPrice
                             ];
                         }
                     }
@@ -174,7 +226,8 @@
                             'price' => 0,
                             'totalprice' => 0,
                             'is_foc' => true,
-                            'has_offer' => false
+                            'has_offer' => false,
+                            'has_special_price' => false
                         ];
                     }
                     
@@ -182,11 +235,14 @@
                 @endphp
                 
                 @forelse($displayItems as $item)
-                <tr @if($item['has_offer']) class="table-info" @endif>
+                <tr @if($item['has_offer']) class="table-info" @elseif($item['has_special_price']) class="table-warning" @endif>
                     <td>
                         {{ $item['display_name'] }}
                         @if($item['has_offer'])
                             <span class="badge badge-info">Volume Offer</span>
+                        @endif
+                        @if($item['has_special_price'])
+                            <span class="badge badge-warning">Special Price</span>
                         @endif
                         @if($item['is_foc'])
                             <span class="badge badge-success">FOC</span>
@@ -431,9 +487,22 @@
             background-color: #e3f2fd;
         }
         
+        .table-warning {
+            background-color: #fff3cd;
+        }
+        
         .badge-info {
             background-color: #17a2b8;
             color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        
+        .badge-warning {
+            background-color: #ffc107;
+            color: #212529;
             padding: 3px 8px;
             border-radius: 12px;
             font-size: 11px;
