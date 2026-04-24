@@ -42,6 +42,11 @@ class InvoiceDataTable extends DataTable
                         $subQuery->where('name', 'like', '%' . $keyword . '%');
                     });
                 });
+            })
+             ->filterColumn('customer_id', function ($query, $keyword) {
+                $query->whereHas('customer', function ($subQuery) use ($keyword) {
+                    $subQuery->where('company', 'like', '%' . $keyword . '%');
+                });
             });
     }
 
@@ -291,7 +296,9 @@ class InvoiceDataTable extends DataTable
             'customer_id' => new \Yajra\DataTables\Html\Column([
                 'title' => 'Customer',
                 'data' => 'customer.company',
-                'name' => 'customer.company'
+                'name' => 'customer_id',  // Change to 'customer_id'
+                'searchable' => true,     // Explicitly enable searchable
+                'orderable' => true       // Enable ordering
             ]),
 
             'driver' => new \Yajra\DataTables\Html\Column([
