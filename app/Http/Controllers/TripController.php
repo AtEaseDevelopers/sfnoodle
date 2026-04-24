@@ -229,7 +229,7 @@ class TripController extends AppBaseController
     }
 
 
-    public function generateTripReport($trip_id) 
+    public static function generateTripReport($trip_id) 
     {
         $trip = Trip::where('uuid', $trip_id)->first();
         
@@ -314,7 +314,7 @@ class TripController extends AppBaseController
                 $quantity = $detail->quantity;
                 
                 // Use the same calculation logic as invoice creation
-                $priceCalculation = $this->calculateProductPriceForInvoice(
+                $priceCalculation = self::calculateProductPriceForInvoice(
                     $product, 
                     $quantity, 
                     $invoice->customer_id
@@ -702,7 +702,7 @@ class TripController extends AppBaseController
         }
     }
 
-    private function calculateProductPriceForInvoice($product, $quantity, $customerId)
+    private static function calculateProductPriceForInvoice($product, $quantity, $customerId)
     {
         $customer = Customer::find($customerId);
         $specialPrices = SpecialPrice::where('product_id', $product->id)
