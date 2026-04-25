@@ -5588,6 +5588,9 @@ class DriverController extends Controller
                 ], 200);
             }
             
+            // Get customer for price category check
+            $customer = $invoice->customer;
+            
             // Prepare purchased items for FOC calculation
             $purchasedItems = [];
             foreach ($invoice->invoiceDetails as $detail) {
@@ -5613,13 +5616,35 @@ class DriverController extends Controller
                 $quantity = $detail->quantity;
                 $regularPrice = $product->price;
                 
-                // Check for special price for this customer
-                $specialPrice = SpecialPrice::where('product_id', $product->id)
-                    ->where('customer_id', $invoice->customer_id)
+                // Get all special prices for this product
+                $specialPrices = SpecialPrice::where('product_id', $product->id)
                     ->where('status', 1)
-                    ->first();
+                    ->get();
+                
+                $specialPrice = null;
+                
+                // First priority: Check for direct customer match
+                foreach ($specialPrices as $sp) {
+                    if ($sp->customer_id == $invoice->customer_id) {
+                        $specialPrice = $sp;
+                        break;
+                    }
+                }
+                
+                // Second priority: Check for price category match (if no customer-specific found)
+                if (!$specialPrice && $customer && $customer->price_category) {
+                    foreach ($specialPrices as $sp) {
+                        if ($sp->price_category && $sp->price_category == $customer->price_category) {
+                            $specialPrice = $sp;
+                            break;
+                        }
+                    }
+                }
                 
                 $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+                $hasSpecialPrice = $specialPrice ? true : false;
+                $specialPriceType = $specialPrice ? 
+                    ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific') : null;
                 
                 // Get tiered pricing
                 $tieredPricing = $product->tiered_pricing;
@@ -5652,6 +5677,12 @@ class DriverController extends Controller
                             $originalTotal += $regularTotalForThisTier;
                             $offerAmount += ($regularTotalForThisTier - $itemTotal);
                             
+                            // Add display name with special price info if applicable
+                            $displayName = $product->code . " ({$tierQuantity} units)";
+                            if ($hasSpecialPrice) {
+                                $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                            }
+                            
                             // Add as a single line item with quantity = number of packages
                             $allItems[] = [
                                 'product_code' => $product->code,
@@ -5660,9 +5691,11 @@ class DriverController extends Controller
                                 'price' => $tierPrice, // Package price
                                 'totalprice' => $itemTotal,
                                 'is_foc' => false,
-                                'display_name' => $product->code . " ({$tierQuantity} units)",
+                                'display_name' => $displayName,
                                 'has_offer' => true,
-                                'tier_quantity' => $tierQuantity
+                                'tier_quantity' => $tierQuantity,
+                                'has_special_price' => $hasSpecialPrice,
+                                'special_price_type' => $specialPriceType
                             ];
                             
                             $remainingQuantity -= $quantityInThisTier;
@@ -5674,6 +5707,12 @@ class DriverController extends Controller
                         $itemTotal = $remainingQuantity * $basePrice;
                         $originalTotal += $itemTotal;
                         
+                        // Add display name with special price info if applicable
+                        $displayName = $product->code;
+                        if ($hasSpecialPrice) {
+                            $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                        }
+                        
                         $allItems[] = [
                             'product_code' => $product->code,
                             'product_name' => $product->name,
@@ -5681,14 +5720,22 @@ class DriverController extends Controller
                             'price' => $basePrice,
                             'totalprice' => $itemTotal,
                             'is_foc' => false,
-                            'display_name' => $product->code,
-                            'has_offer' => false
+                            'display_name' => $displayName,
+                            'has_offer' => false,
+                            'has_special_price' => $hasSpecialPrice,
+                            'special_price_type' => $specialPriceType
                         ];
                     }
                 } else {
                     // No tiered pricing, use base price (special or regular)
                     $itemTotal = $quantity * $basePrice;
                     $originalTotal += $itemTotal;
+                    
+                    // Add display name with special price info if applicable
+                    $displayName = $product->code;
+                    if ($hasSpecialPrice) {
+                        $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                    }
                     
                     $allItems[] = [
                         'product_code' => $product->code,
@@ -5697,8 +5744,10 @@ class DriverController extends Controller
                         'price' => $basePrice,
                         'totalprice' => $itemTotal,
                         'is_foc' => false,
-                        'display_name' => $product->code,
-                        'has_offer' => false
+                        'display_name' => $displayName,
+                        'has_offer' => false,
+                        'has_special_price' => $hasSpecialPrice,
+                        'special_price_type' => $specialPriceType
                     ];
                 }
             }
@@ -5713,7 +5762,8 @@ class DriverController extends Controller
                     'totalprice' => 0,
                     'is_foc' => true,
                     'display_name' => $focItem['product_code'] . " (FOC)",
-                    'has_offer' => false
+                    'has_offer' => false,
+                    'has_special_price' => false
                 ];
             }
             
