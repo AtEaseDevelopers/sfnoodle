@@ -7543,10 +7543,11 @@ class DriverController extends Controller
                         'invoice_count' => $invoiceCount
                     ];
                 })
-                ->values() // Reset array keys
+                ->values() // Convert to sequential array (0, 1, 2...)
                 ->sortByDesc('total_amount') // Sort by total amount descending
+                ->values() // Re-index after sorting
                 ->toArray();
-            
+                
             $result = [
                 'sales' => round($totalAmount,2),
                 'credit' => round($totalCreditAmount,2),
@@ -7639,11 +7640,11 @@ class DriverController extends Controller
                 ->values()
                 ->toArray();
 
-            $customerSummary = $invoices
+           $customerSummary = $invoices
                 ->groupBy('customer_id')
                 ->map(function($customerInvoices, $customerId) {
                     $firstInvoice = $customerInvoices->first();
-                    $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : '-';
+                    $customerName = $firstInvoice->customer ? $firstInvoice->customer->company : 'Unknown Customer';
                     
                     // Calculate total amount for this customer
                     $totalAmount = $customerInvoices->sum(function($invoice) {
@@ -7661,10 +7662,11 @@ class DriverController extends Controller
                         'invoice_count' => $invoiceCount
                     ];
                 })
-                ->values() // Reset array keys
+                ->values() // Convert to sequential array (0, 1, 2...)
                 ->sortByDesc('total_amount') // Sort by total amount descending
+                ->values() // Re-index after sorting
                 ->toArray();
-                
+
             $summaryData = [
                 'trip_summary' => [
                     'trip_id' => $tripSummary['trip_info']['trip_id'] ?? 'T-' . $driver->trip_id,
