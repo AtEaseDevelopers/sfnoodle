@@ -624,7 +624,7 @@ class InvoiceController extends AppBaseController
                 'price' => $effectiveUnitPrice,
                 'totalprice' => $discountedTotal,
                 'is_foc' => false,
-                'display_name' => $product->code . ($hasSpecialPrice ? ' (Special Price)' : ''),
+                'display_name' => $product->code,
                 'has_offer' => ($regularTotal > $discountedTotal),
                 'regular_price' => $regularPrice,
                 'discount_amount' => ($regularTotal - $discountedTotal)

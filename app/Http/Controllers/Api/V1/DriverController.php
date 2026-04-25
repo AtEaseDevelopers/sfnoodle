@@ -5759,7 +5759,7 @@ class DriverController extends Controller
                         // Add display name with special price info if applicable
                         $displayName = $product->code;
                         if ($hasSpecialPrice) {
-                            $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                            $displayName;
                         }
                         
                         $allItems[] = [
@@ -7547,7 +7547,7 @@ class DriverController extends Controller
                 ->sortByDesc('total_amount') // Sort by total amount descending
                 ->values() // Re-index after sorting
                 ->toArray();
-                
+
             $result = [
                 'sales' => round($totalAmount,2),
                 'credit' => round($totalCreditAmount,2),
