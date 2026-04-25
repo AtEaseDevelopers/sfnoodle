@@ -4096,7 +4096,7 @@ class DriverController extends Controller
                             // Add display name with special price info if applicable
                             $displayName = $product->code . " ({$tierQuantity} units)";
                             if ($hasSpecialPrice) {
-                                $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
+                                $displayName;
                             }
                             
                             $allItems[] = [
