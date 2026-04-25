@@ -8329,7 +8329,7 @@ class DriverController extends Controller
             'id' => 'required|exists:inventory_requests,id',
             'items' => 'sometimes|array',
             'items.*.product_id' => 'required_with:items|exists:products,id',
-            'items.*.quantity' => 'required_with:items|numeric|min:1'
+            'items.*.quantity' => 'required_with:items|numeric|min:0' // Changed from min:1 to min:0
         ]);
 
         if ($validator->fails()) {
@@ -8391,24 +8391,30 @@ class DriverController extends Controller
                 
                 // Process each modified item
                 foreach ($modifiedItems as $item) {
-                    // Update inventory balance for the driver
-                    $inventoryBalance = InventoryBalance::firstOrNew([
-                        'driver_id' => $inventoryRequest->driver_id,
-                        'product_id' => $item['product_id']
-                    ]);
+                    $quantity = (float) $item['quantity'];
                     
-                    // Add the requested quantity to existing balance
-                    $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $item['quantity'];
-                    $inventoryBalance->save();
+                    // Only update inventory if quantity is greater than 0
+                    if ($quantity > 0) {
+                        // Update inventory balance for the driver
+                        $inventoryBalance = InventoryBalance::firstOrNew([
+                            'driver_id' => $inventoryRequest->driver_id,
+                            'product_id' => $item['product_id']
+                        ]);
+                        
+                        // Add the requested quantity to existing balance
+                        $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $quantity;
+                        $inventoryBalance->save();
 
-                    // Create inventory transaction record for STOCK IN
-                    InventoryTransaction::createTransaction(
-                        $inventoryRequest->driver_id,
-                        $item['product_id'],
-                        $item['quantity'],
-                        InventoryTransaction::TYPE_STOCK_IN,
-                        'Stock Request Approval - Approved by: ' . $user->name,
-                    );
+                        // Create inventory transaction record for STOCK IN
+                        InventoryTransaction::createTransaction(
+                            $inventoryRequest->driver_id,
+                            $item['product_id'],
+                            $quantity,
+                            InventoryTransaction::TYPE_STOCK_IN,
+                            'Stock Request Approval - Approved by: ' . $user->name,
+                        );
+                    }
+                    // If quantity is 0, skip inventory update (no changes needed)
                 }
                 
                 $approvalMessage = 'Stock Request approved successfully with modified items.';
@@ -8436,24 +8442,30 @@ class DriverController extends Controller
                         continue; // Skip invalid items
                     }
                     
-                    // Update inventory balance for the driver
-                    $inventoryBalance = InventoryBalance::firstOrNew([
-                        'driver_id' => $inventoryRequest->driver_id,
-                        'product_id' => $item['product_id']
-                    ]);
+                    $quantity = (float) $item['quantity'];
                     
-                    // Add the requested quantity to existing balance
-                    $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $item['quantity'];
-                    $inventoryBalance->save();
+                    // Only update inventory if quantity is greater than 0
+                    if ($quantity > 0) {
+                        // Update inventory balance for the driver
+                        $inventoryBalance = InventoryBalance::firstOrNew([
+                            'driver_id' => $inventoryRequest->driver_id,
+                            'product_id' => $item['product_id']
+                        ]);
+                        
+                        // Add the requested quantity to existing balance
+                        $inventoryBalance->quantity = ($inventoryBalance->quantity ?? 0) + $quantity;
+                        $inventoryBalance->save();
 
-                    // Create inventory transaction record for STOCK IN
-                    InventoryTransaction::createTransaction(
-                        $inventoryRequest->driver_id,
-                        $item['product_id'],
-                        $item['quantity'],
-                        InventoryTransaction::TYPE_STOCK_IN,
-                        'Stock Request Approval - Approved by: ' . $user->name,
-                    );
+                        // Create inventory transaction record for STOCK IN
+                        InventoryTransaction::createTransaction(
+                            $inventoryRequest->driver_id,
+                            $item['product_id'],
+                            $quantity,
+                            InventoryTransaction::TYPE_STOCK_IN,
+                            'Stock Request Approval - Approved by: ' . $user->name,
+                        );
+                    }
+                    // If quantity is 0, skip inventory update (no changes needed)
                 }
                 
                 $approvalMessage = 'Stock Request approved successfully.';
@@ -8468,7 +8480,7 @@ class DriverController extends Controller
                 $itemsWithDetails[] = [
                     'product_id' => $item['product_id'],
                     'product_name' => $product ? $product->name : 'Unknown Product',
-                    'quantity' => $item['quantity']
+                    'quantity' => (float) $item['quantity']
                 ];
             }
             
