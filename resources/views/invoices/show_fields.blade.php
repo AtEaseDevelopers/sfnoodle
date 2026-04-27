@@ -181,7 +181,7 @@
                                 $itemTotal = $remainingQuantity * $basePrice;
                                 $originalTotal += $itemTotal;
                                 
-                                $displayName = $product->name;
+                                $displayName = $product->code;
                                 if ($hasSpecialPrice) {
                                     $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
                                 }
@@ -201,7 +201,7 @@
                             $itemTotal = $quantity * $basePrice;
                             $originalTotal += $itemTotal;
                             
-                            $displayName = $product->name;
+                            $displayName = $product->code;
                             if ($hasSpecialPrice) {
                                 $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
                             }

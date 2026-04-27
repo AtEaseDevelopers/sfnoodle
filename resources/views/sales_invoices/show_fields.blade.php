@@ -67,7 +67,8 @@
                 @php
                     // Get sales invoice details
                     $salesInvoiceDetails = $salesInvoice->salesInvoiceDetails;
-                    
+                    $customer = $salesInvoice->customer;
+
                     // Prepare purchased items for FOC calculation
                     $purchasedItems = [];
                     foreach ($salesInvoiceDetails as $detail) {
@@ -87,20 +88,40 @@
                     
                     // Process each purchased item with tiered pricing
                     foreach ($salesInvoiceDetails as $detail) {
-                        $product = $detail->product;
-                        if (!$product) {
-                            continue;
-                        }
-                        $quantity = $detail->quantity;
-                        $regularPrice = $product->price ?? 0;
+                        $product = \App\Models\Product::find($detail['product_id']);
+                        $quantity = $detail['quantity'];
+                        $regularPrice = $product->price;
                         
-                        // Check for special price for this customer
-                        $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                            ->where('customer_id', $salesInvoice->customer_id)
+                        // Get all special prices for this product
+                        $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
                             ->where('status', 1)
-                            ->first();
+                            ->get();
+                        
+                        $specialPrice = null;
+                        
+                        // First priority: Check for direct customer match
+                        foreach ($specialPrices as $sp) {
+                            if ($sp->customer_id == $salesInvoice->customer_id) {
+                                $specialPrice = $sp;
+                                break;
+                            }
+                        }
+                        
+                        // Second priority: Check for price category match
+                        if (!$specialPrice && $customer && $customer->price_category) {
+                            foreach ($specialPrices as $sp) {
+                                if ($sp->price_category && $sp->price_category == $customer->price_category) {
+                                    $specialPrice = $sp;
+                                    break;
+                                }
+                            }
+                        }
                         
                         $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
+                        $hasSpecialPrice = $specialPrice ? true : false;
+                        $specialPriceType = $specialPrice ? 
+                            ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific') : null;
+                        
                         $tieredPricing = $product->tiered_pricing;
                         
                         if (!empty($tieredPricing) && is_array($tieredPricing)) {
@@ -127,7 +148,7 @@
                                     $offerAmount += ($regularTotalForThisTier - $itemTotal);
                                     
                                     $displayItems[] = [
-                                        'display_name' => $product->name . " ({$tierQuantity} units)",
+                                        'display_name' => $product->code . " ({$tierQuantity} units)",
                                         'quantity' => $numberOfPackages,
                                         'price' => $tierPrice,
                                         'totalprice' => $itemTotal,
@@ -145,7 +166,7 @@
                                 $originalTotal += $itemTotal;
                                 
                                 $displayItems[] = [
-                                    'display_name' => $product->name,
+                                    'display_name' => $product->code,
                                     'quantity' => $remainingQuantity,
                                     'price' => $basePrice,
                                     'totalprice' => $itemTotal,
@@ -159,7 +180,7 @@
                             $originalTotal += $itemTotal;
                             
                             $displayItems[] = [
-                                'display_name' => $product->name,
+                                'display_name' => $product->code,
                                 'quantity' => $quantity,
                                 'price' => $basePrice,
                                 'totalprice' => $itemTotal,

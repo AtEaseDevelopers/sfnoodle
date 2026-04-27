@@ -1,13 +1,13 @@
 <!-- Product Id Field -->
 <div class="form-group">
     {!! Form::label('product_id', __('special_prices.product')) !!}:
-    <p>{{ $specialPrice->product->name }}</p>
+    <p>{{ $specialPrice->product->name }} ({{ $specialPrice->product->code }})</p>
 </div>
 
 <!-- Customer Id Field -->
 <div class="form-group">
     {!! Form::label('customer_id', __('special_prices.customer')) !!}:
-    <p>{{ $specialPrice->customer->company }}</p>
+    <p>{{ $specialPrice->customer->company ?? '-' }}</p>
 </div>
 
 <!-- Price Field -->

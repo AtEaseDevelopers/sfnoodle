@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>{{ config('app.name') }}</title>
     <style>
+        @page { margin: 0; }
+        html, body { page-break-inside: avoid; page-break-after: avoid; }
         * {
             margin: 0;
             padding: 0;

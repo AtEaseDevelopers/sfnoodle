@@ -1,7 +1,7 @@
 <!-- Product Id Field -->
 <div class="form-group">
     {!! Form::label('product_id', __('focs.product')) !!}:
-    <p>{{ $foc->product->name }}</p>
+    <p>{{ $foc->product->name }} ({{ $foc->product->code }})</p>
 </div>
 
 <!-- Customer Id Field -->
@@ -19,7 +19,7 @@
 <!-- Free Product Id Field -->
 <div class="form-group">
     {!! Form::label('free_product_id', __('focs.free_product')) !!}:
-    <p>{{ $foc->product->name }}</p>
+    <p>{{ $foc->freeProduct->name }} ({{ $foc->freeProduct->code }})</p>
 </div>
 
 <!-- Free Quantity Field -->

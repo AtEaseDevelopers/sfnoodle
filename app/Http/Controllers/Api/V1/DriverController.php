@@ -1862,8 +1862,8 @@ class DriverController extends Controller
     
             $min = 450;
             $each = 23;
-            $height = (count($invoice['invoicedetail']) * $each) + $min;
-    
+            $height = (count($invoice['invoicedetail']) * $each) + $min;    
+            
             try
             {
                 $credit = DB::select('call ice_spGetCustomerCreditByDate("'.$invoice->updated_at.'",'.$invoice->customer_id.');');
@@ -4124,9 +4124,6 @@ class DriverController extends Controller
                         
                         // Add display name with special price info if applicable
                         $displayName = $product->code;
-                        if ($hasSpecialPrice) {
-                            $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
-                        }
                         
                         $allItems[] = [
                             'product_code' => $product->code,
@@ -4148,9 +4145,6 @@ class DriverController extends Controller
                     
                     // Add display name with special price info if applicable
                     $displayName = $product->code;
-                    if ($hasSpecialPrice) {
-                        $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
-                    }
                     
                     $allItems[] = [
                         'product_code' => $product->code,
@@ -4185,9 +4179,7 @@ class DriverController extends Controller
             // Calculate final total after discount
             $finalTotal = $originalTotal - $offerAmount;
             
-            $min = 450;
-            $each = 23;
-            $height = (count($allItems) * $each) + $min;
+            $height = (count($allItems) * 50) + 600;
             $creator = $salesInvoice->creator;
             
             $pdf = Pdf::loadView('sales_invoices.print', array(
@@ -5728,10 +5720,7 @@ class DriverController extends Controller
                             
                             // Add display name with special price info if applicable
                             $displayName = $product->code . " ({$tierQuantity} units)";
-                            if ($hasSpecialPrice) {
-                                $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
-                            }
-                            
+                        
                             // Add as a single line item with quantity = number of packages
                             $allItems[] = [
                                 'product_code' => $product->code,
@@ -5782,9 +5771,6 @@ class DriverController extends Controller
                     
                     // Add display name with special price info if applicable
                     $displayName = $product->code;
-                    if ($hasSpecialPrice) {
-                        $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
-                    }
                     
                     $allItems[] = [
                         'product_code' => $product->code,
@@ -5819,11 +5805,9 @@ class DriverController extends Controller
             // Calculate final total
             $finalTotal = $originalTotal - $offerAmount;
             
-            $min = 450;
-            $each = 23;
-            $height = (count($allItems) * $each) + $min;
+            $height = (count($allItems) * 50) + 600;
             $creator = $invoice->creator;
-            
+
             $pdf = Pdf::loadView('invoices.print', [
                 'invoices' => $invoice,
                 'creatorName' => $creator->name ?? 'System',

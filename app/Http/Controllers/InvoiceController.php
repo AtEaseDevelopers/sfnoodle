@@ -648,15 +648,7 @@ class InvoiceController extends AppBaseController
         // Calculate final total after discount
         $finalTotal = $originalTotal - $offerAmount;
         
-        // Better height calculation
-        $baseHeight = 400;
-        $itemHeight = 25;
-        $totalItems = count($allItems);
-        $height = $baseHeight + ($totalItems * $itemHeight);
-        
-        if ($height < 500) {
-            $height = 500;
-        }
+        $height = (count($allItems) * 50) + 600;
         
         $creator = $invoice->creator;
         

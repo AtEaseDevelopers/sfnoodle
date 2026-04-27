@@ -756,16 +756,7 @@ class SalesInvoiceController extends AppBaseController
         // Calculate final total after discount
         $finalTotal = $originalTotal - $offerAmount;
         
-        // Better height calculation
-        $baseHeight = 400; // Base height for header and footer
-        $itemHeight = 25; // Height per item row
-        $totalItems = count($allItems);
-        $height = $baseHeight + ($totalItems * $itemHeight);
-        
-        // Ensure minimum height
-        if ($height < 500) {
-            $height = 500;
-        }
+        $height = (count($allItems) * 50) + 600;
         
         $creator = $salesInvoice->creator; // Returns User or Driver model
         

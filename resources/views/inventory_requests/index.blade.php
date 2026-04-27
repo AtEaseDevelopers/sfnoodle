@@ -1745,56 +1745,60 @@
             $('#viewStatusBadge').html('<span class="badge ' + badgeClass + '">' + status.charAt(0).toUpperCase() + status.slice(1) + '</span>');
             
             // Show items table
+            // Show items table - Show ONLY Product Code
             if (requestData.items && Array.isArray(requestData.items) && requestData.items.length > 0) {
                 var itemsHtml = '<div class="table-responsive"><table class="table table-sm table-bordered">';
-                itemsHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product</th><th width="20%" class="text-center">Requested Quantity</th></tr></thead><tbody>';
-                
+                itemsHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product Code</th><th width="20%" class="text-center">Requested Quantity</th></tr></thead><tbody>';
+
                 var totalQuantity = 0;
-                
+
                 requestData.items.forEach(function(item, index) {
                     var quantity = item.quantity || 0;
-                    var productName = item.product_name;
-                    if (!productName && item.product_id) {
-                        productName = getProductName(item.product_id);
-                    } else if (!productName) {
-                        productName = 'Unknown Product';
+                    var productCode = item.product_code;
+
+                    if (!productCode && item.product_id && productsLookup[item.product_id]) {
+                        productCode = productsLookup[item.product_id].code;
+                    } else if (!productCode) {
+                        productCode = '-';
                     }
-                    
+
                     itemsHtml += '<tr>';
                     itemsHtml += '<td class="text-center">' + (index + 1) + '</td>';
-                    itemsHtml += '<td>' + productName + '</td>'; 
+                    itemsHtml += '<td><strong>' + productCode + '</strong></td>';
                     itemsHtml += '<td class="text-center"><strong>' + quantity + '</strong></td>';
                     itemsHtml += '</tr>';
-                    
+
                     totalQuantity += parseInt(quantity);
                 });
-                
+
                 itemsHtml += '</tbody>';
                 itemsHtml += '<tfoot class="bg-light"><tr>';
                 itemsHtml += '<td colspan="2" class="text-right"><strong>Total:</strong></td>';
                 itemsHtml += '<td class="text-center"><strong>' + totalQuantity + '</strong></td>';
                 itemsHtml += '</tr></tfoot>';
                 itemsHtml += '</table></div>';
-                
+
                 $('#viewItemsTable').html(itemsHtml);
             } else {
                 // For backward compatibility with old single-item requests
                 var singleItemHtml = '<div class="table-responsive"><table class="table table-sm table-bordered">';
-                singleItemHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product</th><th width="20%" class="text-center">Requested Quantity</th></tr></thead><tbody>';
-                
+                singleItemHtml += '<thead class="bg-light"><tr><th width="5%">#</th><th>Product Code</th><th width="20%" class="text-center">Requested Quantity</th></tr></thead><tbody>';
+
                 if (requestData.product_id && requestData.quantity) {
-                    var productName = getProductName(requestData.product_id);
+                    var productCode = '-';
+                    if (productsLookup[requestData.product_id]) {
+                        productCode = productsLookup[requestData.product_id].code;
+                    }
                     singleItemHtml += '<tr>';
                     singleItemHtml += '<td class="text-center">1</td>';
-                    singleItemHtml += '<td>' + (requestData.product_name || productName) + '</td>'; 
+                    singleItemHtml += '<td><strong>' + productCode + '</strong></td>';
                     singleItemHtml += '<td class="text-center"><strong>' + requestData.quantity + '</strong></td>';
                     singleItemHtml += '</tr>';
                 }
-                
+
                 singleItemHtml += '</tbody></table></div>';
                 $('#viewItemsTable').html(singleItemHtml);
             }
-            
             // Show/hide approval section - ONLY show when status is approved
             if (status === 'approved') {
                 $('#viewApprovedSection').show();

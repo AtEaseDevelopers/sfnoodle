@@ -157,7 +157,7 @@
                                 <div id="productListEdit" class="list-group">
                                     @foreach($products as $product)
                                         <a href="#" class="list-group-item list-group-item-action product-item" data-value="{{ $product->id }}">
-                                            {{ $product->name }}
+                                            {{ $product->code }}
                                         </a>
                                     @endforeach
                                 </div>
