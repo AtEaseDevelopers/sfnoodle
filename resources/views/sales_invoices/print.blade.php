@@ -13,25 +13,25 @@
         }
         
         body {
-            font-size: 18px;
+            font-size: 22px;
             font-family: 'Courier New', monospace;
             line-height: 1.2;
             padding: 10px;
         }
-        
+
         .header-section {
             text-align: center;
             margin-bottom: 15px;
         }
-        
+
         .company-name {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 22px;
             margin-bottom: 5px;
         }
-        
+
         .company-details {
-            font-size: 14px;
+            font-size: 18px;
             margin-bottom: 2px;
         }
         
@@ -63,7 +63,7 @@
         
         .info-table td {
             padding: 4px 0;
-            font-size: 18px;
+            font-size: 20px;
         }
         
         .product-table {
@@ -75,7 +75,7 @@
         .product-table th,
         .product-table td {
             padding: 6px 4px;
-            font-size: 18px;
+            font-size: 20px;
             vertical-align: top;
         }
         
@@ -100,7 +100,7 @@
         }
         
         .invoice-remark {
-            font-size: 13px;
+            font-size: 14px;
             margin: 10px 0;
         }
         
