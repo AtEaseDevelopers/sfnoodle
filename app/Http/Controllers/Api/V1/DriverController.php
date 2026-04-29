@@ -5419,7 +5419,7 @@ class DriverController extends Controller
             }
 
             // Get sales invoices
-            $invoices = $query->with(['customer:id,company,phone,paymentterm', 'invoiceDetails.product:id,name'])
+            $invoices = $query->with(['customer:id,company,phone,paymentterm', 'invoiceDetails.product:id,name,code,category'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
@@ -5480,6 +5480,8 @@ class DriverController extends Controller
                         return [
                             'product_id' => $detail->product_id,
                             'product_name' => optional($detail->product)->name ?? 'N/A',
+                            'product_code' => optional($detail->product)->code ?? 'N/A',
+                            'category' => $detail->product->category,
                             'quantity' => (float) $detail->quantity,
                             'price' => (float) $detail->price,
                             'total' => (float) $detail->totalprice,
@@ -5529,7 +5531,7 @@ class DriverController extends Controller
                 ->where('id', $id)
                 ->with([
                     'customer:id,company,address,phone,paymentterm',
-                    'invoiceDetails.product:id,name,code'
+                    'invoiceDetails.product:id,name,code,category'
                 ])
                 ->first();
 
@@ -5590,6 +5592,7 @@ class DriverController extends Controller
                         'product_id' => $detail->product_id,
                         'product_name' => optional($detail->product)->name ?? 'N/A',
                         'product_code' => optional($detail->product)->code ?? 'N/A',
+                        'category' => $detail->product->category,
                         'quantity' => (float) $detail->quantity,
                         'price' => (float) $detail->price,
                         'total' => (float) $detail->totalprice,
@@ -6922,10 +6925,10 @@ class DriverController extends Controller
             ->keyBy('id');
         
         $tripIds = $inventoryCounts->pluck('trip_id')->unique()->filter()->toArray();
-        $trips = Trip::whereIn('id', $tripIds)
+        $trips = Trip::whereIn('uuid', $tripIds)
             ->get()
-            ->keyBy('id');
-            
+            ->keyBy('uuid');
+
         // Helper function to convert UTC to UTC+8 (Malaysia Time)
         $convertToUTC8 = function($datetime) {
             if (empty($datetime)) {
@@ -6933,9 +6936,9 @@ class DriverController extends Controller
             }
             return Carbon::parse($datetime)->setTimezone('Asia/Kuala_Lumpur')->toDateTimeString();
         };
-        
+
         // Format the response
-        $formattedCounts = $inventoryCounts->map(function ($count) use ($products, $convertToUTC8) {
+        $formattedCounts = $inventoryCounts->map(function ($count) use ($products, $convertToUTC8, $trips, $driver) {
             $items = $count->items;
             $formattedItems = [];
             
@@ -6954,17 +6957,11 @@ class DriverController extends Controller
                 }, $items);
             }
             
-            $tripUuid = null;
-            $trip = $trips[$count->trip_id] ?? null;
-            if ($trip) {
-                $tripUuid = $trip->uuid;
-            }
-            
-            // Generate PDF URL using trip UUID instead of trip_id
-            $pdf_url = null;
-            if ($tripUuid) {
-                $pdf_url = $this->generateStockCountReport($driver->id, $tripUuid);
-            }
+            // $count->trip_id already stores the UUID directly
+            $tripUuid = $count->trip_id;
+
+            // Generate PDF — always attempt if trip_id exists
+            $pdf_url = $tripUuid ? $this->generateStockCountReport($driver->id, $tripUuid) : null;
             
             // Include driver info if you have driver relationship
             $driver = null;
@@ -6972,8 +6969,6 @@ class DriverController extends Controller
                 $driver = Driver::find($count->driver_id);
             }
             
-            $pdf_url = $this->generateStockCountReport($driver->id, $driver->trip_id);
-
             return [
                 'id' => $count->id,
                 'driver_id' => $count->driver_id,

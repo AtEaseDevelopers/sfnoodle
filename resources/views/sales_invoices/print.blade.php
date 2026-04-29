@@ -87,11 +87,13 @@
         .col-qty {
             width: 18%;
             text-align: right;
+            padding-right: 20px !important;
         }
         
         .col-price {
             width: 22%;
             text-align: right;
+            padding-right: 20px !important;
         }
         
         .col-total {
