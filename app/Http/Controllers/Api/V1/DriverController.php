@@ -5411,7 +5411,8 @@ class DriverController extends Controller
         try {
             // Start building the query
             $query = Invoice::where('is_driver', true)
-                ->where('created_by', $driver->id);
+                ->where('created_by', $driver->id)
+                ->where('created_at', '>=', now()->subDays(3)->startOfDay());
 
             // Apply customer filter if customer_id is provided
             if ($customer_id) {
