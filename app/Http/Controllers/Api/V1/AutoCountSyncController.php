@@ -278,6 +278,7 @@ class AutoCountSyncController extends Controller
                 $details[] = [
                     'item_code'   => $d->product->code,
                     'description' => $d->product->name,
+                    'uom'         => $d->product->uom !== null && $d->product->uom !== '' ? trim((string) $d->product->uom) : null,
                     'quantity'    => (int) $d->quantity,
                     'price'       => (float) $d->price,
                     'totalprice'  => (float) $d->totalprice,
@@ -293,6 +294,7 @@ class AutoCountSyncController extends Controller
                     : null,
                 'customer'     => ['code' => $customer->code, 'name' => $customer->company, 'tin' => $customer->tin ?? ''],
                 'payment_term' => ((int) $invoice->paymentterm === \App\Models\Invoice::PAYMENT_TYPE_CREDIT) ? 'Credit' : 'Cash',
+                'remark'       => $invoice->remark,
                 'sales_agent'  => $salesAgent,
                 'details'      => $details,
             ];
@@ -349,7 +351,8 @@ class AutoCountSyncController extends Controller
             if ($status === 'Synced') {
                 $invoice->autocount = 'Synced';
             } elseif ($status === 'Error') {
-                $invoice->autocount = $message !== '' ? 'Error: ' . $message : 'Error';
+                $errorText = $message !== '' ? 'Error: ' . $message : 'Error';
+                $invoice->autocount = mb_substr($errorText, 0, 255);
             } else {
                 $errors[] = "Invalid status for invoice {$invoiceId}: {$status}";
                 continue;
@@ -466,7 +469,8 @@ class AutoCountSyncController extends Controller
             if ($status === 'Synced') {
                 $payment->autocount = 'Synced';
             } elseif ($status === 'Error') {
-                $payment->autocount = $message !== '' ? 'Error: ' . $message : 'Error';
+                $errorText = $message !== '' ? 'Error: ' . $message : 'Error';
+                $payment->autocount = mb_substr($errorText, 0, 255);
             } else {
                 $errors[] = "Invalid status for payment {$paymentId}: {$status}";
                 continue;
