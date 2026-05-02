@@ -9359,4 +9359,364 @@ class DriverController extends Controller
         }
     }
 
+    public function bulkCreateInvoice(Request $request)
+    {
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if (empty($driver)) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data'    => null
+            ], 401);
+        }
+
+        if ($driver->trip_id == null) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
+                'data'    => null
+            ], 200);
+        }
+
+        $inventoryCountRecord = InventoryCount::where('driver_id', $driver->id)
+            ->where('trip_id', $driver->trip_id)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->first();
+
+        if ($inventoryCountRecord) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have completed inventory count, cannot add new invoice, You may continue in next new trip.',
+                'data'    => null
+            ], 200);
+        }
+
+        $invoicesInput = $request->input('invoices', []);
+
+        if (empty($invoicesInput) || !is_array($invoicesInput)) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'invoices field is required and must be an array',
+                'data'    => null
+            ], 200);
+        }
+
+        $results = [];
+
+        foreach ($invoicesInput as $index => $invoiceInput) {
+            try {
+                // Validate customer
+                $customer = Customer::find($invoiceInput['customer_id'] ?? null);
+                if (!$customer) {
+                    $results[] = [
+                        'index'   => $index,
+                        'success' => false,
+                        'error'   => 'Customer not found',
+                        'input'   => $invoiceInput
+                    ];
+                    continue;
+                }
+
+                $paymentTerm = $customer->paymentterm;
+
+                // Validate invoice fields
+                $validator = Validator::make($invoiceInput, [
+                    'invoiceno'              => 'nullable|string|max:255',
+                    'date'                   => 'required|date_format:d-m-Y',
+                    'customer_id'            => 'required|exists:customers,id',
+                    'remark'                 => 'nullable|string|max:255',
+                    'details'                => 'required|array|min:1',
+                    'details.*.product_id'   => 'required|exists:products,id',
+                    'details.*.quantity'     => 'required|numeric|min:0.01',
+                ]);
+
+                if ($validator->fails()) {
+                    $results[] = [
+                        'index'   => $index,
+                        'success' => false,
+                        'errors'  => $validator->errors()->toArray(),
+                        'input'   => $invoiceInput
+                    ];
+                    continue;
+                }
+
+                // Check inventory balance for all details
+                $insufficientProducts = [];
+                foreach ($invoiceInput['details'] as $detail) {
+                    $productId     = $detail['product_id'];
+                    $quantityNeeded = $detail['quantity'];
+                    $product       = Product::find($productId);
+                    $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                        ->where('product_id', $productId)
+                        ->first();
+
+                    if (!$inventoryBalance) {
+                        $insufficientProducts[] = [
+                            'product_id'         => $productId,
+                            'product_name'       => $product ? $product->name : 'Unknown',
+                            'required_quantity'  => $quantityNeeded,
+                            'available_quantity' => 0,
+                            'error'              => 'No inventory record found'
+                        ];
+                    } elseif ($inventoryBalance->quantity < $quantityNeeded) {
+                        $insufficientProducts[] = [
+                            'product_id'         => $productId,
+                            'product_name'       => $product ? $product->name : 'Unknown',
+                            'required_quantity'  => $quantityNeeded,
+                            'available_quantity' => $inventoryBalance->quantity,
+                            'error'              => 'Insufficient inventory'
+                        ];
+                    }
+                }
+
+                if (!empty($insufficientProducts)) {
+                    $results[] = [
+                        'index'                => $index,
+                        'success'              => false,
+                        'error'                => 'Insufficient inventory balance',
+                        'insufficient_products' => $insufficientProducts,
+                        'input'                => $invoiceInput
+                    ];
+                    continue;
+                }
+
+                DB::beginTransaction();
+
+                $date = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
+
+                $invoiceNo = !empty($invoiceInput['invoiceno']) && $invoiceInput['invoiceno'] !== 'SYSTEM GENERATED IF BLANK'
+                    ? $invoiceInput['invoiceno']
+                    : null;
+
+                // If provided invoice number already exists, generate a new one
+                if ($invoiceNo && Invoice::where('invoiceno', $invoiceNo)->exists()) {
+                    $invoiceNo = null;
+                }
+                if (!$invoiceNo) {
+                    $invoiceNo = Invoice::getNextInvoiceNumber($driver->id);
+                }
+
+                $total          = 0;
+                $invoiceDetails = [];
+
+                foreach ($invoiceInput['details'] as $detail) {
+                    $product          = Product::find($detail['product_id']);
+                    $priceCalculation = $this->calculateProductPriceForInvoice($product, $detail['quantity'], $customer->id);
+                    $itemTotal        = $priceCalculation['total_price'];
+                    $total           += $itemTotal;
+
+                    $invoiceDetails[] = [
+                        'product_id' => $detail['product_id'],
+                        'quantity'   => $detail['quantity'],
+                        'price'      => $detail['price'] ?? $priceCalculation['unit_price'],
+                        'totalprice' => $itemTotal,
+                        'remark'     => $detail['remark'] ?? null,
+                    ];
+                }
+
+                $invoice = Invoice::create([
+                    'invoiceno'   => $invoiceNo,
+                    'date'        => $date,
+                    'customer_id' => $customer->id,
+                    'remark'      => $invoiceInput['remark'] ?? null,
+                    'total'       => $total,
+                    'paymentterm' => $paymentTerm,
+                    'driver_id'   => $driver->id,
+                    'created_by'  => $driver->id,
+                    'is_driver'   => true,
+                    'trip_id'     => $driver->trip_id,
+                    'status'      => Invoice::STATUS_COMPLETED,
+                ]);
+
+                foreach ($invoiceDetails as $detail) {
+                    InvoiceDetail::create(array_merge($detail, ['invoice_id' => $invoice->id]));
+                }
+
+                // Create cash payment record
+                if ($paymentTerm == 'Cash') {
+                    $invoicePayment                = new \App\Models\InvoicePayment();
+                    $invoicePayment->invoice_id    = $invoice->id;
+                    $invoicePayment->type          = 2;
+                    $invoicePayment->customer_id   = $invoice->customer_id;
+                    $invoicePayment->amount        = $total;
+                    $invoicePayment->status        = 1;
+                    $invoicePayment->driver_id     = $driver->id;
+                    $invoicePayment->user_id       = null;
+                    $invoicePayment->approve_by    = $driver->name;
+                    $invoicePayment->approve_at    = now();
+                    $invoicePayment->remark        = $invoiceInput['payment_remark'] ?? 'Cash payment for invoice: ' . $invoice->invoiceno;
+                    $invoicePayment->save();
+                }
+
+                DB::commit();
+
+                // Deduct inventory balance
+                foreach ($invoiceDetails as $detail) {
+                    try {
+                        InventoryTransaction::createTransaction(
+                            $driver->id,
+                            $detail['product_id'],
+                            $detail['quantity'],
+                            InventoryTransaction::TYPE_INVOICE,
+                            'Bulk Create Invoice: ' . $invoice->invoiceno,
+                            $invoice->id
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Bulk invoice inventory transaction failed: ' . $e->getMessage());
+                    }
+
+                    try {
+                        $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                            ->where('product_id', $detail['product_id'])
+                            ->first();
+
+                        if ($inventoryBalance) {
+                            $inventoryBalance->quantity -= $detail['quantity'];
+                            $inventoryBalance->save();
+                        } else {
+                            InventoryBalance::create([
+                                'driver_id'  => $driver->id,
+                                'product_id' => $detail['product_id'],
+                                'quantity'   => -$detail['quantity']
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Bulk invoice inventory balance update failed: ' . $e->getMessage());
+                    }
+                }
+
+                $results[] = [
+                    'index'           => $index,
+                    'success'         => true,
+                    'invoiceno'       => $invoice->invoiceno,
+                    'invoice_id'      => $invoice->id,
+                    'date'            => \Carbon\Carbon::parse($invoice->date)->format('d-m-Y'),
+                    'customer_id'     => $invoice->customer_id,
+                    'customer_name'   => $customer->company,
+                    'total'           => (float) $invoice->total,
+                    'paymentterm'     => $invoice->paymentterm,
+                    'status'          => $invoice->getStatusTextAttribute(),
+                    'payment_created' => $paymentTerm == 'Cash',
+                    'items_count'     => count($invoiceDetails),
+                    'created_at'      => $invoice->created_at->format('Y-m-d H:i:s'),
+                ];
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Bulk invoice creation failed at index ' . $index . ': ' . $e->getMessage());
+                $results[] = [
+                    'index'   => $index,
+                    'success' => false,
+                    'error'   => $e->getMessage(),
+                    'input'   => $invoiceInput
+                ];
+            }
+        }
+
+        $successCount = collect($results)->where('success', true)->count();
+        $failCount    = collect($results)->where('success', false)->count();
+
+        return response()->json([
+            'result'        => true,
+            'message'       => __LINE__ . $this->message_separator . "Bulk create completed: {$successCount} succeeded, {$failCount} failed",
+            'data'          => [
+                'total_submitted' => count($invoicesInput),
+                'success_count'   => $successCount,
+                'fail_count'      => $failCount,
+                'results'         => $results,
+            ]
+        ], 200);
+    }
+
+    public function getOfflineCustomerList(Request $request)
+    {
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if (empty($driver)) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data'    => null
+            ], 401);
+        }
+        
+        try {
+            // Load all data upfront — 3 queries, rest is in-memory
+            $customers = Customer::select('id', 'company', 'paymentterm', 'price_category')
+                ->orderBy('company')
+                ->get();
+
+            $products = Product::select('id', 'name', 'code', 'category', 'price', 'tiered_pricing')
+                ->orderBy('name')
+                ->get();
+
+            // Exclude products blocked for this driver
+            $blockedProductIds = Product::whereJsonContains('blocked_drivers', (string) $driver->id)
+                ->pluck('id')
+                ->toArray();
+            if (!empty($blockedProductIds)) {
+                $products = $products->whereNotIn('id', $blockedProductIds)->values();
+            }
+
+            // Group special prices by product_id for fast lookup
+            $specialPricesByProduct = SpecialPrice::where('status', 1)
+                ->get()
+                ->groupBy('product_id');
+
+            $result = $customers->map(function ($customer) use ($products, $specialPricesByProduct) {
+                $priceCategory = $customer->price_category;
+
+                $productList = $products->map(function ($product) use ($customer, $priceCategory, $specialPricesByProduct) {
+                    $spList = $specialPricesByProduct->get($product->id, collect());
+
+                    // Priority 1: customer-specific special price
+                    $customerSp = $spList->firstWhere('customer_id', $customer->id);
+
+                    // Priority 2: price_category match
+                    $categorySp = null;
+                    if (!$customerSp && $priceCategory) {
+                        $categorySp = $spList->firstWhere('price_category', $priceCategory);
+                    }
+
+                    $tieredPricing = !empty($product->tiered_pricing) ? $product->tiered_pricing : null;
+
+                    return [
+                        'id'                   => $product->id,
+                        'name'                 => $product->name,
+                        'code'                 => $product->code,
+                        'category'             => $product->category,
+                        'default_price'        => (float) $product->price,
+                        'special_price'        => $customerSp ? (float) $customerSp->price : null,
+                        'price_category_price' => $categorySp ? (float) $categorySp->price : null,
+                        'tiered_pricing'       => $tieredPricing,
+                    ];
+                })->values();
+
+                return [
+                    'id'             => $customer->id,
+                    'company'        => $customer->company,
+                    'paymentterm'    => $customer->paymentterm,
+                    'price_category' => $priceCategory,
+                    'products'       => $productList,
+                ];
+            })->values();
+
+            return response()->json([
+                'result'  => true,
+                'message' => __LINE__ . $this->message_separator . 'Offline customer list retrieved successfully',
+                'data'    => [
+                    'total_customers' => $result->count(),
+                    'customers'       => $result,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error('getOfflineCustomerList failed: ' . $e->getMessage());
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Error retrieving offline customer list: ' . $e->getMessage(),
+                'data'    => null
+            ], 200);
+        }
+    }
+
 }

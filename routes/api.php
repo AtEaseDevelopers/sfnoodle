@@ -97,6 +97,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('/driver/get-invoice-list/{customer_id?}', [App\Http\Controllers\Api\V1\DriverController::class, 'getDriverInvoices']);
     Route::get('/driver/get-invoice-detail/{id}', [App\Http\Controllers\Api\V1\DriverController::class, 'getInvoiceById']);
     Route::post('/driver/invoice/{id}/cancel', [App\Http\Controllers\Api\V1\DriverController::class, 'cancelInvoice']);
+    Route::post('/driver/bulk-create-invoice', [App\Http\Controllers\Api\V1\DriverController::class, 'bulkCreateInvoice']);
+    Route::get('/driver/offline-customer-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getOfflineCustomerList']);
     Route::post('/driver/check-in-out', [App\Http\Controllers\Api\V1\DriverController::class, 'checkInOut']);
 
     //stock
