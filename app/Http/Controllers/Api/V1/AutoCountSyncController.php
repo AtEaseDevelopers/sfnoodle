@@ -275,13 +275,24 @@ class AutoCountSyncController extends Controller
                 if (!$d->product) {
                     continue;
                 }
+                $qty = (int) $d->quantity;
+                $total = (float) $d->totalprice;
+                $storedUnit = (float) $d->price;
+                // When stored unit × qty does not match line total (e.g. driver app saved catalog unit but tiered total),
+                // send the implied unit so AutoCount matches the charged SubTotal instead of overwriting to total/qty.
+                $lineTotalFromUnit = $qty > 0 ? round($storedUnit * $qty, 2) : 0.0;
+                $roundedTotal = round($total, 2);
+                $unitForSync = ($qty > 0 && abs($lineTotalFromUnit - $roundedTotal) > 0.02)
+                    ? round($total / $qty, 6)
+                    : $storedUnit;
+
                 $details[] = [
                     'item_code'   => $d->product->code,
                     'description' => $d->product->name,
                     'uom'         => $d->product->uom !== null && $d->product->uom !== '' ? trim((string) $d->product->uom) : null,
-                    'quantity'    => (int) $d->quantity,
-                    'price'       => (float) $d->price,
-                    'totalprice'  => (float) $d->totalprice,
+                    'quantity'    => $qty,
+                    'price'       => (float) $unitForSync,
+                    'totalprice'  => $total,
                 ];
             }
             $payloads[] = [
