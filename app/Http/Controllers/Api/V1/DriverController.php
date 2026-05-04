@@ -4518,7 +4518,6 @@ class DriverController extends Controller
         foreach ($details as $detail) {
             $productId = $detail['product_id'];
             $quantity = $detail['quantity'];
-            $unitPrice = $detail['price'];
 
             $product = Product::find($productId);
             
@@ -4531,7 +4530,7 @@ class DriverController extends Controller
             $calculatedDetails[] = [
                 'product_id' => $productId,
                 'quantity' => $quantity,
-                'price' => $unitPrice,
+                'price' => $priceCalculation['unit_price'],
                 'totalprice' => $itemTotal
             ];
         }
@@ -5268,7 +5267,7 @@ class DriverController extends Controller
                 $invoiceDetails[] = [
                     'product_id' => $productId,
                     'quantity' => $quantity,
-                    'price' => (int) $priceCalculation['unit_price'], // Return the unit price calculated
+                    'price' => $priceCalculation['unit_price'],
                     'totalprice' => $itemTotal,
                     'remark' => $detail['remark'] ?? null,
                 ];
