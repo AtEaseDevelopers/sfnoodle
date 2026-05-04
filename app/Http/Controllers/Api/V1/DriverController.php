@@ -9657,7 +9657,7 @@ class DriverController extends Controller
             $assignedCustomerIds = $customerGroup->customer_ids_only;
 
             // Load all data upfront — rest is in-memory
-            $customers = Customer::select('id', 'company', 'paymentterm', 'price_category')
+            $customers = Customer::select('id', 'company', 'paymentterm', 'price_category', 'phone','address')
                 ->whereIn('id', $assignedCustomerIds)
                 ->orderBy('company')
                 ->get();
@@ -9712,6 +9712,8 @@ class DriverController extends Controller
                 return [
                     'id'             => $customer->id,
                     'company'        => $customer->company,
+                    'phone'          => $customer->phone,
+                    'address'        => $customer->address,
                     'paymentterm'    => $customer->paymentterm,
                     'price_category' => $priceCategory,
                     'products'       => $productList,
