@@ -9635,10 +9635,33 @@ class DriverController extends Controller
         }
         
         try {
-            // Load all data upfront — 3 queries, rest is in-memory
+            // Resolve driver's assigned customer group
+            $assign = Assign::where('driver_id', $driver->id)->first();
+            if (!$assign || !$assign->customer_group_id) {
+                return response()->json([
+                    'result'  => false,
+                    'message' => __LINE__ . $this->message_separator . 'No customer group assigned to driver',
+                    'data'    => null
+                ], 200);
+            }
+
+            $customerGroup = CustomerGroup::where('id', $assign->customer_group_id)->first();
+            if (!$customerGroup) {
+                return response()->json([
+                    'result'  => false,
+                    'message' => __LINE__ . $this->message_separator . 'Customer group not found',
+                    'data'    => null
+                ], 200);
+            }
+
+            $assignedCustomerIds = $customerGroup->customer_ids_only;
+
+            // Load all data upfront — rest is in-memory
             $customers = Customer::select('id', 'company', 'paymentterm', 'price_category')
+                ->whereIn('id', $assignedCustomerIds)
                 ->orderBy('company')
                 ->get();
+
 
             $products = Product::select('id', 'name', 'code', 'category', 'price', 'tiered_pricing')
                 ->orderBy('name')
