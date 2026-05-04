@@ -11,105 +11,135 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-size: 22px;
             font-family: 'Courier New', monospace;
             line-height: 1.2;
             padding: 10px;
         }
-        
+
         .header-section {
             text-align: center;
             margin-bottom: 15px;
         }
-        
+
         .company-name {
             font-weight: bold;
             font-size: 22px;
             margin-bottom: 5px;
         }
-        
+
         .company-details {
             font-size: 18px;
+            margin-bottom: 2px;
         }
-        
+
         .invoice-title {
             font-size: 16px;
             font-weight: bold;
             text-align: center;
             margin: 5px 0;
         }
-        
+
         .section-separator {
             border-top: 1px dashed #000;
             margin: 15px 0;
         }
-        
+
         .left-align {
             text-align: left;
         }
-        
+
         .right-align {
             text-align: right;
         }
-        
+
+        /* FIXED: info table without breaking layout */
         .info-table {
             width: 100%;
             margin-bottom: 15px;
             border-collapse: collapse;
+            /* REMOVED table-layout: fixed - let it flow naturally */
         }
-        
+
         .info-table td {
             padding: 4px 0;
             font-size: 20px;
+            vertical-align: top;
         }
-        
+
+        /* Left column - fixed width, no wrapping */
+        .info-table td:first-child {
+            width: 140px; /* Increased width to prevent wrapping */
+            white-space: nowrap; /* Prevents text from wrapping to next line */
+            vertical-align: top;
+            padding-right: 10px; /* Space between columns */
+        }
+
+        /* Right column - can wrap and takes remaining space */
+        .info-table td:last-child {
+            white-space: normal;
+            word-wrap: break-word;
+            word-break: break-word;
+            text-align: right;
+        }
+
+        /* Special handling for the total row to match the same style */
+        .total-row .info-table td:first-child {
+            width: auto; /* Reset for total row */
+            white-space: normal;
+        }
+
+        .total-row .info-table td:last-child {
+            text-align: right;
+        }
+
         .product-table {
             width: 100%;
             margin: 10px 0;
             border-collapse: collapse;
         }
-        
+
         .product-table th,
         .product-table td {
             padding: 6px 4px;
             font-size: 20px;
             vertical-align: top;
         }
-        
+
         .col-sku {
             width: 40%;
             text-align: left;
         }
-        
+
         .col-qty {
             width: 18%;
             text-align: right;
             padding-right: 20px !important;
         }
-        
+
         .col-price {
             width: 22%;
             text-align: right;
             padding-right: 20px !important;
         }
-        
+
         .col-total {
             width: 20%;
             text-align: right;
         }
-        
+
         .invoice-remark {
             font-size: 14px;
             margin: 10px 0;
         }
-        
+
         .footer-line {
             border-top: 1px dashed #000;
             margin: 15px 0 10px 0;
         }
-        
+
         .total-row {
             font-weight: bold;
             font-size: 30px;
@@ -132,7 +162,7 @@
     
     <table class="info-table">
         <tr>
-            <td class="left-align">Invoice Date</td>
+            <td class="left-align">Invoice Date:</td>
             <td class="right-align">{{ $invoices->date ? date_format(date_create($invoices->date), 'd M Y') : '' }}</td>
         </tr>
         <tr>
