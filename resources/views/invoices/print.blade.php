@@ -32,7 +32,6 @@
         
         .company-details {
             font-size: 18px;
-            margin-bottom: 2px;
         }
         
         .invoice-title {

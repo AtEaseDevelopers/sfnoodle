@@ -312,7 +312,7 @@ class InvoiceDataTable extends DataTable
                 'data' => 'total',
                 'name' => 'total',
                 'searchable' => false,
-                'orderable' => true,
+                'orderable' => false,
                 
             ]),
 

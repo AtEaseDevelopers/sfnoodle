@@ -310,25 +310,16 @@ class TripController extends AppBaseController
             $invoiceDiscountedTotal = 0;
             
             foreach ($invoice->invoiceDetails as $detail) {
-                $product = $detail->product;
-                $quantity = $detail->quantity;
-                
-                // Use the same calculation logic as invoice creation
-                $priceCalculation = self::calculateProductPriceForInvoice(
-                    $product, 
-                    $quantity, 
-                    $invoice->customer_id
-                );
-                
-                $itemDiscountedTotal = $priceCalculation['total_price'];
+                // Use stored totalprice so amounts are fixed at invoice creation time
+                $itemDiscountedTotal = (float) $detail->totalprice;
                 $invoiceDiscountedTotal += $itemDiscountedTotal;
-                
+
                 // Accumulate sales by product (quantity)
                 if (!isset($salesByProduct[$detail->product_id])) {
                     $salesByProduct[$detail->product_id] = 0;
                 }
-                $salesByProduct[$detail->product_id] += $quantity;
-                
+                $salesByProduct[$detail->product_id] += $detail->quantity;
+
                 // Accumulate product amounts
                 if (!isset($productAmounts[$detail->product_id])) {
                     $productAmounts[$detail->product_id] = 0;
