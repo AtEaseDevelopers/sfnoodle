@@ -304,7 +304,7 @@ class AutoCountSyncController extends Controller
                         : \Illuminate\Support\Carbon::parse((string) $invoice->date)->format('Y-m-d H:i:s'))
                     : null,
                 'customer'     => ['code' => $customer->code, 'name' => $customer->company, 'tin' => $customer->tin ?? ''],
-                'payment_term' => ((int) $invoice->paymentterm === \App\Models\Invoice::PAYMENT_TYPE_CREDIT) ? 'Credit' : 'Cash',
+                'payment_term' => $invoice->paymentterm,
                 'remark'       => $invoice->remark,
                 'sales_agent'  => $salesAgent,
                 'details'      => $details,
