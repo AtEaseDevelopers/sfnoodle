@@ -9623,7 +9623,7 @@ class DriverController extends Controller
         ], 200);
     }
 
-    public function getOfflineCustomerList(Request $request)
+     public function getOfflineCustomerList(Request $request)
     {
         $driver = Driver::where('session', $request->header('session'))->first();
         if (empty($driver)) {
@@ -9635,33 +9635,59 @@ class DriverController extends Controller
         }
         
         try {
-            // Resolve driver's assigned customer group
-            $assign = Assign::where('driver_id', $driver->id)->first();
-            if (!$assign || !$assign->customer_group_id) {
+            // Get all customer groups assigned to this driver, ordered by group sequence
+            $assigns = Assign::where('driver_id', $driver->id)
+                ->orderBy('sequence', 'asc')
+                ->get();
+            
+            if ($assigns->isEmpty()) {
                 return response()->json([
                     'result'  => false,
-                    'message' => __LINE__ . $this->message_separator . 'No customer group assigned to driver',
+                    'message' => __LINE__ . $this->message_separator . 'No customer groups assigned to driver',
                     'data'    => null
                 ], 200);
             }
 
-            $customerGroup = CustomerGroup::where('id', $assign->customer_group_id)->first();
-            if (!$customerGroup) {
+            // Collect all customers with their sequences from each group
+            $customersWithSequences = [];
+            
+            foreach ($assigns as $assign) {
+                $customerGroup = CustomerGroup::where('id', $assign->customer_group_id)->first();
+                if ($customerGroup && !empty($customerGroup->customer_ids)) {
+                    // customer_ids is a JSON field, decode it
+                    $customerIdsData = is_array($customerGroup->customer_ids) 
+                        ? $customerGroup->customer_ids 
+                        : json_decode($customerGroup->customer_ids, true);
+                    
+                    foreach ($customerIdsData as $customerData) {
+                        if (isset($customerData['id']) && isset($customerData['sequence'])) {
+                            $customersWithSequences[$customerData['id']] = [
+                                'sequence' => $customerData['sequence'],
+                                'group_sequence' => $assign->sequence // Optional: store group sequence too
+                            ];
+                        }
+                    }
+                }
+            }
+            
+            if (empty($customersWithSequences)) {
                 return response()->json([
                     'result'  => false,
-                    'message' => __LINE__ . $this->message_separator . 'Customer group not found',
+                    'message' => __LINE__ . $this->message_separator . 'No customers found in assigned groups',
                     'data'    => null
                 ], 200);
             }
 
-            $assignedCustomerIds = $customerGroup->customer_ids_only;
-
-            // Load all data upfront — rest is in-memory
-            $customers = Customer::select('id', 'company', 'paymentterm', 'price_category', 'phone','address')
-                ->whereIn('id', $assignedCustomerIds)
-                ->orderBy('company')
+            // Load customers
+            $customerIds = array_keys($customersWithSequences);
+            $customers = Customer::select('id', 'company', 'paymentterm', 'price_category', 'phone', 'address')
+                ->whereIn('id', $customerIds)
                 ->get();
 
+            // Sort customers by their individual sequence (from customer_ids JSON)
+            $customers = $customers->sortBy(function ($customer) use ($customersWithSequences) {
+                return $customersWithSequences[$customer->id]['sequence'] ?? PHP_INT_MAX;
+            })->values();
 
             $products = Product::select('id', 'name', 'code', 'category', 'price', 'tiered_pricing')
                 ->orderBy('name')
@@ -9680,7 +9706,7 @@ class DriverController extends Controller
                 ->get()
                 ->groupBy('product_id');
 
-            $result = $customers->map(function ($customer) use ($products, $specialPricesByProduct) {
+            $result = $customers->map(function ($customer) use ($products, $specialPricesByProduct, $customersWithSequences) {
                 $priceCategory = $customer->price_category;
 
                 $productList = $products->map(function ($product) use ($customer, $priceCategory, $specialPricesByProduct) {
@@ -9716,6 +9742,7 @@ class DriverController extends Controller
                     'address'        => $customer->address,
                     'paymentterm'    => $customer->paymentterm,
                     'price_category' => $priceCategory,
+                    'sequence'       => $customersWithSequences[$customer->id]['sequence'] ?? null, // Individual customer sequence
                     'products'       => $productList,
                 ];
             })->values();

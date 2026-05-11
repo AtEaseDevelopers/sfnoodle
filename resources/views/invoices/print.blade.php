@@ -2,10 +2,19 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
     <title>{{ config('app.name') }}</title>
     <style>
-        @page { margin: 0; }
-        html, body { page-break-inside: avoid; page-break-after: avoid; }
+        @page { 
+            margin: 0;
+        }
+        
+        html, body { 
+            page-break-inside: avoid; 
+            page-break-after: avoid;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -13,10 +22,17 @@
         }
 
         body {
-            font-size: 22px;
-            font-family: 'Courier New', monospace;
+            font-size: 22px !important; /* Added !important */
+            font-family: 'Segoe UI', 'Arial', sans-serif;
             line-height: 1.2;
             padding: 10px;
+            /* Force stable rendering */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: geometricPrecision;
+            /* Prevent font size adjustment on mobile browsers */
+            -webkit-text-size-adjust: 100% !important;
+            text-size-adjust: 100% !important;
         }
 
         .header-section {
@@ -26,17 +42,17 @@
 
         .company-name {
             font-weight: bold;
-            font-size: 22px;
+            font-size: 22px !important;
             margin-bottom: 5px;
         }
 
         .company-details {
-            font-size: 18px;
+            font-size: 18px !important;
             margin-bottom: 2px;
         }
 
         .invoice-title {
-            font-size: 16px;
+            font-size: 16px !important; /* Added !important */
             font-weight: bold;
             text-align: center;
             margin: 5px 0;
@@ -55,29 +71,25 @@
             text-align: right;
         }
 
-        /* FIXED: info table without breaking layout */
         .info-table {
             width: 100%;
             margin-bottom: 15px;
             border-collapse: collapse;
-            /* REMOVED table-layout: fixed - let it flow naturally */
         }
 
         .info-table td {
             padding: 4px 0;
-            font-size: 20px;
+            font-size: 20px !important;
             vertical-align: top;
         }
 
-        /* Left column - fixed width, no wrapping */
         .info-table td:first-child {
-            width: 140px; /* Increased width to prevent wrapping */
-            white-space: nowrap; /* Prevents text from wrapping to next line */
+            width: 140px;
+            white-space: nowrap;
             vertical-align: top;
-            padding-right: 10px; /* Space between columns */
+            padding-right: 10px;
         }
 
-        /* Right column - can wrap and takes remaining space */
         .info-table td:last-child {
             white-space: normal;
             word-wrap: break-word;
@@ -85,9 +97,8 @@
             text-align: right;
         }
 
-        /* Special handling for the total row to match the same style */
         .total-row .info-table td:first-child {
-            width: auto; /* Reset for total row */
+            width: auto;
             white-space: normal;
         }
 
@@ -95,22 +106,26 @@
             text-align: right;
         }
 
+        /* CRITICAL: Added table-layout: fixed for performance */
         .product-table {
             width: 100%;
             margin: 10px 0;
             border-collapse: collapse;
+            table-layout: fixed; /* This is key for performance with many rows */
         }
 
         .product-table th,
         .product-table td {
             padding: 6px 4px;
-            font-size: 20px;
+            font-size: 20px !important;
             vertical-align: top;
         }
 
+        /* Fixed widths for table-layout: fixed to work properly */
         .col-sku {
             width: 40%;
             text-align: left;
+            word-wrap: break-word;
         }
 
         .col-qty {
@@ -131,7 +146,7 @@
         }
 
         .invoice-remark {
-            font-size: 14px;
+            font-size: 14px !important; /* Added !important */
             margin: 10px 0;
         }
 
@@ -142,15 +157,31 @@
 
         .total-row {
             font-weight: bold;
-            font-size: 30px;
+            font-size: 30px !important; /* Added !important */
             margin-top: 10px;
         }
         
+        .total-row .left-align,
+        .total-row .right-align {
+            font-size: 30px !important;
+        }
+        
+        /* Optional: Prevent page breaks inside rows when printing */
+        @media print {
+            body {
+                font-size: 22px !important;
+            }
+            
+            .product-table tbody tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header-section">
-        <div class="invoice-title">=============== INVOICES ==============</div>
+        <div class="invoice-title">========== TEMPORARY INVOICES ==========</div>
         <div class="company-name">{{ config('invoice.name', $invoices->customer->groupcompany->name ?? 'SF NOODLES SON BHD') }}</div>
         <div class="company-details">ROC.: {{ config('invoice.roc', '201001017887 (901592-A)') }}</div>
         <div class="company-details">{{ config('invoice.address1', '48, Jin TPP 1/18, Tim Industri Puchong,') }}</div>
@@ -190,26 +221,22 @@
         <tbody>
             @foreach ($allItems as $item)
             <tr>
-                <td class="col-sku">
-                    {{ $item['display_name'] }}
-                </td>
+                <td class="col-sku">{{ $item['display_name'] }}</td>
                 <td class="col-qty">{{ $item['quantity'] }}</td>
                 <td class="col-price">{{ number_format($item['price'], 2) }}</td>
                 <td class="col-total">{{ number_format($item['totalprice'], 2) }}</td>
             </tr>
             @endforeach
         </tbody>
-    </table>
+     </table>
 
     <div class="section-separator"></div>
 
     <div class="total-row">
         <table class="info-table">
             <tr>
-                <td class="left-align" style="font-weight: bold; font-size: 30px;">Total</td>
-                <td class="right-align" style="font-weight: bold; font-size: 30px;">
-                    RM {{ number_format($finalTotal, 2) }}
-                </td>
+                <td class="left-align">Total</td>
+                <td class="right-align">RM {{ number_format($finalTotal, 2) }}</td>
             </tr>
         </table>
     </div>
