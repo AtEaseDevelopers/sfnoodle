@@ -4947,36 +4947,70 @@ class DriverController extends Controller
         $insufficientProducts = [];
         $details = $request->input('details', []);
         
-        if (!empty($details)) {
-            foreach ($details as $index => $detail) {
-                $productId = $detail['product_id'];
-                $quantityNeeded = $detail['quantity'];
-                
-                // Get product name for error message
-                $product = Product::find($productId);
-                
-                // Check inventory balance
-                $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
-                    ->where('product_id', $productId)
-                    ->first();
-                
-                if (!$inventoryBalance) {
-                    $insufficientProducts[] = [
-                        'product_id' => $productId,
-                        'product_name' => $product ? $product->name : 'Unknown Product',
-                        'required_quantity' => $quantityNeeded,
-                        'available_quantity' => 0,
-                        'error' => 'No inventory record found'
-                    ];
-                } elseif ($inventoryBalance->quantity < $quantityNeeded) {
-                    $insufficientProducts[] = [
-                        'product_id' => $productId,
-                        'product_name' => $product ? $product->name : 'Unknown Product',
-                        'required_quantity' => $quantityNeeded,
-                        'available_quantity' => $inventoryBalance->quantity,
-                        'error' => 'Insufficient inventory'
-                    ];
-                }
+        // First, prepare purchased items array for FOC calculation
+        $purchasedItemsForFoc = [];
+        foreach ($details as $detail) {
+            $purchasedItemsForFoc[] = [
+                'product_id' => $detail['product_id'],
+                'quantity' => $detail['quantity']
+            ];
+        }
+        
+        // Calculate FOC items using the invoice date
+        $invoiceDate = \Carbon\Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
+        $focItems = \App\Models\foc::calculateFocItems($customer->id, $purchasedItemsForFoc, $invoiceDate);
+        
+        // Combine purchased items and FOC items for inventory check
+        $allItemsToCheck = [];
+        
+        // Add purchased items
+        foreach ($details as $detail) {
+            $productId = $detail['product_id'];
+            $quantityNeeded = $detail['quantity'];
+            
+            if (!isset($allItemsToCheck[$productId])) {
+                $allItemsToCheck[$productId] = 0;
+            }
+            $allItemsToCheck[$productId] += $quantityNeeded;
+        }
+        
+        // Add FOC items
+        foreach ($focItems as $focItem) {
+            $productId = $focItem['product_id'];
+            $quantityNeeded = $focItem['quantity'];
+            
+            if (!isset($allItemsToCheck[$productId])) {
+                $allItemsToCheck[$productId] = 0;
+            }
+            $allItemsToCheck[$productId] += $quantityNeeded;
+        }
+        
+        // Check inventory for all items (purchased + FOC)
+        foreach ($allItemsToCheck as $productId => $quantityNeeded) {
+            // Get product name for error message
+            $product = Product::find($productId);
+            
+            // Check inventory balance
+            $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                ->where('product_id', $productId)
+                ->first();
+            
+            if (!$inventoryBalance) {
+                $insufficientProducts[] = [
+                    'product_id' => $productId,
+                    'product_name' => $product ? $product->name : 'Unknown Product',
+                    'required_quantity' => $quantityNeeded,
+                    'available_quantity' => 0,
+                    'error' => 'No inventory record found'
+                ];
+            } elseif ($inventoryBalance->quantity < $quantityNeeded) {
+                $insufficientProducts[] = [
+                    'product_id' => $productId,
+                    'product_name' => $product ? $product->name : 'Unknown Product',
+                    'required_quantity' => $quantityNeeded,
+                    'available_quantity' => $inventoryBalance->quantity,
+                    'error' => 'Insufficient inventory'
+                ];
             }
         }
 
@@ -4986,7 +5020,7 @@ class DriverController extends Controller
                 'result' => false,
                 'message' => __LINE__ . $this->message_separator . 'Insufficient inventory balance',
                 'errors' => [
-                    'inventory' => ['Some products have insufficient inventory']
+                    'inventory' => ['Some products have insufficient inventory (including FOC items)']
                 ],
                 'insufficient_products' => $insufficientProducts,
                 'data' => null
@@ -5025,7 +5059,7 @@ class DriverController extends Controller
                 
                 // Calculate price using the logic
                 $priceCalculation = $this->calculateProductPriceForInvoice($product, $quantity, $customer->id);
-    
+
                 $itemTotal = $priceCalculation['total_price'];
                 $total += $itemTotal;  // Sum all item totals to get invoice total
                 
@@ -5087,7 +5121,8 @@ class DriverController extends Controller
 
             DB::commit();
 
-            // Deduct driver inventory balance
+            // Deduct driver inventory balance for purchased items AND FOC items
+            // First, deduct purchased items
             if (!empty($invoiceDetails)) {
                 foreach ($invoiceDetails as $detail) {
                     try {
@@ -5133,6 +5168,54 @@ class DriverController extends Controller
                     }
                 }
             }
+            
+            // Second, deduct FOC items
+            if (!empty($focItems)) {
+                foreach ($focItems as $focItem) {
+                    try {
+                        InventoryTransaction::createTransaction(
+                            $driver->id,
+                            $focItem['product_id'],
+                            $focItem['quantity'],
+                            InventoryTransaction::TYPE_INVOICE,
+                            'FOC items for Invoice: ' . $invoice->invoiceno,
+                            $invoice->id
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to create FOC inventory transaction: ' . $e->getMessage(), [
+                            'driver_id' => $driver->id,
+                            'product_id' => $focItem['product_id'],
+                            'invoice_id' => $invoice->id,
+                            'foc_quantity' => $focItem['quantity']
+                        ]);
+                        continue;
+                    }
+                    
+                    try {
+                        $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                            ->where('product_id', $focItem['product_id'])
+                            ->first();
+                        
+                        if ($inventoryBalance) {
+                            $inventoryBalance->quantity -= $focItem['quantity'];
+                            $inventoryBalance->save();
+                        } else {
+                            InventoryBalance::create([
+                                'driver_id' => $driver->id,
+                                'product_id' => $focItem['product_id'],
+                                'quantity' => -$focItem['quantity']
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to update FOC inventory balance: ' . $e->getMessage(), [
+                            'driver_id' => $driver->id,
+                            'product_id' => $focItem['product_id'],
+                            'quantity' => $focItem['quantity']
+                        ]);
+                        continue;
+                    }
+                }
+            }
 
             // Prepare response
             $responseData = [
@@ -5148,7 +5231,7 @@ class DriverController extends Controller
                 'created_by_driver' => true,
                 'driver_id' => $driver->id,
                 'payment_created' => $paymentTerm == 'Cash',
-                'payment_amount' => $paymentTerm == 'Cash' ? (float) $total : null, // Return the payment amount
+                'payment_amount' => $paymentTerm == 'Cash' ? (float) $total : null,
                 'items_count' => count($invoiceDetails),
                 'created_at' => $invoice->created_at->format('Y-m-d H:i:s')
             ];
@@ -9435,12 +9518,48 @@ class DriverController extends Controller
                     continue;
                 }
 
-                // Check inventory balance for all details
-                $insufficientProducts = [];
+                // Prepare purchased items for FOC calculation
+                $purchasedItemsForFoc = [];
                 foreach ($invoiceInput['details'] as $detail) {
-                    $productId     = $detail['product_id'];
+                    $purchasedItemsForFoc[] = [
+                        'product_id' => $detail['product_id'],
+                        'quantity' => $detail['quantity']
+                    ];
+                }
+                
+                // Calculate FOC items using the invoice date
+                $invoiceDate = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
+                $focItems = \App\Models\foc::calculateFocItems($customer->id, $purchasedItemsForFoc, $invoiceDate);
+                
+                // Combine purchased items and FOC items for inventory check
+                $allItemsToCheck = [];
+                
+                // Add purchased items
+                foreach ($invoiceInput['details'] as $detail) {
+                    $productId = $detail['product_id'];
                     $quantityNeeded = $detail['quantity'];
-                    $product       = Product::find($productId);
+                    
+                    if (!isset($allItemsToCheck[$productId])) {
+                        $allItemsToCheck[$productId] = 0;
+                    }
+                    $allItemsToCheck[$productId] += $quantityNeeded;
+                }
+                
+                // Add FOC items
+                foreach ($focItems as $focItem) {
+                    $productId = $focItem['product_id'];
+                    $quantityNeeded = $focItem['quantity'];
+                    
+                    if (!isset($allItemsToCheck[$productId])) {
+                        $allItemsToCheck[$productId] = 0;
+                    }
+                    $allItemsToCheck[$productId] += $quantityNeeded;
+                }
+
+                // Check inventory balance for all items (purchased + FOC)
+                $insufficientProducts = [];
+                foreach ($allItemsToCheck as $productId => $quantityNeeded) {
+                    $product = Product::find($productId);
                     $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
                         ->where('product_id', $productId)
                         ->first();
@@ -9468,7 +9587,7 @@ class DriverController extends Controller
                     $results[] = [
                         'index'                => $index,
                         'success'              => false,
-                        'error'                => 'Insufficient inventory balance',
+                        'error'                => 'Insufficient inventory balance (including FOC items)',
                         'insufficient_products' => $insufficientProducts,
                         'input'                => $invoiceInput
                     ];
@@ -9479,17 +9598,25 @@ class DriverController extends Controller
 
                 $date = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
 
-                $invoiceNo = !empty($invoiceInput['invoiceno']) && $invoiceInput['invoiceno'] !== 'SYSTEM GENERATED IF BLANK'
-                    ? $invoiceInput['invoiceno']
-                    : null;
+                // Bulk invoices always use the A-prefixed sequence (AE2512/JK1/A0001)
+                $year      = date('y');
+                $month     = date('m');
+                $userCode  = $driver->invoice_code ?? 'R00';
+                $bulkPrefix = "AE{$year}{$month}/{$userCode}/A";
 
-                // If provided invoice number already exists, generate a new one
-                if ($invoiceNo && Invoice::where('invoiceno', $invoiceNo)->exists()) {
-                    $invoiceNo = null;
+                $existingBulk = Invoice::where('invoiceno', 'like', $bulkPrefix . '%')->get();
+                $maxNumber = 0;
+                foreach ($existingBulk as $inv) {
+                    $numericPart = (int) substr($inv->invoiceno, strlen($bulkPrefix));
+                    if ($numericPart > $maxNumber) {
+                        $maxNumber = $numericPart;
+                    }
                 }
-                if (!$invoiceNo) {
-                    $invoiceNo = Invoice::getNextInvoiceNumber($driver->id);
-                }
+                $nextNumber = $maxNumber + 1;
+                do {
+                    $invoiceNo = $bulkPrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                    $nextNumber++;
+                } while (Invoice::where('invoiceno', $invoiceNo)->exists());
 
                 $total          = 0;
                 $invoiceDetails = [];
@@ -9545,7 +9672,7 @@ class DriverController extends Controller
 
                 DB::commit();
 
-                // Deduct inventory balance
+                // Deduct inventory balance for purchased items
                 foreach ($invoiceDetails as $detail) {
                     try {
                         InventoryTransaction::createTransaction(
@@ -9577,6 +9704,50 @@ class DriverController extends Controller
                         }
                     } catch (\Exception $e) {
                         \Log::error('Bulk invoice inventory balance update failed: ' . $e->getMessage());
+                    }
+                }
+                
+                // Deduct inventory balance for FOC items
+                if (!empty($focItems)) {
+                    foreach ($focItems as $focItem) {
+                        try {
+                            InventoryTransaction::createTransaction(
+                                $driver->id,
+                                $focItem['product_id'],
+                                $focItem['quantity'],
+                                InventoryTransaction::TYPE_INVOICE,
+                                'Bulk Create Invoice FOC items: ' . $invoice->invoiceno,
+                                $invoice->id
+                            );
+                        } catch (\Exception $e) {
+                            \Log::error('Bulk invoice FOC inventory transaction failed: ' . $e->getMessage(), [
+                                'product_id' => $focItem['product_id'],
+                                'quantity' => $focItem['quantity'],
+                                'invoice_id' => $invoice->id
+                            ]);
+                        }
+
+                        try {
+                            $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                                ->where('product_id', $focItem['product_id'])
+                                ->first();
+
+                            if ($inventoryBalance) {
+                                $inventoryBalance->quantity -= $focItem['quantity'];
+                                $inventoryBalance->save();
+                            } else {
+                                InventoryBalance::create([
+                                    'driver_id'  => $driver->id,
+                                    'product_id' => $focItem['product_id'],
+                                    'quantity'   => -$focItem['quantity']
+                                ]);
+                            }
+                        } catch (\Exception $e) {
+                            \Log::error('Bulk invoice FOC inventory balance update failed: ' . $e->getMessage(), [
+                                'product_id' => $focItem['product_id'],
+                                'quantity' => $focItem['quantity']
+                            ]);
+                        }
                     }
                 }
 

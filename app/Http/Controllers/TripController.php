@@ -539,9 +539,16 @@ class TripController extends AppBaseController
 
         // Get report data (already has all calculations done)
         $report = $this->generateTripReport($trip_id);
-        
+
         // Get driver info
         $driver = Driver::find($trip->driver_id);
+
+        // Get approved_by from inventory count
+        $inventoryCount = InventoryCount::where('trip_id', $trip_id)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->with('approver')
+            ->first();
+        $approvedBy = $inventoryCount?->approver?->name ?? 'N/A';
         
         // Get product names for sales summary - using pre-calculated amounts
         $productDetails = [];
@@ -562,6 +569,8 @@ class TripController extends AppBaseController
             }
         }
 
+        usort($productDetails, fn($a, $b) => strcmp($a['code'], $b['code']));
+
         // Format stock summary
         $stockSummaryData = [];
         foreach ($report['stock_summary'] as $stock) {
@@ -577,7 +586,9 @@ class TripController extends AppBaseController
                 'close' => $stock['stock_count']
             ];
         }
-        
+
+        usort($stockSummaryData, fn($a, $b) => strcmp($a['brand'], $b['brand']));
+
         // Format invoices list - using pre-calculated totals
         $documentsList = [];
         $totalDocumentsAmount = 0;
@@ -675,7 +686,8 @@ class TripController extends AppBaseController
             'total_credit' => 'RM ' . number_format($report['sales_summary']['total_credit'], 2),
             'grand_total' => 'RM ' . number_format($report['sales_summary']['total_amount'], 2),
             
-            'total_cancelled_invoices' => $report['sales_summary']['total_cancelled_invoices'] ?? 0
+            'total_cancelled_invoices' => $report['sales_summary']['total_cancelled_invoices'] ?? 0,
+            'approved_by' => $approvedBy,
         ];
         
         try {

@@ -152,7 +152,9 @@
                 <td><strong>Printed Time :</strong> {{ $printed_time }}</td>
                 <td colspan="2"><strong>End Time :</strong> {{ $end_time }}</td>
             </tr>
-           
+            <tr>
+                <td><strong>Approved By :</strong> {{ $approved_by }}</td>
+            </tr>
         </table>
         <!-- Sales Summary -->
         <div class="section-title">Sales Summary</div>
