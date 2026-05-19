@@ -6,6 +6,7 @@
     <meta name="format-detection" content="telephone=no">
     <title>{{ config('app.name') }}</title>
     <style>
+
         @page { 
             margin: 0;
         }
@@ -168,15 +169,50 @@
         
         /* Optional: Prevent page breaks inside rows when printing */
         @media print {
-            body {
-                font-size: 22px !important;
-            }
-            
-            .product-table tbody tr {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
+        /* Force exact sizes using pt (points) for print */
+        body, .company-name, .company-details {
+            font-size: 22pt !important;
         }
+
+        .invoice-title {
+            font-size: 16pt !important;
+        }
+
+        .info-table td,
+        .product-table th,
+        .product-table td {
+            font-size: 20pt !important;
+        }
+
+        .invoice-remark {
+            font-size: 14pt !important;
+        }
+
+        .total-row,
+        .total-row .left-align,
+        .total-row .right-align {
+            font-size: 30pt !important;
+        }
+
+        /* Prevent printer from scaling */
+        html, body {
+            zoom: 100% !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* Prevent page breaks inside rows */
+        .product-table tbody tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* Disable any printer auto-scaling */
+        @page {
+            size: auto;
+            margin: 0mm;
+        }
+    }
     </style>
 </head>
 <body>
