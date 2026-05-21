@@ -5887,7 +5887,7 @@ class DriverController extends Controller
             // Calculate final total
             $finalTotal = $originalTotal - $offerAmount;
             
-            $height = (count($allItems) * 50) + 600;
+            $height = (count($allItems) * 50) + 430;
             $creator = $invoice->creator;
 
             $pdf = Pdf::loadView('invoices.print', [
