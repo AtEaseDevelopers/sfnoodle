@@ -43,9 +43,14 @@ class InvoiceDataTable extends DataTable
                     });
                 });
             })
-             ->filterColumn('customer_id', function ($query, $keyword) {
+            ->filterColumn('customer_id', function ($query, $keyword) {
                 $query->whereHas('customer', function ($subQuery) use ($keyword) {
                     $subQuery->where('company', 'like', '%' . $keyword . '%');
+                });
+            })
+            ->filterColumn('driver.name', function ($query, $keyword) {
+                $query->whereHas('driver', function ($subQuery) use ($keyword) {
+                    $subQuery->where('name', 'like', '%' . $keyword . '%');
                 });
             });
     }
