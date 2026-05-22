@@ -123,9 +123,13 @@ class Invoice extends Model
         // Find the maximum numeric value
         $maxNumber = 0;
         foreach ($invoices as $invoice) {
-            $numericPart = (int) substr($invoice->invoiceno, strlen($prefix));
-            if ($numericPart > $maxNumber) {
-                $maxNumber = $numericPart;
+            $suffix = substr($invoice->invoiceno, strlen($prefix));
+            // Skip bulk (A-prefixed) and corrupted/timestamp-like suffixes
+            if (ctype_digit($suffix) && strlen($suffix) <= 9) {
+                $numericPart = (int) $suffix;
+                if ($numericPart > $maxNumber) {
+                    $maxNumber = $numericPart;
+                }
             }
         }
         

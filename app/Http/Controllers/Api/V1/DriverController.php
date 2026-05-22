@@ -5315,15 +5315,13 @@ class DriverController extends Controller
 
         try {
             $input = $request->all();
-            
+
             // Convert date format
             $input['date'] = \Carbon\Carbon::createFromFormat('d-m-Y', $input['date'])->format('Y-m-d');
-            
-            // Handle invoice number generation
-            if (empty($input['invoiceno']) || $input['invoiceno'] == 'SYSTEM GENERATED IF BLANK') {
-                $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
-            }
-            
+
+            // Always generate server-side to ensure correct sequence format
+            $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
+
             // Set driver information
             $input['driver_id'] = $driver->id;
             $input['created_by'] = $driver->id;
