@@ -5036,9 +5036,7 @@ class DriverController extends Controller
             $input['date'] = \Carbon\Carbon::createFromFormat('d-m-Y', $input['date'])->format('Y-m-d');
             
             // Handle invoice number generation
-            if (empty($input['invoiceno']) || $input['invoiceno'] == 'SYSTEM GENERATED IF BLANK') {
-                $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
-            }
+            $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
             
             // Set driver information
             $input['driver_id'] = $driver->id;
