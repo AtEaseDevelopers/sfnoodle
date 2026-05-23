@@ -9914,12 +9914,33 @@ class DriverController extends Controller
                 ];
             })->values();
 
+            // Generate next bulk (A-prefixed) invoice number
+            $year       = date('y');
+            $month      = date('m');
+            $userCode   = $driver->invoice_code ?? 'R00';
+            $bulkPrefix = "AE{$year}{$month}/{$userCode}/A";
+
+            $existingBulk = Invoice::where('invoiceno', 'like', $bulkPrefix . '%')->get();
+            $maxNumber = 0;
+            foreach ($existingBulk as $inv) {
+                $numericPart = (int) substr($inv->invoiceno, strlen($bulkPrefix));
+                if ($numericPart > $maxNumber) {
+                    $maxNumber = $numericPart;
+                }
+            }
+            $nextNumber = $maxNumber + 1;
+            do {
+                $nextInvoiceNo = $bulkPrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                $nextNumber++;
+            } while (Invoice::where('invoiceno', $nextInvoiceNo)->exists());
+
             return response()->json([
                 'result'  => true,
                 'message' => __LINE__ . $this->message_separator . 'Offline customer list retrieved successfully',
                 'data'    => [
-                    'total_customers' => $result->count(),
-                    'customers'       => $result,
+                    'next_invoice_number' => $nextInvoiceNo,
+                    'total_customers'     => $result->count(),
+                    'customers'           => $result,
                 ]
             ], 200);
 
