@@ -153,7 +153,7 @@
                 <td colspan="2"><strong>End Time :</strong> {{ $end_time }}</td>
             </tr>
             <tr>
-                <td><strong>Approved By :</strong> {{ $approved_by }}</td>
+                <td><strong>Stock count By :</strong> {{ $approved_by }}</td>
             </tr>
         </table>
         <!-- Sales Summary -->
