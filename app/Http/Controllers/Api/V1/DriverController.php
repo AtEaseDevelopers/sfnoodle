@@ -7070,6 +7070,67 @@ class DriverController extends Controller
         ], 200);
     }
 
+    public function getStockCountDetail(Request $request, $id)
+    {
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if (empty($driver)) {
+            return response()->json(['result' => false, 'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session', 'data' => null], 401);
+        }
+
+        $inventoryCountId = $id; // Get ID from route parameter
+        if (empty($inventoryCountId)) {
+            return response()->json(['result' => false, 'message' => __LINE__ . $this->message_separator . 'inventory_count_id is required', 'data' => null], 200);
+        }
+
+        $inventoryCount = InventoryCount::where('id', $inventoryCountId)
+            ->where('driver_id', $driver->id)
+            ->first();
+
+        if (!$inventoryCount) {
+            return response()->json(['result' => false, 'message' => __LINE__ . $this->message_separator . 'Inventory count not found', 'data' => null], 200);
+        }
+
+        // All active products
+        $allProducts = Product::where('status', 1)->orderBy('code')->get();
+
+        // Driver's inventory balance keyed by product_id
+        $balances = InventoryBalance::where('driver_id', $driver->id)
+            ->get()
+            ->keyBy('product_id');
+
+        // Counted quantities from inventory count items keyed by product_id
+        $countedItems = collect($inventoryCount->items ?? [])
+            ->keyBy('product_id');
+
+        $products = $allProducts->map(function ($product) use ($balances, $countedItems) {
+            $balance = $balances->get($product->id);
+            $counted = $countedItems->get($product->id);
+            return [
+                'product_id'        => $product->id,
+                'product_name'      => $product->name,
+                'product_code'      => $product->code,
+                'inventory_balance' => $balance ? $balance->quantity : 0,
+                'counted_quantity'  => $counted ? $counted['counted_quantity'] : null,
+            ];
+        });
+
+        // Products with inventory balance first, then the rest (both groups sorted by code)
+        $sorted = $products
+            ->sortBy(fn($p) => [$p['inventory_balance'] > 0 ? 0 : 1, $p['product_code']])
+            ->values();
+
+        return response()->json([
+            'result'  => true,
+            'message' => __LINE__ . $this->message_separator . 'Stock count detail retrieved successfully',
+            'data'    => [
+                'inventory_count_id' => $inventoryCount->id,
+                'status'             => $inventoryCount->status,
+                'remarks'            => $inventoryCount->remarks,
+                'products'           => $sorted,
+            ]
+        ], 200);
+    }
+
     public function StockCountStatus(Request $request)
     {
 
