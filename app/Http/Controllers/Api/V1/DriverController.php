@@ -7084,8 +7084,8 @@ class DriverController extends Controller
 
     public function getStockCountDetail(Request $request, $id)
     {
-        $driver = Driver::where('session', $request->header('session'))->first();
-        if (empty($driver)) {
+        $user = User::where('session', $request->header('session'))->first();
+        if (empty($user)) {
             return response()->json(['result' => false, 'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session', 'data' => null], 401);
         }
 
