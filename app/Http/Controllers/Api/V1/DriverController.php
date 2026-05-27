@@ -8912,6 +8912,63 @@ class DriverController extends Controller
 
     }
 
+    public function rejectStockCount(Request $request)
+    {
+        $user = User::where('session', $request->header('session'))->first();
+        if (empty($user)) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data'    => null
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id'               => 'required|exists:inventory_counts,id',
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . $validator->errors()->first(),
+                'data'    => null
+            ], 200);
+        }
+
+        $inventoryCount = InventoryCount::find($request->id);
+
+        if (!$inventoryCount->canBeRejected()) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'This stock count cannot be rejected, the status is not in pending.',
+                'data'    => null
+            ], 200);
+        }
+
+        try {
+            $inventoryCount->update([
+                'status'           => InventoryCount::STATUS_REJECTED,
+                'rejected_by'      => $user->id,
+                'rejection_reason' => $request->rejection_reason,
+                'rejected_at'      => now(),
+            ]);
+
+            return response()->json([
+                'result'  => true,
+                'message' => __LINE__ . $this->message_separator . 'Stock count rejected successfully.',
+                'data'    => null
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Failed to reject stock count: ' . $e->getMessage(),
+                'data'    => null
+            ], 200);
+        }
+    }
+
     public function StockReturn(Request $request)
     {
         // Validate session
@@ -8923,7 +8980,7 @@ class DriverController extends Controller
                 'data' => null
             ], 401);
         }
-        
+
         $driver = Driver::find($request->driver_id);
         if(!$driver){
             return response()->json([

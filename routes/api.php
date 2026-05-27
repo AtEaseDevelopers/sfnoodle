@@ -131,6 +131,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/stock-request-reject', [App\Http\Controllers\Api\V1\DriverController::class, 'rejectStockRequest']);
     Route::get('/driver/stock-count-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCount']);
     Route::post('/driver/stock-count-approve', [App\Http\Controllers\Api\V1\DriverController::class, 'approveStockCount']);
+    Route::post('/driver/stock-count-reject', [App\Http\Controllers\Api\V1\DriverController::class, 'rejectStockCount']);
     Route::post('/driver/stock-return', [App\Http\Controllers\Api\V1\DriverController::class, 'StockReturn']);
 
     Route::post('/driver/manager-login', [App\Http\Controllers\Api\V1\DriverController::class, 'managerLogin']);
