@@ -8750,8 +8750,8 @@ class DriverController extends Controller
 
     public function getStockCountDetail(Request $request, $id)
     {
-        $driver = Driver::where('session', $request->header('session'))->first();
-        if (empty($driver)) {
+        $user = User::where('session', $request->header('session'))->first();
+        if (empty($user)) {
             return response()->json(['result' => false, 'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session', 'data' => null], 401);
         }
 
@@ -8760,8 +8760,7 @@ class DriverController extends Controller
             return response()->json(['result' => false, 'message' => __LINE__ . $this->message_separator . 'inventory_count_id is required', 'data' => null], 200);
         }
 
-        $inventoryCount = InventoryCount::where('id', $inventoryCountId)
-            ->first();
+        $inventoryCount = InventoryCount::where('id', $inventoryCountId)->first();
 
         if (!$inventoryCount) {
             return response()->json(['result' => false, 'message' => __LINE__ . $this->message_separator . 'Inventory count not found', 'data' => null], 200);
@@ -8770,8 +8769,8 @@ class DriverController extends Controller
         // All active products
         $allProducts = Product::where('status', 1)->orderBy('code')->get();
 
-        // Driver's inventory balance keyed by product_id
-        $balances = InventoryBalance::where('driver_id', $driver->id)
+        // Driver's inventory balance keyed by product_id (use driver_id from inventory count)
+        $balances = InventoryBalance::where('driver_id', $inventoryCount->driver_id)
             ->get()
             ->keyBy('product_id');
 
