@@ -112,7 +112,6 @@ Route::group(['prefix' => 'v1'], function () {
 
     Route::get('/driver/stock-count-report', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountPdf']);
     Route::get('/driver/get-stock-count-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountList']);
-    Route::get('/driver/stock-count-detail/{id}', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountDetail']);
 
     Route::get('/driver/inventory-balance', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryBalance']);
     Route::post('/driver/stock/transaction', [App\Http\Controllers\Api\V1\DriverController::class, 'getInventoryTransaction']);
@@ -130,6 +129,7 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/stock-request-approve', [App\Http\Controllers\Api\V1\DriverController::class, 'approveStockRequest']);
     Route::post('/driver/stock-request-reject', [App\Http\Controllers\Api\V1\DriverController::class, 'rejectStockRequest']);
     Route::get('/driver/stock-count-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCount']);
+    Route::get('/driver/stock-count-detail/{id}', [App\Http\Controllers\Api\V1\DriverController::class, 'getStockCountDetail']);
     Route::post('/driver/stock-count-approve', [App\Http\Controllers\Api\V1\DriverController::class, 'approveStockCount']);
     Route::post('/driver/stock-count-reject', [App\Http\Controllers\Api\V1\DriverController::class, 'rejectStockCount']);
     Route::post('/driver/stock-return', [App\Http\Controllers\Api\V1\DriverController::class, 'StockReturn']);
