@@ -7095,7 +7095,7 @@ class DriverController extends Controller
         }
 
         $inventoryCount = InventoryCount::where('id', $inventoryCountId)
-            ->where('driver_id', $driver->id)
+            ->where('driver_id', $user->id)
             ->first();
 
         if (!$inventoryCount) {
