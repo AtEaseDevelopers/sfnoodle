@@ -5314,6 +5314,18 @@ class DriverController extends Controller
         try {
             $input = $request->all();
 
+            // Check UUID for duplicate prevention (only if uuid provided)
+            if (!empty($input['uuid'])) {
+                $existing = Invoice::where('uuid', $input['uuid'])->first();
+                if ($existing) {
+                    return response()->json([
+                        'result'  => false,
+                        'message' => __LINE__ . $this->message_separator . 'Invoice already created, skipped.',
+                        'data'    => ['invoiceno' => $existing->invoiceno, 'invoice_id' => $existing->id]
+                    ], 200);
+                }
+            }
+
             // Convert date format
             $input['date'] = \Carbon\Carbon::createFromFormat('d-m-Y', $input['date'])->format('Y-m-d');
 
@@ -9708,6 +9720,21 @@ class DriverController extends Controller
                     continue;
                 }
 
+                // Check UUID for duplicate prevention (only if uuid provided)
+                if (!empty($invoiceInput['uuid'])) {
+                    $existing = Invoice::where('uuid', $invoiceInput['uuid'])->first();
+                    if ($existing) {
+                        $results[] = [
+                            'index'      => $index,
+                            'success'    => false,
+                            'error'      => 'Invoice already created, skipped.',
+                            'invoiceno'  => $existing->invoiceno,
+                            'invoice_id' => $existing->id,
+                        ];
+                        continue;
+                    }
+                }
+
                 DB::beginTransaction();
 
                 $date = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
@@ -9762,6 +9789,7 @@ class DriverController extends Controller
                     'is_driver'   => true,
                     'trip_id'     => $driver->trip_id,
                     'status'      => Invoice::STATUS_COMPLETED,
+                    'uuid'        => $invoiceInput['uuid'] ?? null,
                 ]);
 
                 foreach ($invoiceDetails as $detail) {

@@ -39,6 +39,7 @@ class Invoice extends Model
         'trip_id',
         'driver_id',
         'autocount',
+        'uuid',
     ];
     
     protected $casts = [
