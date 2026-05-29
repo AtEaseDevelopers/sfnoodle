@@ -459,6 +459,16 @@ class TripController extends AppBaseController
             $closing = $openingQty + $stockInQty - $salesQty - $returnQty;
             $variance = $actual - $closing;
             
+            // Filter out products where all metrics are zero to keep the report clean
+            if ($openingQty == 0 && 
+                $stockInQty == 0 && 
+                $salesQty == 0 && 
+                $returnQty == 0 && 
+                $actual == 0 && 
+                $variance == 0) {
+                continue;
+            }
+
             $productCode = $openingProduct['product_code'] ?? 
                         ($stockRequestItem['product_code'] ?? 
                         ($returnItem['product_code'] ??
