@@ -362,8 +362,12 @@ class ReportController extends AppBaseController
         }
         
         // Convert to collection for easier handling
-        $stockCounts = collect($stockCountSummary)->values();
-        
+        $stockCounts = collect($stockCountSummary)->filter(function ($item) {
+            return $item['current_quantity'] != 0 || 
+                   $item['counted_quantity'] != 0 || 
+                   $item['difference'] != 0;
+        })->values(); 
+               
         // Get latest approved count for approved_by info
         $latestCount = $inventoryCounts->sortByDesc('created_at')->first();
         
