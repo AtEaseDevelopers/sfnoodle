@@ -217,7 +217,7 @@
 </head>
 <body>
     <div class="header-section">
-        <div class="invoice-title">========== TEMPORARY INVOICES ==========</div>
+        <div class="invoice-title">========== TEMPORARY INVOICE ==========</div>
         <div class="company-name">{{ config('invoice.name', $invoices->customer->groupcompany->name ?? 'SF NOODLES SON BHD') }}</div>
         <div class="company-details">ROC.: {{ config('invoice.roc', '201001017887 (901592-A)') }}</div>
         <div class="company-details">{{ config('invoice.address1', '48, Jin TPP 1/18, Tim Industri Puchong,') }}</div>
