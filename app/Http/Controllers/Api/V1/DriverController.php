@@ -10129,7 +10129,8 @@ class DriverController extends Controller
                     'next_invoice_number' => $nextInvoiceNo,
                     'total_customers'     => $result->count(),
                     'customers'           => $result,
-                    'invoice_html'        => $this->getInvoiceHtml()
+                    'invoice_html'        => $this->getInvoiceHtml(),
+                    'foc_data'            => $this->getFocData()
                 ]
             ], 200);
 
@@ -10141,6 +10142,29 @@ class DriverController extends Controller
                 'data'    => null
             ], 200);
         }
+    }
+
+    public function getFocData(){
+        return foc::where('status', 1)
+            ->whereDate('startdate', '<=', Carbon::today())
+            ->whereDate('enddate', '>=', Carbon::today())
+            ->with(['product', 'freeproduct'])
+            ->get()
+            ->map(function($foc) {
+                return [
+                    'product_id'        => $foc->product_id,
+                    'product_code'      => optional($foc->product)->code,
+                    'product_name'      => optional($foc->product)->name,
+                    'achieve_quantity'  => $foc->achievequantity,
+                    'free_product_id'   => $foc->free_product_id,
+                    'free_product_code' => optional($foc->freeproduct)->code,
+                    'free_product_name' => optional($foc->freeproduct)->name,
+                    'free_quantity'     => $foc->free_quantity,
+                    'startdate'         => $foc->startdate,
+                    'enddate'           => $foc->enddate,
+                ];
+            })
+            ->values();
     }
 
     public function getInvoiceHtml(){
