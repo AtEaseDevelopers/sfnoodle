@@ -86,6 +86,8 @@ class DriverController extends Controller
                 }
 
                 $colorcode = Code::where('code','color_code_'.date("D"))->first()['value'] ?? '';
+                $codeRecord = Code::where('code','color_code_'.date("D"))->first();
+                $colorcode = $codeRecord ? ($codeRecord->value ?? '') : '';
 
                 if($status){
                     if($session == null){
@@ -220,6 +222,8 @@ class DriverController extends Controller
             $data = $request->all();
             $driver = Driver::where('session', $data['session'])->first();
             $colorcode = Code::where('code','color_code_'.date("D"))->first()['value'] ?? '';
+            $codeRecord = Code::where('code','color_code_'.date("D"))->first();
+            $colorcode = $codeRecord ? ($codeRecord->value ?? '') : '';
             if(!empty($driver)){
                 return response()->json([
                     'result' => true,
@@ -2934,6 +2938,7 @@ class DriverController extends Controller
                             $newtask->customer_id = $customer->id;
                             $newtask->status = 0;
                             $newtask->invoice_id = $task->invoice_id;
+                            $newtask->invoice_id = $task ? $task->invoice_id : null;
                             $sequence = Task::where('driver_id',$driver->id)->where('date',date('Y-m-d'))->orderby('sequence','desc')->first();
                             if(empty($sequence)){
                                 $sequence = 0;
@@ -2944,6 +2949,9 @@ class DriverController extends Controller
                             $newtask->date = date('Y-m-d');
                             $newtask->save();
                             $task->update(['status' => 9]);
+                            if ($task) {
+                                $task->update(['status' => 9]);
+                            }
                         }
                     }else{
                         //take from assign & invoice
@@ -4028,6 +4036,9 @@ class DriverController extends Controller
             // Process each purchased item with tiered pricing
             foreach ($salesInvoice->salesInvoiceDetails as $detail) {
                 $product = $detail->product;
+                if (!$product) {
+                    continue;
+                }
                 $quantity = $detail->quantity;
                 $regularPrice = $product->price;
                 
@@ -5388,6 +5399,14 @@ class DriverController extends Controller
 
     private function calculateProductPriceForInvoice($product, $quantity, $customerId)
     {
+        if (!$product) {
+            return [
+                'total_price' => 0,
+                'unit_price' => 0,
+                'breakdown' => []
+            ];
+        }
+
         $customer = Customer::find($customerId);
         $specialPrices = SpecialPrice::where('product_id', $product->id)
             ->where('status', 1)
@@ -5744,6 +5763,9 @@ class DriverController extends Controller
             // Process each purchased item with tiered pricing
             foreach ($invoice->invoiceDetails as $detail) {
                 $product = $detail->product;
+                if (!$product) {
+                    continue;
+                }
                 $quantity = $detail->quantity;
                 $regularPrice = $product->price;
                 
@@ -7240,8 +7262,7 @@ class DriverController extends Controller
         }
 
         try {
-
-        // **UPDATE INVENTORY BALANCE BASED ON INVENTORY COUNT**
+            // **UPDATE INVENTORY BALANCE BASED ON INVENTORY COUNT (with product validation)**
             $this->updateInventoryBalanceFromCount($driver->id, $inventoryCount);
 
             $currentStock = InventoryBalance::where('driver_id', $driver->id)
@@ -7254,6 +7275,7 @@ class DriverController extends Controller
                     'quantity' => $item->quantity
                 ];
             });
+            
             $trip = Trip::create([
                 'uuid'=> $driver->trip_id,
                 'date'=> now(),
@@ -7300,7 +7322,6 @@ class DriverController extends Controller
             ];
             
             // send notification to admin this driver has end trip
-
             $notificationService = app(NotificationService::class);
             $notificationService->createTripEndNotification($driver, $trip);
 
@@ -7323,10 +7344,25 @@ class DriverController extends Controller
 
     private function updateInventoryBalanceFromCount($driverId, InventoryCount $inventoryCount)
     {
+        $skippedProducts = [];
+        
         // Loop through each item in the inventory count
         foreach ($inventoryCount->items as $item) {
             $productId = $item['product_id'];
             $countedQuantity = (int) $item['counted_quantity'];
+            
+            // First, check if the product exists
+            $productExists = Product::where('id', $productId)->exists();
+            
+            if (!$productExists) {
+                // Log and skip this product
+                $skippedProducts[] = [
+                    'product_id' => $productId,
+                    'product_name' => $item['product_name'] ?? 'Unknown',
+                    'counted_quantity' => $countedQuantity
+                ];
+                continue; // Skip to next item
+            }
             
             // Find or create inventory balance record for this driver and product
             $inventoryBalance = InventoryBalance::where('driver_id', $driverId)
@@ -7347,8 +7383,17 @@ class DriverController extends Controller
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
-                
             }
+        }
+        
+        // Log all skipped products at once
+        if (!empty($skippedProducts)) {
+            \Log::warning('Products not found during inventory balance update', [
+                'driver_id' => $driverId,
+                'inventory_count_id' => $inventoryCount->id,
+                'trip_id' => $inventoryCount->trip_id,
+                'skipped_products' => $skippedProducts
+            ]);
         }
     }
 
