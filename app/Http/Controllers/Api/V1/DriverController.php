@@ -7182,7 +7182,7 @@ class DriverController extends Controller
                 ->map(function($item) {
                     return [
                         'product_id' => $item->product_id,
-                        'product_code' => $item->product->code,
+                        'product_code' => $item->product->code ?? '',
                         'quantity' => $item->quantity
                     ];
                 });
