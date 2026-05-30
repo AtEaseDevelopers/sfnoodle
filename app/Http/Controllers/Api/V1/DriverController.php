@@ -10148,20 +10148,22 @@ class DriverController extends Controller
         return foc::where('status', 1)
             ->whereDate('startdate', '<=', Carbon::today())
             ->whereDate('enddate', '>=', Carbon::today())
-            ->with(['product', 'freeproduct'])
+            ->with(['product', 'freeproduct', 'customer'])
             ->get()
             ->map(function($foc) {
                 return [
                     'product_id'        => $foc->product_id,
                     'product_code'      => optional($foc->product)->code,
                     'product_name'      => optional($foc->product)->name,
-                    'achieve_quantity'  => $foc->achievequantity,
+                    'achieve_quantity'  => $foc->quantity,
                     'free_product_id'   => $foc->free_product_id,
                     'free_product_code' => optional($foc->freeproduct)->code,
                     'free_product_name' => optional($foc->freeproduct)->name,
                     'free_quantity'     => $foc->free_quantity,
                     'startdate'         => $foc->startdate,
                     'enddate'           => $foc->enddate,
+                    'customer_id'       => $foc->customer_id,
+                    'customer_company'  => optional($foc->customer)->company,
                 ];
             })
             ->values();
