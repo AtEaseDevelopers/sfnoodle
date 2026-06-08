@@ -7544,35 +7544,29 @@ class DriverController extends Controller
             ->values() 
             ->toArray();
 
-            $totals = Invoice::selectRaw('
-                    SUM(CASE WHEN paymentterm = "Credit" THEN invoice_totals.total ELSE 0 END) as total_credit,
-                    SUM(invoice_totals.total) as total_all,
-                    SUM(CASE WHEN paymentterm = "Cash" THEN invoice_totals.total ELSE 0 END) as total_cash
-                ')
-                ->leftJoinSub(
-                    InvoiceDetail::select('invoice_id', DB::raw('SUM(totalprice) as total'))
-                        ->groupBy('invoice_id'),
-                    'invoice_totals',
-                    'invoices.id',
-                    '=',
-                    'invoice_totals.invoice_id'
-                )
-                ->where('invoices.status', Invoice::STATUS_COMPLETED)
-                ->where('invoices.is_driver', 1)
-                ->where('invoices.trip_id', $driver->trip_id)
-                ->where('invoices.created_by', $driver->id)
-                ->first();
-            
-            $totalAmount = $totals->total_all ?? 0;
-            $totalCreditAmount = $totals->total_credit ?? 0;
-            $totalCashAmount = $totals->total_cash ?? 0;
-            
             $invoices = Invoice::where('is_driver', 1)
                 ->where('trip_id', $driver->trip_id)
                 ->where('created_by', $driver->id)
                 ->where('status', Invoice::STATUS_COMPLETED)
                 ->with(['invoiceDetails.product'])
-                ->get(); 
+                ->get();
+
+            $totalAmount = 0;
+            $totalCashAmount = 0;
+            $totalCreditAmount = 0;
+
+            foreach ($invoices as $invoice) {
+                $invoiceTotal = 0;
+                foreach ($invoice->invoiceDetails as $detail) {
+                    $invoiceTotal += (float) $detail->totalprice;
+                }
+                $totalAmount += $invoiceTotal;
+                if ($invoice->paymentterm == 'Cash') {
+                    $totalCashAmount += $invoiceTotal;
+                } elseif ($invoice->paymentterm == 'Credit') {
+                    $totalCreditAmount += $invoiceTotal;
+                }
+            }
 
             $productsSold = $invoices->flatMap(function($invoice) {
                     return $invoice->invoiceDetails;
