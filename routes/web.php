@@ -416,7 +416,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::get('/salesInvoices/customer/{id}', [App\Http\Controllers\SalesInvoiceController::class, 'getcustomer']);
         Route::resource('salesInvoices', App\Http\Controllers\SalesInvoiceController::class);
         Route::get('salesInvoices/print/{id}/{function}',[App\Http\Controllers\SalesInvoiceController::class, 'getSalesInvoiceViewPDF'])->name('salesInvoice.print');
-        Route::post('salesInvoices/{id}/cancel', [ App\Http\Controllers\ControllersSalesInvoiceController::class, 'cancel'])->name('salesInvoices.cancel');
+        Route::post('salesInvoices/{id}/cancel', [ App\Http\Controllers\SalesInvoiceController::class, 'cancel'])->name('salesInvoices.cancel');
         Route::post('/salesInvoices/convert-to-invoice', [App\Http\Controllers\SalesInvoiceController::class, 'convertToInvoice'])->name('salesInvoices.convertToInvoice');
         Route::post('/salesInvoices/convert-with-payment', [App\Http\Controllers\SalesInvoiceController::class, 'convertWithPayment'])->name('salesInvoices.convertWithPayment');
         Route::get('sales-invoices/get-customer-prices/{customerId}', [App\Http\Controllers\SalesInvoiceController::class, 'getCustomerProductPrices'])->name('salesInvoices.getCustomerPrices');
