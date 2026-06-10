@@ -8825,6 +8825,7 @@ class DriverController extends Controller
                 'product_id'        => $product->id,
                 'product_name'      => $product->name,
                 'product_code'      => $product->code,
+                'product_category'  => $product->category,
                 'inventory_balance' => $balance ? $balance->quantity : 0,
                 'counted_quantity'  => $counted ? $counted['counted_quantity'] : null,
             ];
