@@ -63,7 +63,7 @@
                 noti('i','Date To cannot be empty','Please select the Date To');
                 return;
             }
-            if($('#datetomodel').val() < $('#datefrommodel').val()){
+            if(moment($('#datetomodel').val(), 'DD-MM-YYYY').isBefore(moment($('#datefrommodel').val(), 'DD-MM-YYYY'))){
                 noti('i','Date From cannot greater than Date To','Please select the Date again');
                 return;
             }
