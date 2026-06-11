@@ -32,7 +32,12 @@ class InvoiceDataTable extends DataTable
                 return number_format($this->calculateDiscountedTotal($model), 2);
             })
             ->filterColumn('date', function ($query, $keyword) {
-                $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
+                $dates = explode('|', $keyword);
+                if (count($dates) > 1) {
+                    $query->whereIn(\DB::raw('DATE(date)'), $dates);
+                } else {
+                    $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
+                }
             })
             ->filterColumn('created_by', function ($query, $keyword) {
                 $query->where(function ($q) use ($keyword) {

@@ -157,11 +157,20 @@ class InventoryReturnDataTable extends DataTable
             return 'N/A';
         });
 
+        $dataTable->filterColumn('created_at', function ($query, $keyword) {
+            $dates = explode('|', $keyword);
+            if (count($dates) > 1) {
+                $query->whereIn(\DB::raw('DATE(created_at)'), $dates);
+            } else {
+                $query->whereDate('created_at', date('Y-m-d', strtotime($keyword)));
+            }
+        });
+
         return $dataTable->rawColumns([
-            'action', 
-            'status', 
-            'rejection_reason', 
-            'remarks', 
+            'action',
+            'status',
+            'rejection_reason',
+            'remarks',
             'product_summary',
             'total_quantity'
         ]);

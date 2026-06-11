@@ -18,7 +18,16 @@ class InventoryTransferDataTable extends DataTable
     {
         $dataTable = new EloquentDataTable($query);
 
-        return $dataTable->addColumn('action', 'inventory_transfers.datatables_actions');
+        return $dataTable
+            ->addColumn('action', 'inventory_transfers.datatables_actions')
+            ->filterColumn('date', function ($query, $keyword) {
+                $dates = explode('|', $keyword);
+                if (count($dates) > 1) {
+                    $query->whereIn(\DB::raw('DATE(date)'), $dates);
+                } else {
+                    $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
+                }
+            });
     }
 
     /**

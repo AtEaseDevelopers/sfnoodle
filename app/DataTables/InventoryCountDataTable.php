@@ -153,9 +153,18 @@ class InventoryCountDataTable extends DataTable
             return $request->rejected_at ? $request->rejected_at->format('d-m-Y H:i') : '';
         });
 
+        $dataTable->filterColumn('created_at', function ($query, $keyword) {
+            $dates = explode('|', $keyword);
+            if (count($dates) > 1) {
+                $query->whereIn(\DB::raw('DATE(created_at)'), $dates);
+            } else {
+                $query->whereDate('created_at', date('Y-m-d', strtotime($keyword)));
+            }
+        });
+
         return $dataTable->rawColumns([
-            'action', 
-            'status', 
+            'action',
+            'status',
             'product_summary',
             'total_quantity'
         ]);

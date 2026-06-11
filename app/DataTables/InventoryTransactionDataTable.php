@@ -61,6 +61,14 @@ class InventoryTransactionDataTable extends DataTable
                 }
                 return '-';
             })
+            ->filterColumn('created_at', function ($query, $keyword) {
+                $dates = explode('|', $keyword);
+                if (count($dates) > 1) {
+                    $query->whereIn(\DB::raw('DATE(created_at)'), $dates);
+                } else {
+                    $query->whereDate('created_at', date('Y-m-d', strtotime($keyword)));
+                }
+            })
             ->rawColumns(['type', 'quantity', 'action']);
     }
 

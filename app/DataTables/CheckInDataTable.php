@@ -45,25 +45,12 @@ class CheckInDataTable extends DataTable
             return $row->check_time ? $row->check_time->format('d-m-Y H:i:s') : '-';
         })
         ->filterColumn('check_time', function ($query, $keyword) {
-            // Custom filter for date search
             if (!empty($keyword)) {
-                // Remove any spaces and convert search term
-                $searchTerm = trim($keyword);
-                
-                // If search term contains date only (without time)
-                if (preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $searchTerm)) {
-                    // Search for records on that specific date
-                    $query->whereDate('check_time', '=', date('Y-m-d', strtotime($searchTerm)));
-                } 
-                // If search term contains date and time
-                elseif (preg_match('/^\d{1,2}-\d{1,2}-\d{4} \d{1,2}:\d{1,2}:\d{1,2}$/', $searchTerm)) {
-                    // Exact datetime match
-                    $query->where('check_time', '=', date('Y-m-d H:i:s', strtotime($searchTerm)));
-                }
-                // If search term contains partial date/time
-                else {
-                    // Use LIKE for partial matching
-                    $query->where('check_time', 'LIKE', "%{$searchTerm}%");
+                $dates = explode('|', $keyword);
+                if (count($dates) > 1) {
+                    $query->whereIn(\DB::raw('DATE(check_time)'), $dates);
+                } else {
+                    $query->whereDate('check_time', '=', date('Y-m-d', strtotime($keyword)));
                 }
             }
         })

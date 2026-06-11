@@ -32,7 +32,12 @@ class SalesInvoiceDataTable extends DataTable
                 return (float) $this->calculateDiscountedTotal($model);
             })
             ->filterColumn('date', function ($query, $keyword) {
-                $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
+                $dates = explode('|', $keyword);
+                if (count($dates) > 1) {
+                    $query->whereIn(\DB::raw('DATE(date)'), $dates);
+                } else {
+                    $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
+                }
             });
     }
 

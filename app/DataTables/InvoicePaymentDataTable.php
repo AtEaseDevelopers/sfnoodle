@@ -60,7 +60,12 @@ class InvoicePaymentDataTable extends DataTable
             // Add filter for approve_at
             ->filterColumn('approve_at_formatted', function($query, $keyword) {
                 if (!empty($keyword)) {
-                    $query->whereDate('approve_at', '=', $keyword);
+                    $dates = explode('|', $keyword);
+                    if (count($dates) > 1) {
+                        $query->whereIn(\DB::raw('DATE(approve_at)'), $dates);
+                    } else {
+                        $query->whereDate('approve_at', '=', $keyword);
+                    }
                 }
             })
             

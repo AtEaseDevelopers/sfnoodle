@@ -57,7 +57,15 @@ class TripDataTable extends DataTable
                     </span>';
                 }
             })
-            ->rawColumns(['action', 'type']); // Add 'type' to rawColumns
+            ->filterColumn('date', function ($query, $keyword) {
+                $dates = explode('|', $keyword);
+                if (count($dates) > 1) {
+                    $query->whereIn(\DB::raw('DATE(date)'), $dates);
+                } else {
+                    $query->whereDate('date', date('Y-m-d', strtotime($keyword)));
+                }
+            })
+            ->rawColumns(['action', 'type']);
     }
 
     /**
