@@ -11,6 +11,8 @@ use App\Models\SpecialPrice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class AutoCountSyncController extends Controller
 {
@@ -241,6 +243,12 @@ class AutoCountSyncController extends Controller
      */
     public function getPendingInvoices(Request $request): JsonResponse
     {
+    	$now = Carbon::now('Asia/Kuala_Lumpur');
+
+		// 9am - 6pm = 2 records
+		// after 6pm = 150 records
+		$limit = ($now->hour >= 9 && $now->hour < 18) ? 2 : 150;
+
         $invoices = Invoice::query()
             ->where('status', Invoice::STATUS_COMPLETED)
             ->whereNotNull('trip_id')
@@ -255,6 +263,7 @@ class AutoCountSyncController extends Controller
             })
             ->with(['customer', 'invoiceDetails.product', 'driver', 'createdByDriver'])
             ->orderBy('id')
+            ->limit($limit)
             ->get();
 
         $payloads = [];
@@ -266,9 +275,9 @@ class AutoCountSyncController extends Controller
             }
             $salesAgent = 'ADMIN';
             if ($invoice->driver_id && $invoice->driver) {
-                $salesAgent = $invoice->driver->name ?? 'ADMIN';
+                $salesAgent = $invoice->driver->invoice_code ?? 'ADMIN';
             } elseif ($invoice->is_driver && $invoice->created_by && $invoice->createdByDriver) {
-                $salesAgent = $invoice->createdByDriver->name ?? 'ADMIN';
+                $salesAgent = $invoice->createdByDriver->invoice_code ?? 'ADMIN';
             }
             $details = [];
             foreach ($invoice->invoiceDetails as $d) {
@@ -311,6 +320,7 @@ class AutoCountSyncController extends Controller
             ];
         }
 
+    //Log::info(json_encode($payloads, JSON_PRETTY_PRINT));
         return response()->json([
             'status'   => true,
             'count'    => count($payloads),
