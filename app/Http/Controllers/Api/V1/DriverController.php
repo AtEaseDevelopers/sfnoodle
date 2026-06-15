@@ -7545,10 +7545,8 @@ class DriverController extends Controller
             ->values() 
             ->toArray();
 
-            $invoices = Invoice::where('is_driver', 1)
-                ->where('trip_id', $driver->trip_id)
-                ->where('created_by', $driver->id)
-                ->where('status', Invoice::STATUS_COMPLETED)
+            $invoices = Invoice::where('trip_id', $driver->trip_id)
+                ->where('status', '!=', Invoice::STATUS_CANCELLED)
                 ->with(['invoiceDetails.product'])
                 ->get();
 
@@ -7655,8 +7653,8 @@ class DriverController extends Controller
                 ->toArray();
 
             $result = [
-                'sales' => round($totalAmount,2),
-                'credit' => round($totalCreditAmount,2),
+                'sales' => (float) number_format($totalAmount, 2, '.', ''),
+                'credit' => (float) number_format($totalCreditAmount, 2, '.', ''),
         
                 'productsold' => $productsSold,
 
