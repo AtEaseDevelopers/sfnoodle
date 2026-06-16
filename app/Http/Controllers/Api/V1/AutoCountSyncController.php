@@ -263,7 +263,6 @@ class AutoCountSyncController extends Controller
             })
             ->with(['customer', 'invoiceDetails.product', 'driver', 'createdByDriver'])
             ->orderBy('id')
-            ->limit($limit)
             ->get();
 
         $payloads = [];
