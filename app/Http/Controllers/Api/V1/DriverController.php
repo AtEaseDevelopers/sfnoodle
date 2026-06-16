@@ -9642,148 +9642,133 @@ class DriverController extends Controller
             ], 200);
         }
 
-        $results = [];
+        // Phase 1: Pre-flight — validate all invoices and check all stock before creating anything
+        $insufficientProducts = [];
+        $preparedInvoices     = [];
 
         foreach ($invoicesInput as $index => $invoiceInput) {
+            $customer = Customer::find($invoiceInput['customer_id'] ?? null);
+            if (!$customer) {
+                return response()->json([
+                    'result'  => false,
+                    'message' => __LINE__ . $this->message_separator . 'Customer not found at invoice index ' . $index,
+                    'data'    => null
+                ], 200);
+            }
+
+            $validator = Validator::make($invoiceInput, [
+                'invoiceno'            => 'nullable|string|max:255',
+                'date'                 => 'required|date_format:d-m-Y',
+                'customer_id'          => 'required|exists:customers,id',
+                'remark'               => 'nullable|string|max:255',
+                'details'              => 'required|array|min:1',
+                'details.*.product_id' => 'required|exists:products,id',
+                'details.*.quantity'   => 'required|numeric|min:0.01',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'result'  => false,
+                    'message' => __LINE__ . $this->message_separator . 'Validation failed at invoice index ' . $index,
+                    'errors'  => $validator->errors()->toArray(),
+                    'data'    => null
+                ], 200);
+            }
+
+            // Check UUID for duplicate prevention
+            if (!empty($invoiceInput['uuid'])) {
+                $existing = Invoice::where('uuid', $invoiceInput['uuid'])->first();
+                if ($existing) {
+                    return response()->json([
+                        'result'  => false,
+                        'message' => __LINE__ . $this->message_separator . 'Invoice already exists at index ' . $index . ': ' . $existing->invoiceno,
+                        'data'    => null
+                    ], 200);
+                }
+            }
+
+            $invoiceDate          = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
+            $purchasedItemsForFoc = array_map(fn($d) => ['product_id' => $d['product_id'], 'quantity' => $d['quantity']], $invoiceInput['details']);
+            $focItems             = \App\Models\foc::calculateFocItems($customer->id, $purchasedItemsForFoc, $invoiceDate);
+
+            $allItemsToCheck = [];
+            foreach ($invoiceInput['details'] as $detail) {
+                $allItemsToCheck[$detail['product_id']] = ($allItemsToCheck[$detail['product_id']] ?? 0) + $detail['quantity'];
+            }
+            foreach ($focItems as $focItem) {
+                $allItemsToCheck[$focItem['product_id']] = ($allItemsToCheck[$focItem['product_id']] ?? 0) + $focItem['quantity'];
+            }
+
+            foreach ($allItemsToCheck as $productId => $quantityNeeded) {
+                $product          = Product::find($productId);
+                $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                    ->where('product_id', $productId)
+                    ->first();
+
+                if (!$inventoryBalance) {
+                    $insufficientProducts[] = [
+                        'invoice_index'      => $index,
+                        'product_id'         => $productId,
+                        'product_name'       => $product ? $product->name : 'Unknown',
+                        'required_quantity'  => $quantityNeeded,
+                        'available_quantity' => 0,
+                        'error'              => 'No inventory record found',
+                    ];
+                } elseif ($inventoryBalance->quantity < $quantityNeeded) {
+                    $insufficientProducts[] = [
+                        'invoice_index'      => $index,
+                        'product_id'         => $productId,
+                        'product_name'       => $product ? $product->name : 'Unknown',
+                        'required_quantity'  => $quantityNeeded,
+                        'available_quantity' => $inventoryBalance->quantity,
+                        'error'              => 'Insufficient inventory',
+                    ];
+                }
+            }
+
+            $preparedInvoices[] = [
+                'index'        => $index,
+                'invoiceInput' => $invoiceInput,
+                'customer'     => $customer,
+                'focItems'     => $focItems,
+                'invoiceDate'  => $invoiceDate,
+            ];
+        }
+
+        // Block entire request if any invoice has insufficient stock
+        if (!empty($insufficientProducts)) {
+            return response()->json([
+                'result'                => false,
+                'message'               => __LINE__ . $this->message_separator . 'Insufficient inventory balance, no invoices created',
+                'errors'                => [
+                    'inventory' => ['Some products have insufficient inventory (including FOC items)']
+                ],
+                'insufficient_products' => $insufficientProducts,
+                'data'                  => null
+            ], 200);
+        }
+
+        // Phase 2: All pre-flight checks passed — create all invoices
+        $results = [];
+
+        foreach ($preparedInvoices as $prepared) {
+            $index        = $prepared['index'];
+            $invoiceInput = $prepared['invoiceInput'];
+            $customer     = $prepared['customer'];
+            $focItems     = $prepared['focItems'];
+            $date         = $prepared['invoiceDate'];
+            $paymentTerm  = $customer->paymentterm;
+
             try {
-                // Validate customer
-                $customer = Customer::find($invoiceInput['customer_id'] ?? null);
-                if (!$customer) {
-                    $results[] = [
-                        'index'   => $index,
-                        'success' => false,
-                        'error'   => 'Customer not found',
-                        'input'   => $invoiceInput
-                    ];
-                    continue;
-                }
-
-                $paymentTerm = $customer->paymentterm;
-
-                // Validate invoice fields
-                $validator = Validator::make($invoiceInput, [
-                    'invoiceno'              => 'nullable|string|max:255',
-                    'date'                   => 'required|date_format:d-m-Y',
-                    'customer_id'            => 'required|exists:customers,id',
-                    'remark'                 => 'nullable|string|max:255',
-                    'details'                => 'required|array|min:1',
-                    'details.*.product_id'   => 'required|exists:products,id',
-                    'details.*.quantity'     => 'required|numeric|min:0.01',
-                ]);
-
-                if ($validator->fails()) {
-                    $results[] = [
-                        'index'   => $index,
-                        'success' => false,
-                        'errors'  => $validator->errors()->toArray(),
-                        'input'   => $invoiceInput
-                    ];
-                    continue;
-                }
-
-                // Prepare purchased items for FOC calculation
-                $purchasedItemsForFoc = [];
-                foreach ($invoiceInput['details'] as $detail) {
-                    $purchasedItemsForFoc[] = [
-                        'product_id' => $detail['product_id'],
-                        'quantity' => $detail['quantity']
-                    ];
-                }
-                
-                // Calculate FOC items using the invoice date
-                $invoiceDate = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
-                $focItems = \App\Models\foc::calculateFocItems($customer->id, $purchasedItemsForFoc, $invoiceDate);
-                
-                // Combine purchased items and FOC items for inventory check
-                $allItemsToCheck = [];
-                
-                // Add purchased items
-                foreach ($invoiceInput['details'] as $detail) {
-                    $productId = $detail['product_id'];
-                    $quantityNeeded = $detail['quantity'];
-                    
-                    if (!isset($allItemsToCheck[$productId])) {
-                        $allItemsToCheck[$productId] = 0;
-                    }
-                    $allItemsToCheck[$productId] += $quantityNeeded;
-                }
-                
-                // Add FOC items
-                foreach ($focItems as $focItem) {
-                    $productId = $focItem['product_id'];
-                    $quantityNeeded = $focItem['quantity'];
-                    
-                    if (!isset($allItemsToCheck[$productId])) {
-                        $allItemsToCheck[$productId] = 0;
-                    }
-                    $allItemsToCheck[$productId] += $quantityNeeded;
-                }
-
-                // Check inventory balance for all items (purchased + FOC)
-                $insufficientProducts = [];
-                foreach ($allItemsToCheck as $productId => $quantityNeeded) {
-                    $product = Product::find($productId);
-                    $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
-                        ->where('product_id', $productId)
-                        ->first();
-
-                    if (!$inventoryBalance) {
-                        $insufficientProducts[] = [
-                            'product_id'         => $productId,
-                            'product_name'       => $product ? $product->name : 'Unknown',
-                            'required_quantity'  => $quantityNeeded,
-                            'available_quantity' => 0,
-                            'error'              => 'No inventory record found'
-                        ];
-                    } elseif ($inventoryBalance->quantity < $quantityNeeded) {
-                        $insufficientProducts[] = [
-                            'product_id'         => $productId,
-                            'product_name'       => $product ? $product->name : 'Unknown',
-                            'required_quantity'  => $quantityNeeded,
-                            'available_quantity' => $inventoryBalance->quantity,
-                            'error'              => 'Insufficient inventory'
-                        ];
-                    }
-                }
-
-                if (!empty($insufficientProducts)) {
-                    $results[] = [
-                        'index'                => $index,
-                        'success'              => false,
-                        'error'                => 'Insufficient inventory balance (including FOC items)',
-                        'insufficient_products' => $insufficientProducts,
-                        'input'                => $invoiceInput
-                    ];
-                    continue;
-                }
-
-                // Check UUID for duplicate prevention (only if uuid provided)
-                if (!empty($invoiceInput['uuid'])) {
-                    $existing = Invoice::where('uuid', $invoiceInput['uuid'])->first();
-                    if ($existing) {
-                        $results[] = [
-                            'index'      => $index,
-                            'success'    => false,
-                            'error'      => 'Invoice already created, skipped.',
-                            'invoiceno'  => $existing->invoiceno,
-                            'invoice_id' => $existing->id,
-                        ];
-                        continue;
-                    }
-                }
-
                 DB::beginTransaction();
 
-                $date = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
-
-                // Bulk invoices always use the A-prefixed sequence (AE2512/JK1/A0001)
-                $year      = date('y');
-                $month     = date('m');
-                $userCode  = $driver->invoice_code ?? 'R00';
+                $year       = date('y');
+                $month      = date('m');
+                $userCode   = $driver->invoice_code ?? 'R00';
                 $bulkPrefix = "AE{$year}{$month}/{$userCode}/A";
 
                 $existingBulk = Invoice::where('invoiceno', 'like', $bulkPrefix . '%')->get();
-                $maxNumber = 0;
+                $maxNumber    = 0;
                 foreach ($existingBulk as $inv) {
                     $numericPart = (int) substr($inv->invoiceno, strlen($bulkPrefix));
                     if ($numericPart > $maxNumber) {
@@ -9826,25 +9811,25 @@ class DriverController extends Controller
                     'is_driver'   => true,
                     'trip_id'     => $driver->trip_id,
                     'status'      => Invoice::STATUS_COMPLETED,
+                    'uuid'        => $invoiceInput['uuid'] ?? null,
                 ]);
 
                 foreach ($invoiceDetails as $detail) {
                     InvoiceDetail::create(array_merge($detail, ['invoice_id' => $invoice->id]));
                 }
 
-                // Create cash payment record
                 if ($paymentTerm == 'Cash') {
-                    $invoicePayment                = new \App\Models\InvoicePayment();
-                    $invoicePayment->invoice_id    = $invoice->id;
-                    $invoicePayment->type          = 2;
-                    $invoicePayment->customer_id   = $invoice->customer_id;
-                    $invoicePayment->amount        = $total;
-                    $invoicePayment->status        = 1;
-                    $invoicePayment->driver_id     = $driver->id;
-                    $invoicePayment->user_id       = null;
-                    $invoicePayment->approve_by    = $driver->name;
-                    $invoicePayment->approve_at    = now();
-                    $invoicePayment->remark        = $invoiceInput['payment_remark'] ?? 'Cash payment for invoice: ' . $invoice->invoiceno;
+                    $invoicePayment             = new \App\Models\InvoicePayment();
+                    $invoicePayment->invoice_id = $invoice->id;
+                    $invoicePayment->type       = 2;
+                    $invoicePayment->customer_id = $invoice->customer_id;
+                    $invoicePayment->amount     = $total;
+                    $invoicePayment->status     = 1;
+                    $invoicePayment->driver_id  = $driver->id;
+                    $invoicePayment->user_id    = null;
+                    $invoicePayment->approve_by = $driver->name;
+                    $invoicePayment->approve_at = now();
+                    $invoicePayment->remark     = $invoiceInput['payment_remark'] ?? 'Cash payment for invoice: ' . $invoice->invoiceno;
                     $invoicePayment->save();
                 }
 
@@ -9877,14 +9862,14 @@ class DriverController extends Controller
                             InventoryBalance::create([
                                 'driver_id'  => $driver->id,
                                 'product_id' => $detail['product_id'],
-                                'quantity'   => -$detail['quantity']
+                                'quantity'   => -$detail['quantity'],
                             ]);
                         }
                     } catch (\Exception $e) {
                         \Log::error('Bulk invoice inventory balance update failed: ' . $e->getMessage());
                     }
                 }
-                
+
                 // Deduct inventory balance for FOC items
                 if (!empty($focItems)) {
                     foreach ($focItems as $focItem) {
@@ -9900,8 +9885,8 @@ class DriverController extends Controller
                         } catch (\Exception $e) {
                             \Log::error('Bulk invoice FOC inventory transaction failed: ' . $e->getMessage(), [
                                 'product_id' => $focItem['product_id'],
-                                'quantity' => $focItem['quantity'],
-                                'invoice_id' => $invoice->id
+                                'quantity'   => $focItem['quantity'],
+                                'invoice_id' => $invoice->id,
                             ]);
                         }
 
@@ -9917,13 +9902,13 @@ class DriverController extends Controller
                                 InventoryBalance::create([
                                     'driver_id'  => $driver->id,
                                     'product_id' => $focItem['product_id'],
-                                    'quantity'   => -$focItem['quantity']
+                                    'quantity'   => -$focItem['quantity'],
                                 ]);
                             }
                         } catch (\Exception $e) {
                             \Log::error('Bulk invoice FOC inventory balance update failed: ' . $e->getMessage(), [
                                 'product_id' => $focItem['product_id'],
-                                'quantity' => $focItem['quantity']
+                                'quantity'   => $focItem['quantity'],
                             ]);
                         }
                     }
@@ -9952,7 +9937,7 @@ class DriverController extends Controller
                     'index'   => $index,
                     'success' => false,
                     'error'   => $e->getMessage(),
-                    'input'   => $invoiceInput
+                    'input'   => $invoiceInput,
                 ];
             }
         }
@@ -9961,9 +9946,9 @@ class DriverController extends Controller
         $failCount    = collect($results)->where('success', false)->count();
 
         return response()->json([
-            'result'        => true,
-            'message'       => __LINE__ . $this->message_separator . "Bulk create completed: {$successCount} succeeded, {$failCount} failed",
-            'data'          => [
+            'result'  => true,
+            'message' => __LINE__ . $this->message_separator . "Bulk create completed: {$successCount} succeeded, {$failCount} failed",
+            'data'    => [
                 'total_submitted' => count($invoicesInput),
                 'success_count'   => $successCount,
                 'fail_count'      => $failCount,
