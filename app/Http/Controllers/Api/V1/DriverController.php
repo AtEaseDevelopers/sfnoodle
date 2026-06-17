@@ -9957,6 +9957,599 @@ class DriverController extends Controller
         ], 200);
     }
 
+    public function createInvoice_v2(Request $request)
+    {
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if (empty($driver)) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data'    => null
+            ], 401);
+        }
+
+        if ($driver->trip_id == null) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
+                'data'    => null
+            ], 200);
+        }
+
+        $inventoryCountRecord = InventoryCount::where('driver_id', $driver->id)
+            ->where('trip_id', $driver->trip_id)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->first();
+
+        if ($inventoryCountRecord) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have completed inventory count, cannot add new invoice, You may continue in next new trip.',
+                'data'    => null
+            ], 200);
+        }
+
+        $customer = Customer::find($request->customer_id);
+        if (!$customer) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Customer not found',
+                'data'    => null
+            ], 200);
+        }
+
+        $paymentTerm    = $customer->paymentterm;
+        $validationRules = [
+            'date'                        => 'required|date_format:d-m-Y',
+            'customer_id'                 => 'required|exists:customers,id',
+            'remark'                      => 'nullable|string|max:255',
+            'details'                     => 'required|array|min:1',
+            'details.*.product_id'        => 'required|exists:products,id',
+            'details.*.quantity'          => 'required|numeric|min:0.01',
+            'details.*.discount_amount'   => 'nullable|numeric|min:0',
+        ];
+
+        if ($paymentTerm == 'Cash') {
+            $validationRules['payment_attachment'] = 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048';
+            $validationRules['payment_remark']     = 'nullable|string|max:255';
+        }
+
+        $validator = Validator::make($request->all(), $validationRules);
+        if ($validator->fails()) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Validation failed',
+                'errors'  => $validator->errors()->toArray(),
+                'data'    => null
+            ], 200);
+        }
+
+        $details             = $request->input('details', []);
+        $invoiceDate         = \Carbon\Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d');
+        $purchasedItemsForFoc = array_map(fn($d) => ['product_id' => $d['product_id'], 'quantity' => $d['quantity']], $details);
+        $focItems            = \App\Models\foc::calculateFocItems($customer->id, $purchasedItemsForFoc, $invoiceDate);
+
+        $allItemsToCheck = [];
+        foreach ($details as $detail) {
+            $allItemsToCheck[$detail['product_id']] = ($allItemsToCheck[$detail['product_id']] ?? 0) + $detail['quantity'];
+        }
+        foreach ($focItems as $focItem) {
+            $allItemsToCheck[$focItem['product_id']] = ($allItemsToCheck[$focItem['product_id']] ?? 0) + $focItem['quantity'];
+        }
+
+        $insufficientProducts = [];
+        foreach ($allItemsToCheck as $productId => $quantityNeeded) {
+            $product          = Product::find($productId);
+            $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                ->where('product_id', $productId)
+                ->first();
+
+            if (!$inventoryBalance) {
+                $insufficientProducts[] = [
+                    'product_id'         => $productId,
+                    'product_name'       => $product ? $product->name : 'Unknown Product',
+                    'required_quantity'  => $quantityNeeded,
+                    'available_quantity' => 0,
+                    'error'              => 'No inventory record found',
+                ];
+            } elseif ($inventoryBalance->quantity < $quantityNeeded) {
+                $insufficientProducts[] = [
+                    'product_id'         => $productId,
+                    'product_name'       => $product ? $product->name : 'Unknown Product',
+                    'required_quantity'  => $quantityNeeded,
+                    'available_quantity' => $inventoryBalance->quantity,
+                    'error'              => 'Insufficient inventory',
+                ];
+            }
+        }
+
+        if (!empty($insufficientProducts)) {
+            return response()->json([
+                'result'                => false,
+                'message'               => __LINE__ . $this->message_separator . 'Insufficient inventory balance',
+                'errors'                => ['inventory' => ['Some products have insufficient inventory (including FOC items)']],
+                'insufficient_products' => $insufficientProducts,
+                'data'                  => null
+            ], 200);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $input              = $request->all();
+            $input['date']      = $invoiceDate;
+            $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
+            $input['driver_id'] = $driver->id;
+            $input['created_by'] = $driver->id;
+            $input['is_driver'] = true;
+            $input['paymentterm'] = $paymentTerm;
+
+            $total          = 0;
+            $invoiceDetails = [];
+
+            foreach ($details as $detail) {
+                $product          = Product::find($detail['product_id']);
+                $priceCalculation = $this->calculateProductPriceForInvoice($product, $detail['quantity'], $customer->id);
+                $discount         = (float) ($detail['discount_amount'] ?? 0);
+                $itemTotal        = max(0, $priceCalculation['total_price'] - $discount);
+                $total           += $itemTotal;
+
+                $invoiceDetails[] = [
+                    'product_id'      => $detail['product_id'],
+                    'quantity'        => $detail['quantity'],
+                    'price'           => $priceCalculation['unit_price'],
+                    'totalprice'      => $itemTotal,
+                    'discount_amount' => $discount,
+                    'remark'          => $detail['remark'] ?? null,
+                ];
+            }
+
+            $input['total']   = $total;
+            $input['trip_id'] = $driver->trip_id;
+
+            $invoice = Invoice::create($input);
+
+            foreach ($invoiceDetails as $detail) {
+                InvoiceDetail::create(array_merge($detail, ['invoice_id' => $invoice->id]));
+            }
+
+            if ($paymentTerm == 'Cash') {
+                $attachmentPath = null;
+                if ($request->hasFile('payment_attachment')) {
+                    $file           = $request->file('payment_attachment');
+                    $fileName       = time() . '_' . $file->getClientOriginalName();
+                    $attachmentPath = $file->storeAs('invoice_payments', $fileName, 'public');
+                }
+
+                $invoicePayment             = new \App\Models\InvoicePayment();
+                $invoicePayment->invoice_id = $invoice->id;
+                $invoicePayment->type       = 2;
+                $invoicePayment->customer_id = $invoice->customer_id;
+                $invoicePayment->amount     = $total;
+                $invoicePayment->status     = 1;
+                if ($attachmentPath) {
+                    $invoicePayment->attachment = $attachmentPath;
+                }
+                $invoicePayment->driver_id  = $driver->id;
+                $invoicePayment->user_id    = null;
+                $invoicePayment->approve_by = $driver->name;
+                $invoicePayment->approve_at = now();
+                $invoicePayment->remark     = $request->input('payment_remark', 'Cash payment for invoice: ' . $invoice->invoiceno);
+                $invoicePayment->save();
+            }
+
+            DB::commit();
+
+            foreach ($invoiceDetails as $detail) {
+                try {
+                    InventoryTransaction::createTransaction(
+                        $driver->id, $detail['product_id'], $detail['quantity'],
+                        InventoryTransaction::TYPE_INVOICE,
+                        'Create Invoice with ID: ' . $invoice->invoiceno, $invoice->id
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Failed to create inventory transaction: ' . $e->getMessage());
+                }
+
+                try {
+                    $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                        ->where('product_id', $detail['product_id'])->first();
+                    if ($inventoryBalance) {
+                        $inventoryBalance->quantity -= $detail['quantity'];
+                        $inventoryBalance->save();
+                    } else {
+                        InventoryBalance::create(['driver_id' => $driver->id, 'product_id' => $detail['product_id'], 'quantity' => -$detail['quantity']]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to update inventory balance: ' . $e->getMessage());
+                }
+            }
+
+            foreach ($focItems as $focItem) {
+                try {
+                    InventoryTransaction::createTransaction(
+                        $driver->id, $focItem['product_id'], $focItem['quantity'],
+                        InventoryTransaction::TYPE_INVOICE,
+                        'FOC items for Invoice: ' . $invoice->invoiceno, $invoice->id
+                    );
+                } catch (\Exception $e) {
+                    \Log::error('Failed to create FOC inventory transaction: ' . $e->getMessage());
+                }
+
+                try {
+                    $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                        ->where('product_id', $focItem['product_id'])->first();
+                    if ($inventoryBalance) {
+                        $inventoryBalance->quantity -= $focItem['quantity'];
+                        $inventoryBalance->save();
+                    } else {
+                        InventoryBalance::create(['driver_id' => $driver->id, 'product_id' => $focItem['product_id'], 'quantity' => -$focItem['quantity']]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to update FOC inventory balance: ' . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'result'  => true,
+                'message' => __LINE__ . $this->message_separator . 'Invoice created successfully with Completed status',
+                'data'    => [
+                    'id'               => $invoice->id,
+                    'invoiceno'        => $invoice->invoiceno,
+                    'date'             => \Carbon\Carbon::parse($invoice->date)->format('d-m-Y'),
+                    'customer_id'      => $invoice->customer_id,
+                    'customer_name'    => optional($invoice->customer)->company ?? 'N/A',
+                    'total'            => (float) $invoice->total,
+                    'paymentterm'      => $invoice->paymentterm,
+                    'status'           => $invoice->status,
+                    'status_text'      => $invoice->getStatusTextAttribute(),
+                    'created_by_driver' => true,
+                    'driver_id'        => $driver->id,
+                    'payment_created'  => $paymentTerm == 'Cash',
+                    'payment_amount'   => $paymentTerm == 'Cash' ? (float) $total : null,
+                    'items_count'      => count($invoiceDetails),
+                    'created_at'       => $invoice->created_at->format('Y-m-d H:i:s'),
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Invoice creation failed: ' . $e->getMessage(), ['driver_id' => $driver->id, 'request_data' => $request->all()]);
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Error creating invoice: ' . $e->getMessage(),
+                'data'    => null
+            ], 200);
+        }
+    }
+
+    public function bulkCreateInvoice_v2(Request $request)
+    {
+        $driver = Driver::where('session', $request->header('session'))->first();
+        if (empty($driver)) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'api.message.invalid_session',
+                'data'    => null
+            ], 401);
+        }
+
+        if ($driver->trip_id == null) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have to start trip before perform any Action',
+                'data'    => null
+            ], 200);
+        }
+
+        $inventoryCountRecord = InventoryCount::where('driver_id', $driver->id)
+            ->where('trip_id', $driver->trip_id)
+            ->where('status', InventoryCount::STATUS_APPROVED)
+            ->first();
+
+        if ($inventoryCountRecord) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'Driver have completed inventory count, cannot add new invoice, You may continue in next new trip.',
+                'data'    => null
+            ], 200);
+        }
+
+        $invoicesInput = $request->input('invoices', []);
+
+        if (empty($invoicesInput) || !is_array($invoicesInput)) {
+            return response()->json([
+                'result'  => false,
+                'message' => __LINE__ . $this->message_separator . 'invoices field is required and must be an array',
+                'data'    => null
+            ], 200);
+        }
+
+        // Phase 1: Pre-flight — validate all invoices and check all stock before creating anything
+        $insufficientProducts = [];
+        $preparedInvoices     = [];
+
+        foreach ($invoicesInput as $index => $invoiceInput) {
+            $customer = Customer::find($invoiceInput['customer_id'] ?? null);
+            if (!$customer) {
+                return response()->json([
+                    'result'  => false,
+                    'message' => __LINE__ . $this->message_separator . 'Customer not found at invoice index ' . $index,
+                    'data'    => null
+                ], 200);
+            }
+
+            $validator = Validator::make($invoiceInput, [
+                'invoiceno'                   => 'nullable|string|max:255',
+                'date'                        => 'required|date_format:d-m-Y',
+                'customer_id'                 => 'required|exists:customers,id',
+                'remark'                      => 'nullable|string|max:255',
+                'details'                     => 'required|array|min:1',
+                'details.*.product_id'        => 'required|exists:products,id',
+                'details.*.quantity'          => 'required|numeric|min:0.01',
+                'details.*.discount_amount'   => 'nullable|numeric|min:0',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'result'  => false,
+                    'message' => __LINE__ . $this->message_separator . 'Validation failed at invoice index ' . $index,
+                    'errors'  => $validator->errors()->toArray(),
+                    'data'    => null
+                ], 200);
+            }
+
+            if (!empty($invoiceInput['uuid'])) {
+                $existing = Invoice::where('uuid', $invoiceInput['uuid'])->first();
+                if ($existing) {
+                    return response()->json([
+                        'result'  => false,
+                        'message' => __LINE__ . $this->message_separator . 'Invoice already exists at index ' . $index . ': ' . $existing->invoiceno,
+                        'data'    => null
+                    ], 200);
+                }
+            }
+
+            $invoiceDate          = \Carbon\Carbon::createFromFormat('d-m-Y', $invoiceInput['date'])->format('Y-m-d');
+            $purchasedItemsForFoc = array_map(fn($d) => ['product_id' => $d['product_id'], 'quantity' => $d['quantity']], $invoiceInput['details']);
+            $focItems             = \App\Models\foc::calculateFocItems($customer->id, $purchasedItemsForFoc, $invoiceDate);
+
+            $allItemsToCheck = [];
+            foreach ($invoiceInput['details'] as $detail) {
+                $allItemsToCheck[$detail['product_id']] = ($allItemsToCheck[$detail['product_id']] ?? 0) + $detail['quantity'];
+            }
+            foreach ($focItems as $focItem) {
+                $allItemsToCheck[$focItem['product_id']] = ($allItemsToCheck[$focItem['product_id']] ?? 0) + $focItem['quantity'];
+            }
+
+            foreach ($allItemsToCheck as $productId => $quantityNeeded) {
+                $product          = Product::find($productId);
+                $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                    ->where('product_id', $productId)
+                    ->first();
+
+                if (!$inventoryBalance) {
+                    $insufficientProducts[] = [
+                        'invoice_index'      => $index,
+                        'product_id'         => $productId,
+                        'product_name'       => $product ? $product->name : 'Unknown',
+                        'required_quantity'  => $quantityNeeded,
+                        'available_quantity' => 0,
+                        'error'              => 'No inventory record found',
+                    ];
+                } elseif ($inventoryBalance->quantity < $quantityNeeded) {
+                    $insufficientProducts[] = [
+                        'invoice_index'      => $index,
+                        'product_id'         => $productId,
+                        'product_name'       => $product ? $product->name : 'Unknown',
+                        'required_quantity'  => $quantityNeeded,
+                        'available_quantity' => $inventoryBalance->quantity,
+                        'error'              => 'Insufficient inventory',
+                    ];
+                }
+            }
+
+            $preparedInvoices[] = [
+                'index'        => $index,
+                'invoiceInput' => $invoiceInput,
+                'customer'     => $customer,
+                'focItems'     => $focItems,
+                'invoiceDate'  => $invoiceDate,
+            ];
+        }
+
+        if (!empty($insufficientProducts)) {
+            return response()->json([
+                'result'                => false,
+                'message'               => __LINE__ . $this->message_separator . 'Insufficient inventory balance, no invoices created',
+                'errors'                => ['inventory' => ['Some products have insufficient inventory (including FOC items)']],
+                'insufficient_products' => $insufficientProducts,
+                'data'                  => null
+            ], 200);
+        }
+
+        // Phase 2: All pre-flight checks passed — create all invoices
+        $results = [];
+
+        foreach ($preparedInvoices as $prepared) {
+            $index        = $prepared['index'];
+            $invoiceInput = $prepared['invoiceInput'];
+            $customer     = $prepared['customer'];
+            $focItems     = $prepared['focItems'];
+            $date         = $prepared['invoiceDate'];
+            $paymentTerm  = $customer->paymentterm;
+
+            try {
+                DB::beginTransaction();
+
+                $year       = date('y');
+                $month      = date('m');
+                $userCode   = $driver->invoice_code ?? 'R00';
+                $bulkPrefix = "AE{$year}{$month}/{$userCode}/A";
+
+                $existingBulk = Invoice::where('invoiceno', 'like', $bulkPrefix . '%')->get();
+                $maxNumber    = 0;
+                foreach ($existingBulk as $inv) {
+                    $numericPart = (int) substr($inv->invoiceno, strlen($bulkPrefix));
+                    if ($numericPart > $maxNumber) {
+                        $maxNumber = $numericPart;
+                    }
+                }
+                $nextNumber = $maxNumber + 1;
+                do {
+                    $invoiceNo = $bulkPrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                    $nextNumber++;
+                } while (Invoice::where('invoiceno', $invoiceNo)->exists());
+
+                $total          = 0;
+                $invoiceDetails = [];
+
+                foreach ($invoiceInput['details'] as $detail) {
+                    $product          = Product::find($detail['product_id']);
+                    $priceCalculation = $this->calculateProductPriceForInvoice($product, $detail['quantity'], $customer->id);
+                    $discount         = (float) ($detail['discount_amount'] ?? 0);
+                    $itemTotal        = max(0, $priceCalculation['total_price'] - $discount);
+                    $total           += $itemTotal;
+
+                    $invoiceDetails[] = [
+                        'product_id'      => $detail['product_id'],
+                        'quantity'        => $detail['quantity'],
+                        'price'           => $detail['price'] ?? $priceCalculation['unit_price'],
+                        'totalprice'      => $itemTotal,
+                        'discount_amount' => $discount,
+                        'remark'          => $detail['remark'] ?? null,
+                    ];
+                }
+
+                $invoice = Invoice::create([
+                    'invoiceno'   => $invoiceNo,
+                    'date'        => $date,
+                    'customer_id' => $customer->id,
+                    'remark'      => $invoiceInput['remark'] ?? null,
+                    'total'       => $total,
+                    'paymentterm' => $paymentTerm,
+                    'driver_id'   => $driver->id,
+                    'created_by'  => $driver->id,
+                    'is_driver'   => true,
+                    'trip_id'     => $driver->trip_id,
+                    'status'      => Invoice::STATUS_COMPLETED,
+                    'uuid'        => $invoiceInput['uuid'] ?? null,
+                ]);
+
+                foreach ($invoiceDetails as $detail) {
+                    InvoiceDetail::create(array_merge($detail, ['invoice_id' => $invoice->id]));
+                }
+
+                if ($paymentTerm == 'Cash') {
+                    $invoicePayment             = new \App\Models\InvoicePayment();
+                    $invoicePayment->invoice_id = $invoice->id;
+                    $invoicePayment->type       = 2;
+                    $invoicePayment->customer_id = $invoice->customer_id;
+                    $invoicePayment->amount     = $total;
+                    $invoicePayment->status     = 1;
+                    $invoicePayment->driver_id  = $driver->id;
+                    $invoicePayment->user_id    = null;
+                    $invoicePayment->approve_by = $driver->name;
+                    $invoicePayment->approve_at = now();
+                    $invoicePayment->remark     = $invoiceInput['payment_remark'] ?? 'Cash payment for invoice: ' . $invoice->invoiceno;
+                    $invoicePayment->save();
+                }
+
+                DB::commit();
+
+                foreach ($invoiceDetails as $detail) {
+                    try {
+                        InventoryTransaction::createTransaction(
+                            $driver->id, $detail['product_id'], $detail['quantity'],
+                            InventoryTransaction::TYPE_INVOICE,
+                            'Bulk Create Invoice: ' . $invoice->invoiceno, $invoice->id
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Bulk invoice inventory transaction failed: ' . $e->getMessage());
+                    }
+
+                    try {
+                        $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                            ->where('product_id', $detail['product_id'])->first();
+                        if ($inventoryBalance) {
+                            $inventoryBalance->quantity -= $detail['quantity'];
+                            $inventoryBalance->save();
+                        } else {
+                            InventoryBalance::create(['driver_id' => $driver->id, 'product_id' => $detail['product_id'], 'quantity' => -$detail['quantity']]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Bulk invoice inventory balance update failed: ' . $e->getMessage());
+                    }
+                }
+
+                foreach ($focItems as $focItem) {
+                    try {
+                        InventoryTransaction::createTransaction(
+                            $driver->id, $focItem['product_id'], $focItem['quantity'],
+                            InventoryTransaction::TYPE_INVOICE,
+                            'Bulk Create Invoice FOC items: ' . $invoice->invoiceno, $invoice->id
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Bulk invoice FOC inventory transaction failed: ' . $e->getMessage());
+                    }
+
+                    try {
+                        $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
+                            ->where('product_id', $focItem['product_id'])->first();
+                        if ($inventoryBalance) {
+                            $inventoryBalance->quantity -= $focItem['quantity'];
+                            $inventoryBalance->save();
+                        } else {
+                            InventoryBalance::create(['driver_id' => $driver->id, 'product_id' => $focItem['product_id'], 'quantity' => -$focItem['quantity']]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Bulk invoice FOC inventory balance update failed: ' . $e->getMessage());
+                    }
+                }
+
+                $results[] = [
+                    'index'           => $index,
+                    'success'         => true,
+                    'invoiceno'       => $invoice->invoiceno,
+                    'invoice_id'      => $invoice->id,
+                    'date'            => \Carbon\Carbon::parse($invoice->date)->format('d-m-Y'),
+                    'customer_id'     => $invoice->customer_id,
+                    'customer_name'   => $customer->company,
+                    'total'           => (float) $invoice->total,
+                    'paymentterm'     => $invoice->paymentterm,
+                    'status'          => $invoice->getStatusTextAttribute(),
+                    'payment_created' => $paymentTerm == 'Cash',
+                    'items_count'     => count($invoiceDetails),
+                    'created_at'      => $invoice->created_at->format('Y-m-d H:i:s'),
+                ];
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Bulk invoice v2 creation failed at index ' . $index . ': ' . $e->getMessage());
+                $results[] = [
+                    'index'   => $index,
+                    'success' => false,
+                    'error'   => $e->getMessage(),
+                    'input'   => $invoiceInput,
+                ];
+            }
+        }
+
+        $successCount = collect($results)->where('success', true)->count();
+        $failCount    = collect($results)->where('success', false)->count();
+
+        return response()->json([
+            'result'  => true,
+            'message' => __LINE__ . $this->message_separator . "Bulk create completed: {$successCount} succeeded, {$failCount} failed",
+            'data'    => [
+                'total_submitted' => count($invoicesInput),
+                'success_count'   => $successCount,
+                'fail_count'      => $failCount,
+                'results'         => $results,
+            ]
+        ], 200);
+    }
+
      public function getOfflineCustomerList(Request $request)
     {
         $driver = Driver::where('session', $request->header('session'))->first();
