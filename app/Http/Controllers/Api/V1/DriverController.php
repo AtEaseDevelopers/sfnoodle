@@ -5099,6 +5099,18 @@ class DriverController extends Controller
                 }
             }
 
+            // Save FOC items as invoice details with totalprice = 0
+            foreach ($focItems as $focItem) {
+                InvoiceDetail::create([
+                    'invoice_id' => $invoice->id,
+                    'product_id' => $focItem['product_id'],
+                    'quantity'   => $focItem['quantity'],
+                    'price'      => 0,
+                    'totalprice' => 0,
+                    'remark'     => 'FOC',
+                ]);
+            }
+
             // Handle payment for cash invoices
             if ($paymentTerm == 'Cash') {
                 $attachmentPath = null;
@@ -9818,6 +9830,18 @@ class DriverController extends Controller
                     InvoiceDetail::create(array_merge($detail, ['invoice_id' => $invoice->id]));
                 }
 
+                // Save FOC items as invoice details with totalprice = 0
+                foreach ($focItems as $focItem) {
+                    InvoiceDetail::create([
+                        'invoice_id' => $invoice->id,
+                        'product_id' => $focItem['product_id'],
+                        'quantity'   => $focItem['quantity'],
+                        'price'      => 0,
+                        'totalprice' => 0,
+                        'remark'     => 'FOC',
+                    ]);
+                }
+
                 if ($paymentTerm == 'Cash') {
                     $invoicePayment             = new \App\Models\InvoicePayment();
                     $invoicePayment->invoice_id = $invoice->id;
@@ -10111,6 +10135,18 @@ class DriverController extends Controller
 
             foreach ($invoiceDetails as $detail) {
                 InvoiceDetail::create(array_merge($detail, ['invoice_id' => $invoice->id]));
+            }
+
+            // Save FOC items as invoice details with totalprice = 0
+            foreach ($focItems as $focItem) {
+                InvoiceDetail::create([
+                    'invoice_id' => $invoice->id,
+                    'product_id' => $focItem['product_id'],
+                    'quantity'   => $focItem['quantity'],
+                    'price'      => 0,
+                    'totalprice' => 0,
+                    'remark'     => 'FOC',
+                ]);
             }
 
             if ($paymentTerm == 'Cash') {
@@ -10438,6 +10474,18 @@ class DriverController extends Controller
 
                 foreach ($invoiceDetails as $detail) {
                     InvoiceDetail::create(array_merge($detail, ['invoice_id' => $invoice->id]));
+                }
+
+                // Save FOC items as invoice details with totalprice = 0
+                foreach ($focItems as $focItem) {
+                    InvoiceDetail::create([
+                        'invoice_id' => $invoice->id,
+                        'product_id' => $focItem['product_id'],
+                        'quantity'   => $focItem['quantity'],
+                        'price'      => 0,
+                        'totalprice' => 0,
+                        'remark'     => 'FOC',
+                    ]);
                 }
 
                 if ($paymentTerm == 'Cash') {
