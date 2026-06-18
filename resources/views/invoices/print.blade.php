@@ -218,12 +218,13 @@
 <body>
     <div class="header-section">
         <div class="invoice-title">========== TEMPORARY INVOICE ==========</div>
-        <div class="company-name">{{ config('invoice.name', $invoices->customer->groupcompany->name ?? 'SF NOODLES SON BHD') }}</div>
-        <div class="company-details">ROC.: {{ config('invoice.roc', '201001017887 (901592-A)') }}</div>
-        <div class="company-details">{{ config('invoice.address1', '48, Jin TPP 1/18, Tim Industri Puchong,') }}</div>
-        <div class="company-details">{{ config('invoice.address2', '47100 Puchong, Selangor DE.') }}</div>
-        <div class="company-details">t: {{ config('invoice.phone', '03-8061 1490/ 012-311 1531') }}</div>
-        <div class="company-details">email: {{ config('invoice.email', 'account@sfnoodles.com') }}</div>
+        <div class="company-name">SF NOODLES SDN BHD</div>
+        <div class="company-details">ROC.: 201001017887 (901592-A)</div>
+        <div class="company-details">48, Jin TPP 1/18,</div>
+        <div class="company-details">Taman Industri Puchong,</div>
+        <div class="company-details">47100 Puchong, Selangor DE.</div>
+        <div class="company-details">t: 017-900 9663/ 012-311 1531</div>
+        <div class="company-details">email: account@sfnoodles.com</div>
     </div>
     
     <table class="info-table">
