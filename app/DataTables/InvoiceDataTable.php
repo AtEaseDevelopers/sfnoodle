@@ -74,6 +74,7 @@ class InvoiceDataTable extends DataTable
         $customer = Customer::find($invoice->customer_id);
         
         foreach ($invoice->invoiceDetails as $detail) {
+            if ($detail->price == 0 && $detail->totalprice == 0) continue;
             $product = $detail->product;
             $quantity = $detail->quantity;
             $regularPrice = $product->price;

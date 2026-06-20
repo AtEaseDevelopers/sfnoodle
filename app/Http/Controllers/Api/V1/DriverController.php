@@ -5756,7 +5756,7 @@ class DriverController extends Controller
             // Prepare purchased items for FOC calculation (exclude FOC rows saved by driver app)
             $purchasedItems = [];
             foreach ($invoice->invoiceDetails as $detail) {
-                if ($detail->remark === 'FOC') continue;
+                if ($detail->price == 0 && $detail->totalprice == 0) continue;
                 $purchasedItems[] = [
                     'product_id' => $detail->product_id,
                     'quantity' => $detail->quantity,
@@ -5775,7 +5775,7 @@ class DriverController extends Controller
 
             // Process each purchased item with tiered pricing (exclude FOC rows saved by driver app)
             foreach ($invoice->invoiceDetails as $detail) {
-                if ($detail->remark === 'FOC') continue;
+                if ($detail->price == 0 && $detail->totalprice == 0) continue;
                 $product = $detail->product;
                 if (!$product) {
                     continue;
