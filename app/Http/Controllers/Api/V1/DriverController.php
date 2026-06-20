@@ -5753,27 +5753,29 @@ class DriverController extends Controller
             // Get customer for price category check
             $customer = $invoice->customer;
             
-            // Prepare purchased items for FOC calculation
+            // Prepare purchased items for FOC calculation (exclude FOC rows saved by driver app)
             $purchasedItems = [];
             foreach ($invoice->invoiceDetails as $detail) {
+                if ($detail->remark === 'FOC') continue;
                 $purchasedItems[] = [
                     'product_id' => $detail->product_id,
                     'quantity' => $detail->quantity,
                     'price' => $detail->price
                 ];
             }
-            
+
             // Calculate FOC items using the invoice date
             $invoiceDate = $invoice->date;
             $focItems = \App\Models\foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoiceDate);
-            
+
             // Merge original items with tiered pricing breakdown
             $allItems = [];
             $originalTotal = 0;
             $offerAmount = 0;
-            
-            // Process each purchased item with tiered pricing
+
+            // Process each purchased item with tiered pricing (exclude FOC rows saved by driver app)
             foreach ($invoice->invoiceDetails as $detail) {
+                if ($detail->remark === 'FOC') continue;
                 $product = $detail->product;
                 if (!$product) {
                     continue;
