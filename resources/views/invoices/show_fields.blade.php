@@ -72,166 +72,167 @@
                     <th>Description</th>
                     <th>Qty</th>
                     <th>Unit Price</th>
+                    @if($hasDiscount)<th>Discount</th>@endif
                     <th>Total</th>
                 </tr>
             </thead>
             <tbody>
                 @php
-                    // Get customer with price category
                     $customer = $invoice->customer;
-                    
-                    // Prepare purchased items for FOC calculation
+
+                    // Prepare purchased items for FOC calculation (exclude FOC rows)
                     $purchasedItems = [];
                     foreach ($invoicedetails as $detail) {
+                        if ($detail['price'] == 0 && $detail['totalprice'] == 0) continue;
                         $purchasedItems[] = [
                             'product_id' => $detail['product_id'],
-                            'quantity' => $detail['quantity'],
-                            'price' => $detail['price']
+                            'quantity'   => $detail['quantity'],
+                            'price'      => $detail['price'],
                         ];
                     }
-                    
+
                     $focItems = \App\Models\foc::calculateFocItems($invoice->customer_id, $purchasedItems, $invoice->date);
-                    
-                    $displayItems = [];
+
+                    $displayItems  = [];
                     $originalTotal = 0;
-                    $offerAmount = 0;
-                    
-                    // Process each purchased item with tiered pricing and special price logic
+                    $offerAmount   = 0;
+
                     foreach ($invoicedetails as $detail) {
-                        $product = \App\Models\Product::find($detail['product_id']);
-                        $quantity = $detail['quantity'];
+                        if ($detail['price'] == 0 && $detail['totalprice'] == 0) continue;
+
+                        $product      = \App\Models\Product::find($detail['product_id']);
+                        $quantity     = $detail['quantity'];
                         $regularPrice = $product->price;
-                        
-                        // Get all special prices for this product
+                        $discount     = (float)($detail['discount_amount'] ?? 0);
+
                         $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
-                            ->where('status', 1)
-                            ->get();
-                        
+                            ->where('status', 1)->get();
+
                         $specialPrice = null;
-                        
-                        // First priority: Check for direct customer match
                         foreach ($specialPrices as $sp) {
-                            if ($sp->customer_id == $invoice->customer_id) {
-                                $specialPrice = $sp;
-                                break;
-                            }
+                            if ($sp->customer_id == $invoice->customer_id) { $specialPrice = $sp; break; }
                         }
-                        
-                        // Second priority: Check for price category match
                         if (!$specialPrice && $customer && $customer->price_category) {
                             foreach ($specialPrices as $sp) {
-                                if ($sp->price_category && $sp->price_category == $customer->price_category) {
-                                    $specialPrice = $sp;
-                                    break;
-                                }
+                                if ($sp->price_category && $sp->price_category == $customer->price_category) { $specialPrice = $sp; break; }
                             }
                         }
-                        
-                        $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
-                        $hasSpecialPrice = $specialPrice ? true : false;
-                        $specialPriceType = $specialPrice ? 
-                            ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific') : null;
-                        
-                        $tieredPricing = $product->tiered_pricing;
-                        
+
+                        $basePrice        = $specialPrice ? $specialPrice->price : $regularPrice;
+                        $hasSpecialPrice  = (bool)$specialPrice;
+                        $specialPriceType = $specialPrice
+                            ? ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific')
+                            : null;
+
+                        $tieredPricing    = $product->tiered_pricing;
+                        $detailStartIndex = count($displayItems);
+
                         if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                            // Sort tiers by quantity ascending (smallest first)
-                            usort($tieredPricing, function($a, $b) {
-                                return $a['quantity'] - $b['quantity'];
-                            });
-                            
+                            usort($tieredPricing, fn($a, $b) => $a['quantity'] - $b['quantity']);
+
                             $remainingQuantity = $quantity;
-                            
+
                             foreach ($tieredPricing as $tier) {
                                 if ($remainingQuantity <= 0) break;
-                                
-                                $tierQuantity = $tier['quantity'];
-                                $tierPrice = $tier['price'];
+
+                                $tierQuantity     = $tier['quantity'];
+                                $tierPrice        = $tier['price'];
                                 $numberOfPackages = floor($remainingQuantity / $tierQuantity);
-                                
+
                                 if ($numberOfPackages > 0) {
-                                    $quantityInTier = $numberOfPackages * $tierQuantity;
-                                    $itemTotal = $numberOfPackages * $tierPrice;
+                                    $quantityInTier          = $numberOfPackages * $tierQuantity;
+                                    $itemTotal               = $numberOfPackages * $tierPrice;
                                     $regularTotalForThisTier = $quantityInTier * $basePrice;
-                                    
+
                                     $originalTotal += $regularTotalForThisTier;
-                                    $offerAmount += ($regularTotalForThisTier - $itemTotal);
-                                    
+                                    $offerAmount   += ($regularTotalForThisTier - $itemTotal);
+
                                     $displayName = $product->name . " ({$tierQuantity} units)";
                                     if ($hasSpecialPrice) {
                                         $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
                                     }
-                                    
+
                                     $displayItems[] = [
-                                        'display_name' => $displayName,
-                                        'quantity' => $numberOfPackages,
-                                        'price' => $tierPrice,
-                                        'totalprice' => $itemTotal,
-                                        'is_foc' => false,
-                                        'has_offer' => true,
-                                        'has_special_price' => $hasSpecialPrice
+                                        'display_name'    => $displayName,
+                                        'quantity'        => $numberOfPackages,
+                                        'price'           => $tierPrice,
+                                        'totalprice'      => $itemTotal,
+                                        'discount_amount' => 0,
+                                        'is_foc'          => false,
+                                        'has_offer'       => true,
+                                        'has_special_price' => $hasSpecialPrice,
                                     ];
-                                    
+
                                     $remainingQuantity -= $quantityInTier;
                                 }
                             }
-                            
-                            // Handle remaining quantity
+
                             if ($remainingQuantity > 0) {
                                 $itemTotal = $remainingQuantity * $basePrice;
                                 $originalTotal += $itemTotal;
-                                
+
                                 $displayName = $product->code;
                                 if ($hasSpecialPrice) {
                                     $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
                                 }
-                                
+
                                 $displayItems[] = [
-                                    'display_name' => $displayName,
-                                    'quantity' => $remainingQuantity,
-                                    'price' => $basePrice,
-                                    'totalprice' => $itemTotal,
-                                    'is_foc' => false,
-                                    'has_offer' => false,
-                                    'has_special_price' => $hasSpecialPrice
+                                    'display_name'    => $displayName,
+                                    'quantity'        => $remainingQuantity,
+                                    'price'           => $basePrice,
+                                    'totalprice'      => $itemTotal,
+                                    'discount_amount' => 0,
+                                    'is_foc'          => false,
+                                    'has_offer'       => false,
+                                    'has_special_price' => $hasSpecialPrice,
                                 ];
                             }
                         } else {
-                            // No tiered pricing
                             $itemTotal = $quantity * $basePrice;
                             $originalTotal += $itemTotal;
-                            
+
                             $displayName = $product->code;
                             if ($hasSpecialPrice) {
                                 $displayName .= $specialPriceType == 'customer_specific' ? ' (Special Price)' : ' (Category Price)';
                             }
-                            
+
                             $displayItems[] = [
-                                'display_name' => $displayName,
-                                'quantity' => $quantity,
-                                'price' => $basePrice,
-                                'totalprice' => $itemTotal,
-                                'is_foc' => false,
-                                'has_offer' => false,
-                                'has_special_price' => $hasSpecialPrice
+                                'display_name'    => $displayName,
+                                'quantity'        => $quantity,
+                                'price'           => $basePrice,
+                                'totalprice'      => $itemTotal,
+                                'discount_amount' => 0,
+                                'is_foc'          => false,
+                                'has_offer'       => false,
+                                'has_special_price' => $hasSpecialPrice,
                             ];
                         }
+
+                        // Apply discount to the last row added for this detail
+                        if ($discount > 0 && count($displayItems) > $detailStartIndex) {
+                            $lastIdx = count($displayItems) - 1;
+                            $displayItems[$lastIdx]['totalprice']      = max(0, $displayItems[$lastIdx]['totalprice'] - $discount);
+                            $displayItems[$lastIdx]['discount_amount'] = $discount;
+                            $offerAmount += $discount;
+                        }
                     }
-                    
+
                     // Add FOC items
                     foreach ($focItems as $focItem) {
                         $displayItems[] = [
-                            'display_name' => $focItem['product_name'] . " (FOC)",
-                            'quantity' => $focItem['quantity'],
-                            'price' => 0,
-                            'totalprice' => 0,
-                            'is_foc' => true,
-                            'has_offer' => false,
-                            'has_special_price' => false
+                            'display_name'    => $focItem['product_name'] . " (FOC)",
+                            'quantity'        => $focItem['quantity'],
+                            'price'           => 0,
+                            'totalprice'      => 0,
+                            'discount_amount' => 0,
+                            'is_foc'          => true,
+                            'has_offer'       => false,
+                            'has_special_price' => false,
                         ];
                     }
-                    
-                    $finalTotal = $originalTotal - $offerAmount;
+
+                    $finalTotal  = $originalTotal - $offerAmount;
+                    $hasDiscount = collect($displayItems)->contains(fn($i) => ($i['discount_amount'] ?? 0) > 0);
                 @endphp
                 
                 @forelse($displayItems as $item)
@@ -250,6 +251,7 @@
                     </td>
                     <td class="text-right">{{ number_format($item['quantity'], 2) }}</td>
                     <td class="text-right">RM {{ number_format($item['price'], 2) }}</td>
+                    @if($hasDiscount)<td class="text-right">{{ ($item['discount_amount'] ?? 0) > 0 ? 'RM ' . number_format($item['discount_amount'], 2) : '-' }}</td>@endif
                     <td class="text-right">RM {{ number_format($item['totalprice'], 2) }}</td>
                 </tr>
                 @empty
@@ -258,25 +260,26 @@
                 </tr>
                 @endforelse
             </tbody>
+            @php $footerColspan = $hasDiscount ? 4 : 3; @endphp
             @if($offerAmount > 0)
             <tfoot>
                 <tr class="table-light">
-                    <td colspan="3" class="text-right"><strong>Original Total:</strong></td>
+                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Original Total:</strong></td>
                     <td class="text-right"><strong>RM {{ number_format($originalTotal, 2) }}</strong></td>
                 </tr>
                 <tr class="table-success">
-                    <td colspan="3" class="text-right"><strong>Volume Offer Discount:</strong></td>
+                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Volume Offer Discount:</strong></td>
                     <td class="text-right"><strong>- RM {{ number_format($offerAmount, 2) }}</strong></td>
                 </tr>
                 <tr class="table-active">
-                    <td colspan="3" class="text-right"><strong>Grand Total:</strong></td>
+                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Grand Total:</strong></td>
                     <td class="text-right"><strong>RM {{ number_format($finalTotal, 2) }}</strong></td>
                 </tr>
             </tfoot>
             @else
             <tfoot>
                 <tr class="table-active">
-                    <td colspan="3" class="text-right"><strong>Grand Total:</strong></td>
+                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Grand Total:</strong></td>
                     <td class="text-right"><strong>RM {{ number_format($finalTotal, 2) }}</strong></td>
                 </tr>
             </tfoot>
