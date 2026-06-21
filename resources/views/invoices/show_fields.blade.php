@@ -65,19 +65,7 @@
 <div class="col-12 mt-4">
     <hr>
     <h4>Invoice Items</h4>
-    <div class="table-responsive">
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th>Qty</th>
-                    <th>Unit Price</th>
-                    @if($hasDiscount)<th>Discount</th>@endif
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @php
+    @php
                     $customer = $invoice->customer;
 
                     // Prepare purchased items for FOC calculation (exclude FOC rows)
@@ -231,10 +219,20 @@
                         ];
                     }
 
-                    $finalTotal  = $originalTotal - $offerAmount;
-                    $hasDiscount = collect($displayItems)->contains(fn($i) => ($i['discount_amount'] ?? 0) > 0);
-                @endphp
-                
+                    $finalTotal = $originalTotal - $offerAmount;
+    @endphp
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Discount</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
                 @forelse($displayItems as $item)
                 <tr @if($item['has_offer']) class="table-info" @elseif($item['has_special_price']) class="table-warning" @endif>
                     <td>
@@ -251,35 +249,34 @@
                     </td>
                     <td class="text-right">{{ number_format($item['quantity'], 2) }}</td>
                     <td class="text-right">RM {{ number_format($item['price'], 2) }}</td>
-                    @if($hasDiscount)<td class="text-right">{{ ($item['discount_amount'] ?? 0) > 0 ? 'RM ' . number_format($item['discount_amount'], 2) : '-' }}</td>@endif
+                    <td class="text-right">{{ ($item['discount_amount'] ?? 0) > 0 ? 'RM ' . number_format($item['discount_amount'], 2) : '-' }}</td>
                     <td class="text-right">RM {{ number_format($item['totalprice'], 2) }}</td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="4" class="text-center">No items found</td>
+                    <td colspan="5" class="text-center">No items found</td>
                 </tr>
                 @endforelse
             </tbody>
-            @php $footerColspan = $hasDiscount ? 4 : 3; @endphp
             @if($offerAmount > 0)
             <tfoot>
                 <tr class="table-light">
-                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Original Total:</strong></td>
+                    <td colspan="4" class="text-right"><strong>Original Total:</strong></td>
                     <td class="text-right"><strong>RM {{ number_format($originalTotal, 2) }}</strong></td>
                 </tr>
                 <tr class="table-success">
-                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Volume Offer Discount:</strong></td>
+                    <td colspan="4" class="text-right"><strong>Volume Offer Discount:</strong></td>
                     <td class="text-right"><strong>- RM {{ number_format($offerAmount, 2) }}</strong></td>
                 </tr>
                 <tr class="table-active">
-                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Grand Total:</strong></td>
+                    <td colspan="4" class="text-right"><strong>Grand Total:</strong></td>
                     <td class="text-right"><strong>RM {{ number_format($finalTotal, 2) }}</strong></td>
                 </tr>
             </tfoot>
             @else
             <tfoot>
                 <tr class="table-active">
-                    <td colspan="{{ $footerColspan }}" class="text-right"><strong>Grand Total:</strong></td>
+                    <td colspan="4" class="text-right"><strong>Grand Total:</strong></td>
                     <td class="text-right"><strong>RM {{ number_format($finalTotal, 2) }}</strong></td>
                 </tr>
             </tfoot>
