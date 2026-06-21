@@ -137,9 +137,9 @@
 
         .col-price {
             width: 18%;
-            text-align: right;
-            padding-left: 20px !important;
-            padding-right: 10px !important;
+            text-align: left;
+            padding-left: 8px !important;
+            padding-right: 4px !important;
         }
 
         .col-discount {
