@@ -138,11 +138,11 @@
         .col-price {
             width: 18%;
             text-align: right;
-            padding-left: 10px !important;
+            padding-left: 20px !important;
             padding-right: 10px !important;
         }
 
-        .col-dis {
+        .col-discount {
             width: 16%;
             text-align: right;
             padding-right: 10px !important;
@@ -260,7 +260,7 @@
                 <th class="col-sku">SKU</th>
                 <th class="col-qty">Qty</th>
                 <th class="col-price">U.Price</th>
-                @if($hasDiscount)<th class="col-dis">Dis</th>@endif
+                @if($hasDiscount)<th class="col-discount">Dis</th>@endif
                 <th class="col-total">Total</th>
             </tr>
         </thead>
@@ -270,7 +270,7 @@
                 <td class="col-sku">{{ $item['display_name'] }}</td>
                 <td class="col-qty">{{ $item['quantity'] }}</td>
                 <td class="col-price">{{ number_format($item['price'], 2) }}</td>
-                @if($hasDiscount)<td class="col-dis">{{ ($item['discount_amount'] ?? 0) > 0 ? number_format($item['discount_amount'], 2) : '' }}</td>@endif
+                @if($hasDiscount)<td class="col-discount">{{ ($item['discount_amount'] ?? 0) > 0 ? number_format($item['discount_amount'], 2) : '' }}</td>@endif
                 <td class="col-total">{{ number_format($item['totalprice'], 2) }}</td>
             </tr>
             @endforeach
