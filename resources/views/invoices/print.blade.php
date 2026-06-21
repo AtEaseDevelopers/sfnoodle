@@ -138,6 +138,7 @@
         .col-price {
             width: 18%;
             text-align: right;
+            padding-left: 10px !important;
             padding-right: 10px !important;
         }
 
