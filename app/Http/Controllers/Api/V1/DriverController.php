@@ -10926,8 +10926,8 @@ class DriverController extends Controller
                     .col-price {
                         width: 18%;
                         text-align: left;
-                        padding-left: 8px !important;
-                        padding-right: 4px !important;
+                        padding-left: 10px !important;
+                        padding-right: 10px !important;
                     }
 
                     .col-discount {
