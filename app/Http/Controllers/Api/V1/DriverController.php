@@ -11001,7 +11001,7 @@ class DriverController extends Controller
                             <th class="col-sku">SKU</th>
                             <th class="col-qty">Qty</th>
                             <th class="col-price">U.Price</th>
-                            <th class="col-discount">Dis</th>
+                            @discountHeader
                             <th class="col-total">Total</th>
                         </tr>
                     </thead>
