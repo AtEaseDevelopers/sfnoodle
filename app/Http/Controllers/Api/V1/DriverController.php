@@ -10912,25 +10912,32 @@ class DriverController extends Controller
 
                     /* Fixed widths for table-layout: fixed to work properly */
                     .col-sku {
-                        width: 40%;
+                        width: 33%;
                         text-align: left;
                         word-wrap: break-word;
                     }
 
                     .col-qty {
-                        width: 18%;
+                        width: 14%;
                         text-align: right;
-                        padding-right: 20px !important;
+                        padding-right: 10px !important;
                     }
 
                     .col-price {
-                        width: 22%;
+                        width: 18%;
+                        text-align: left;
+                        padding-left: 8px !important;
+                        padding-right: 4px !important;
+                    }
+
+                    .col-discount {
+                        width: 16%;
                         text-align: right;
-                        padding-right: 20px !important;
+                        padding-right: 10px !important;
                     }
 
                     .col-total {
-                        width: 20%;
+                        width: 19%;
                         text-align: right;
                     }
 
@@ -10994,6 +11001,7 @@ class DriverController extends Controller
                             <th class="col-sku">SKU</th>
                             <th class="col-qty">Qty</th>
                             <th class="col-price">U.Price</th>
+                            <th class="col-discount">Dis</th>
                             <th class="col-total">Total</th>
                         </tr>
                     </thead>
