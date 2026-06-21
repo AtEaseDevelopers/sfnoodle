@@ -124,25 +124,31 @@
 
         /* Fixed widths for table-layout: fixed to work properly */
         .col-sku {
-            width: 40%;
+            width: 33%;
             text-align: left;
             word-wrap: break-word;
         }
 
         .col-qty {
-            width: 18%;
+            width: 14%;
             text-align: right;
-            padding-right: 20px !important;
+            padding-right: 10px !important;
         }
 
         .col-price {
-            width: 22%;
+            width: 18%;
             text-align: right;
-            padding-right: 20px !important;
+            padding-right: 10px !important;
+        }
+
+        .col-dis {
+            width: 16%;
+            text-align: right;
+            padding-right: 10px !important;
         }
 
         .col-total {
-            width: 20%;
+            width: 19%;
             text-align: right;
         }
 
@@ -246,12 +252,14 @@
         </tr>
     </table>
 
+    @php $hasDiscount = collect($allItems)->contains(fn($i) => ($i['discount_amount'] ?? 0) > 0); @endphp
     <table class="product-table">
         <thead>
             <tr>
                 <th class="col-sku">SKU</th>
                 <th class="col-qty">Qty</th>
                 <th class="col-price">U.Price</th>
+                @if($hasDiscount)<th class="col-dis">Dis</th>@endif
                 <th class="col-total">Total</th>
             </tr>
         </thead>
@@ -261,6 +269,7 @@
                 <td class="col-sku">{{ $item['display_name'] }}</td>
                 <td class="col-qty">{{ $item['quantity'] }}</td>
                 <td class="col-price">{{ number_format($item['price'], 2) }}</td>
+                @if($hasDiscount)<td class="col-dis">{{ ($item['discount_amount'] ?? 0) > 0 ? number_format($item['discount_amount'], 2) : '' }}</td>@endif
                 <td class="col-total">{{ number_format($item['totalprice'], 2) }}</td>
             </tr>
             @endforeach

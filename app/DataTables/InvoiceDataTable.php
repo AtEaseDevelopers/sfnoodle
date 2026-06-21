@@ -109,41 +109,37 @@ class InvoiceDataTable extends DataTable
             // Get tiered pricing
             $tieredPricing = $product->tiered_pricing;
             
+            $itemTotal = 0;
+
             if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                // Sort tiers by quantity descending (largest first for best value)
                 usort($tieredPricing, function($a, $b) {
                     return $b['quantity'] - $a['quantity'];
                 });
-                
+
                 $remainingQuantity = $quantity;
-                
-                // Apply tiered pricing for each tier
+
                 foreach ($tieredPricing as $tier) {
-                    if ($remainingQuantity <= 0) {
-                        break;
-                    }
-                    
-                    $tierQuantity = $tier['quantity'];
-                    $tierPrice = $tier['price'];
-                    
-                    // Calculate how many full tier packages fit into remaining quantity
+                    if ($remainingQuantity <= 0) break;
+
+                    $tierQuantity     = $tier['quantity'];
+                    $tierPrice        = $tier['price'];
                     $numberOfPackages = floor($remainingQuantity / $tierQuantity);
-                    
+
                     if ($numberOfPackages > 0) {
-                        $itemTotal = $numberOfPackages * $tierPrice;
-                        $total += $itemTotal;
-                        $remainingQuantity -= ($numberOfPackages * $tierQuantity);
+                        $itemTotal         += $numberOfPackages * $tierPrice;
+                        $remainingQuantity -= $numberOfPackages * $tierQuantity;
                     }
                 }
-                
-                // Handle remaining quantity with base price (special or regular)
+
                 if ($remainingQuantity > 0) {
-                    $total += $remainingQuantity * $basePrice;
+                    $itemTotal += $remainingQuantity * $basePrice;
                 }
             } else {
-                // No tiered pricing, use base price
-                $total += $quantity * $basePrice;
+                $itemTotal = $quantity * $basePrice;
             }
+
+            $discount = (float)($detail->discount_amount ?? 0);
+            $total   += max(0, $itemTotal - $discount);
         }
         return round($total, 2);
     }

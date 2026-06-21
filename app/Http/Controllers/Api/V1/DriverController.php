@@ -5810,106 +5810,99 @@ class DriverController extends Controller
                 
                 $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
                 $hasSpecialPrice = $specialPrice ? true : false;
-                $specialPriceType = $specialPrice ? 
+                $specialPriceType = $specialPrice ?
                     ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific') : null;
-                
+
+                $discount = (float)($detail->discount_amount ?? 0);
+                $detailStartIndex = count($allItems);
+
                 // Get tiered pricing
                 $tieredPricing = $product->tiered_pricing;
-                
+
                 if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                    // Sort tiers by quantity ascending
                     usort($tieredPricing, function($a, $b) {
                         return $a['quantity'] - $b['quantity'];
                     });
-                    
+
                     $remainingQuantity = $quantity;
-                    
-                    // Apply tiered pricing for each tier
+
                     foreach ($tieredPricing as $tier) {
-                        if ($remainingQuantity <= 0) {
-                            break;
-                        }
-                        
+                        if ($remainingQuantity <= 0) break;
+
                         $tierQuantity = $tier['quantity'];
-                        $tierPrice = $tier['price']; // This is the lump sum price for the tier quantity
-                        
-                        // Calculate how many full tier packages fit into remaining quantity
+                        $tierPrice    = $tier['price'];
                         $numberOfPackages = floor($remainingQuantity / $tierQuantity);
-                        
+
                         if ($numberOfPackages > 0) {
-                            $quantityInThisTier = $numberOfPackages * $tierQuantity;
-                            $itemTotal = $numberOfPackages * $tierPrice; // Package price × number of packages
+                            $quantityInThisTier      = $numberOfPackages * $tierQuantity;
+                            $itemTotal               = $numberOfPackages * $tierPrice;
                             $regularTotalForThisTier = $quantityInThisTier * $basePrice;
-                            
+
                             $originalTotal += $regularTotalForThisTier;
-                            $offerAmount += ($regularTotalForThisTier - $itemTotal);
-                            
-                            // Add display name with special price info if applicable
-                            $displayName = $product->code . " ({$tierQuantity} units)";
-                        
-                            // Add as a single line item with quantity = number of packages
+                            $offerAmount   += ($regularTotalForThisTier - $itemTotal);
+
                             $allItems[] = [
-                                'product_code' => $product->code,
-                                'product_name' => $product->name,
-                                'quantity' => $numberOfPackages, // Number of packages
-                                'price' => $tierPrice, // Package price
-                                'totalprice' => $itemTotal,
-                                'is_foc' => false,
-                                'display_name' => $displayName,
-                                'has_offer' => true,
-                                'tier_quantity' => $tierQuantity,
+                                'product_code'    => $product->code,
+                                'product_name'    => $product->name,
+                                'quantity'        => $numberOfPackages,
+                                'price'           => $tierPrice,
+                                'totalprice'      => $itemTotal,
+                                'discount_amount' => 0,
+                                'is_foc'          => false,
+                                'display_name'    => $product->code . " ({$tierQuantity} units)",
+                                'has_offer'       => true,
+                                'tier_quantity'   => $tierQuantity,
                                 'has_special_price' => $hasSpecialPrice,
-                                'special_price_type' => $specialPriceType
+                                'special_price_type' => $specialPriceType,
                             ];
-                            
+
                             $remainingQuantity -= $quantityInThisTier;
                         }
                     }
-                    
-                    // Handle remaining quantity with base price (special or regular)
+
                     if ($remainingQuantity > 0) {
                         $itemTotal = $remainingQuantity * $basePrice;
                         $originalTotal += $itemTotal;
-                        
-                        // Add display name with special price info if applicable
-                        $displayName = $product->code;
-                        if ($hasSpecialPrice) {
-                            $displayName;
-                        }
-                        
+
                         $allItems[] = [
-                            'product_code' => $product->code,
-                            'product_name' => $product->name,
-                            'quantity' => $remainingQuantity,
-                            'price' => $basePrice,
-                            'totalprice' => $itemTotal,
-                            'is_foc' => false,
-                            'display_name' => $displayName,
-                            'has_offer' => false,
+                            'product_code'    => $product->code,
+                            'product_name'    => $product->name,
+                            'quantity'        => $remainingQuantity,
+                            'price'           => $basePrice,
+                            'totalprice'      => $itemTotal,
+                            'discount_amount' => 0,
+                            'is_foc'          => false,
+                            'display_name'    => $product->code,
+                            'has_offer'       => false,
                             'has_special_price' => $hasSpecialPrice,
-                            'special_price_type' => $specialPriceType
+                            'special_price_type' => $specialPriceType,
                         ];
                     }
                 } else {
-                    // No tiered pricing, use base price (special or regular)
                     $itemTotal = $quantity * $basePrice;
                     $originalTotal += $itemTotal;
-                    
-                    // Add display name with special price info if applicable
-                    $displayName = $product->code;
-                    
+
                     $allItems[] = [
-                        'product_code' => $product->code,
-                        'product_name' => $product->name,
-                        'quantity' => $quantity,
-                        'price' => $basePrice,
-                        'totalprice' => $itemTotal,
-                        'is_foc' => false,
-                        'display_name' => $displayName,
-                        'has_offer' => false,
+                        'product_code'    => $product->code,
+                        'product_name'    => $product->name,
+                        'quantity'        => $quantity,
+                        'price'           => $basePrice,
+                        'totalprice'      => $itemTotal,
+                        'discount_amount' => 0,
+                        'is_foc'          => false,
+                        'display_name'    => $product->code,
+                        'has_offer'       => false,
                         'has_special_price' => $hasSpecialPrice,
-                        'special_price_type' => $specialPriceType
+                        'special_price_type' => $specialPriceType,
                     ];
+                }
+
+                // Apply discount to the last row added for this detail
+                if ($discount > 0 && count($allItems) > $detailStartIndex) {
+                    $lastIdx = count($allItems) - 1;
+                    $allItems[$lastIdx]['totalprice']      = max(0, $allItems[$lastIdx]['totalprice'] - $discount);
+                    $allItems[$lastIdx]['discount_amount'] = $discount;
+                    $offerAmount += $discount;
                 }
             }
             

@@ -595,41 +595,34 @@ class InvoiceController extends AppBaseController
                 $invoice->customer_id
             );
             
-            $discountedTotal = $priceCalculation['total_price'];
+            $discount = (float)($detail->discount_amount ?? 0);
+            $discountedTotal = max(0, $priceCalculation['total_price'] - $discount);
             $regularTotal = $quantity * $regularPrice;
-            
+
             $originalTotal += $regularTotal;
             $offerAmount += ($regularTotal - $discountedTotal);
-            
-            // Get the base price (could be special price or regular price)
-            // We need to determine the effective unit price
+
             $effectiveUnitPrice = $priceCalculation['unit_price'];
-            
-            // Check if special price was applied
+
             $hasSpecialPrice = false;
-            $specialPriceType = null;
-            
-            // Check breakdown to see if special price was used
             foreach ($priceCalculation['breakdown'] as $breakdown) {
                 if (isset($breakdown['price_source']) && $breakdown['price_source'] == 'special_price') {
                     $hasSpecialPrice = true;
                     break;
                 }
             }
-            
-            // Display logic - you might want to show tiered pricing differently
-            // For now, show as a single line with the calculated unit price
+
             $allItems[] = [
-                'product_code' => $product->code,
-                'product_name' => $product->name,
-                'quantity' => $quantity,
-                'price' => $effectiveUnitPrice,
-                'totalprice' => $discountedTotal,
-                'is_foc' => false,
-                'display_name' => $product->code,
-                'has_offer' => ($regularTotal > $discountedTotal),
-                'regular_price' => $regularPrice,
-                'discount_amount' => ($regularTotal - $discountedTotal)
+                'product_code'    => $product->code,
+                'product_name'    => $product->name,
+                'quantity'        => $quantity,
+                'price'           => $effectiveUnitPrice,
+                'totalprice'      => $discountedTotal,
+                'is_foc'          => false,
+                'display_name'    => $product->code,
+                'has_offer'       => ($regularTotal > $discountedTotal),
+                'regular_price'   => $regularPrice,
+                'discount_amount' => $discount,
             ];
         }
         
