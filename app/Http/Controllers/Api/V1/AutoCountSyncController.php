@@ -280,17 +280,17 @@ class AutoCountSyncController extends Controller
             }
             $details = [];
             foreach ($invoice->invoiceDetails as $d) {
-                if (!$d->product) {
-                    continue;
-                }
-                $qty = (int) $d->quantity;
-                $total = (float) $d->totalprice;
+                if (!$d->product) continue;
+
+                $qty        = (int) $d->quantity;
+                $discount   = (float) ($d->discount_amount ?? 0);
+                $total      = max(0, round((float) $d->totalprice - $discount, 2));
                 $storedUnit = (float) $d->price;
-                // When stored unit × qty does not match line total (e.g. driver app saved catalog unit but tiered total),
-                // send the implied unit so AutoCount matches the charged SubTotal instead of overwriting to total/qty.
+
+                // When stored unit × qty does not match line total (e.g. tiered pricing or discount applied),
+                // send the implied unit so AutoCount matches the charged SubTotal.
                 $lineTotalFromUnit = $qty > 0 ? round($storedUnit * $qty, 2) : 0.0;
-                $roundedTotal = round($total, 2);
-                $unitForSync = ($qty > 0 && abs($lineTotalFromUnit - $roundedTotal) > 0.02)
+                $unitForSync = ($qty > 0 && abs($lineTotalFromUnit - $total) > 0.02)
                     ? round($total / $qty, 6)
                     : $storedUnit;
 
