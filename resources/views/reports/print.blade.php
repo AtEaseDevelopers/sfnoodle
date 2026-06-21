@@ -249,6 +249,7 @@
                                 <th>Status</th>
                                 <th>Company Name</th>
                                 <th>Payment Term</th>
+                                <th>Discount</th>
                                 <th>Amount</th>
                             </tr>
                         </thead>
@@ -259,32 +260,39 @@
                                 <td>{{ $item['status'] }}</td>
                                 <td>{{ $item['company_name'] }}</td>
                                 <td>{{ $item['paymentterm'] }}</td>
+                                <td>{{ $item['discount'] ?? '-' }}</td>
                                 <td>{{ $item['amount'] }}</td>
                             </tr>
                             @endforeach
-                            
+
                             @if($loop->last)
                             <tr class="total-row">
-                                <td colspan="4" style="text-align:left;">
-                                    <strong>Number Of Documents</strong><br>
+                                <td colspan="5" style="text-align:left;">
+                                    <strong>Number Of Documents</strong>
                                 </td>
                                 <td><strong>{{ $total_documents }}</strong></td>
                             </tr>
                             <tr class="total-row">
-                                <td colspan="4" style="text-align:left;">
-                                    <strong>Total Cash</strong><br>
+                                <td colspan="5" style="text-align:left;">
+                                    <strong>Total Discount</strong>
+                                </td>
+                                <td><strong>{{ $total_discount ?? 'RM 0.00' }}</strong></td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="5" style="text-align:left;">
+                                    <strong>Total Cash</strong>
                                 </td>
                                 <td><strong>{{ $total_cash }}</strong></td>
                             </tr>
                             <tr class="total-row">
-                                <td colspan="4" style="text-align:left;">
-                                    <strong>Total Credit</strong><br>
+                                <td colspan="5" style="text-align:left;">
+                                    <strong>Total Credit</strong>
                                 </td>
                                 <td><strong>{{ $total_credit }}</strong></td>
                             </tr>
                             <tr class="total-row">
-                                <td colspan="4" style="text-align:left;">
-                                    <strong>Total</strong><br>
+                                <td colspan="5" style="text-align:left;">
+                                    <strong>Total</strong>
                                 </td>
                                 <td><strong>{{ $grand_total }}</strong></td>
                             </tr>

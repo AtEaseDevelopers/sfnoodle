@@ -302,17 +302,22 @@ class TripController extends AppBaseController
         $salesByProduct = [];
         $productAmounts = []; // Store total amount for each product
         $invoiceTotals = [];
+        $invoiceDiscounts = [];
         $totalDiscountedAmount = 0;
         $totalCashAmount = 0;
         $totalCreditAmount = 0;
-        
+        $totalDiscountAmount = 0;
+
         foreach ($invoices as $invoice) {
             $invoiceDiscountedTotal = 0;
-            
+            $invoiceDiscountAmount  = 0;
+
             foreach ($invoice->invoiceDetails as $detail) {
+                if ($detail->price == 0 && $detail->totalprice == 0) continue; // skip FOC rows
                 // Use stored totalprice so amounts are fixed at invoice creation time
                 $itemDiscountedTotal = (float) $detail->totalprice;
                 $invoiceDiscountedTotal += $itemDiscountedTotal;
+                $invoiceDiscountAmount  += (float) ($detail->discount_amount ?? 0);
 
                 // Accumulate sales by product (quantity)
                 if (!isset($salesByProduct[$detail->product_id])) {
@@ -326,10 +331,12 @@ class TripController extends AppBaseController
                 }
                 $productAmounts[$detail->product_id] += $itemDiscountedTotal;
             }
-            
-            $invoiceTotals[$invoice->id] = $invoiceDiscountedTotal;
-            $totalDiscountedAmount += $invoiceDiscountedTotal;
-            
+
+            $invoiceTotals[$invoice->id]   = $invoiceDiscountedTotal;
+            $invoiceDiscounts[$invoice->id] = $invoiceDiscountAmount;
+            $totalDiscountedAmount         += $invoiceDiscountedTotal;
+            $totalDiscountAmount           += $invoiceDiscountAmount;
+
             // Track cash vs credit
             if ($invoice->paymentterm == 'Cash') {
                 $totalCashAmount += $invoiceDiscountedTotal;
@@ -517,7 +524,9 @@ class TripController extends AppBaseController
                 'invoices' => $invoices,
                 'cancelled_invoices' => $cancelledInvoices,
                 'sales_orders' => $salesOrder,
-                'invoice_totals' => $invoiceTotals
+                'invoice_totals' => $invoiceTotals,
+                'invoice_discounts' => $invoiceDiscounts,
+                'total_discount' => $totalDiscountAmount,
             ],
             'sales_by_product' => $sales->map(function($item) {
                 return [
@@ -602,37 +611,41 @@ class TripController extends AppBaseController
         // Format invoices list - using pre-calculated totals
         $documentsList = [];
         $totalDocumentsAmount = 0;
-        
+        $totalDocumentsDiscount = 0;
+
         // Add active (completed) invoices
         foreach ($report['sales_summary']['invoices'] as $invoice) {
             $customer = Customer::find($invoice->customer_id);
             $customerName = $customer ? $customer->company : 'N/A';
-            
-            // Use pre-calculated invoice total from report
+
             $invoiceDiscountedTotal = $report['sales_summary']['invoice_totals'][$invoice->id] ?? 0;
-            $totalDocumentsAmount += $invoiceDiscountedTotal;
-            
+            $invoiceDiscount        = $report['sales_summary']['invoice_discounts'][$invoice->id] ?? 0;
+            $totalDocumentsAmount  += $invoiceDiscountedTotal;
+            $totalDocumentsDiscount += $invoiceDiscount;
+
             $documentsList[] = [
-                'doc_no' => $invoice->invoiceno,
-                'status' => $invoice->getStatusTextAttribute(),
+                'doc_no'       => $invoice->invoiceno,
+                'status'       => $invoice->getStatusTextAttribute(),
                 'company_name' => $customerName,
-                'paymentterm' => $invoice->paymentterm ?? '-',
-                'amount' => 'RM ' . number_format($invoiceDiscountedTotal, 2)
+                'paymentterm'  => $invoice->paymentterm ?? '-',
+                'discount'     => $invoiceDiscount > 0 ? 'RM ' . number_format($invoiceDiscount, 2) : '-',
+                'amount'       => 'RM ' . number_format($invoiceDiscountedTotal, 2),
             ];
         }
-        
+
         // Add cancelled invoices with amount 0
         if (isset($report['sales_summary']['cancelled_invoices'])) {
             foreach ($report['sales_summary']['cancelled_invoices'] as $invoice) {
                 $customer = Customer::find($invoice->customer_id);
                 $customerName = $customer ? $customer->company : 'N/A';
-                
+
                 $documentsList[] = [
-                    'doc_no' => $invoice->invoiceno,
-                    'status' => $invoice->getStatusTextAttribute(),  
+                    'doc_no'       => $invoice->invoiceno,
+                    'status'       => $invoice->getStatusTextAttribute(),
                     'company_name' => $customerName,
-                    'paymentterm' => $invoice->paymentterm ?? '-',
-                    'amount' => 'RM 0.00'
+                    'paymentterm'  => $invoice->paymentterm ?? '-',
+                    'discount'     => '-',
+                    'amount'       => 'RM 0.00',
                 ];
             }
         }
@@ -691,6 +704,7 @@ class TripController extends AppBaseController
             'documents_list' => $documentsList,
             'total_documents' => count($documentsList),
             'total_documents_amount' => 'RM ' . number_format($totalDocumentsAmount, 2),
+            'total_discount' => 'RM ' . number_format($totalDocumentsDiscount, 2),
             
             'total_cash' => 'RM ' . number_format($report['sales_summary']['total_cash'], 2),
             'total_credit' => 'RM ' . number_format($report['sales_summary']['total_credit'], 2),
