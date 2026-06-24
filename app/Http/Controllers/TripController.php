@@ -313,17 +313,20 @@ class TripController extends AppBaseController
             $invoiceDiscountAmount  = 0;
 
             foreach ($invoice->invoiceDetails as $detail) {
-                if ($detail->price == 0 && $detail->totalprice == 0) continue; // skip FOC rows
-                // Use stored totalprice so amounts are fixed at invoice creation time
-                $itemDiscountedTotal = (float) $detail->totalprice;
-                $invoiceDiscountedTotal += $itemDiscountedTotal;
-                $invoiceDiscountAmount  += (float) ($detail->discount_amount ?? 0);
+                $isFoc = ($detail->price == 0 && $detail->totalprice == 0);
 
-                // Accumulate sales by product (quantity)
+                // Always count quantity for stock tracking (FOC items physically leave the truck)
                 if (!isset($salesByProduct[$detail->product_id])) {
                     $salesByProduct[$detail->product_id] = 0;
                 }
                 $salesByProduct[$detail->product_id] += $detail->quantity;
+
+                if ($isFoc) continue; // Skip FOC for money calculations only
+
+                // Use stored totalprice so amounts are fixed at invoice creation time
+                $itemDiscountedTotal = (float) $detail->totalprice;
+                $invoiceDiscountedTotal += $itemDiscountedTotal;
+                $invoiceDiscountAmount  += (float) ($detail->discount_amount ?? 0);
 
                 // Accumulate product amounts
                 if (!isset($productAmounts[$detail->product_id])) {
