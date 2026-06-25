@@ -10333,11 +10333,45 @@ class DriverController extends Controller
             if (!empty($invoiceInput['uuid'])) {
                 $existing = Invoice::where('uuid', $invoiceInput['uuid'])->first();
                 if ($existing) {
-                    return response()->json([
-                        'result'  => false,
-                        'message' => __LINE__ . $this->message_separator . 'Invoice already exists at index ' . $index . ': ' . $existing->invoiceno,
-                        'data'    => null
-                    ], 200);
+                    // Compare non-FOC details to detect idempotent retry
+                    $existingNonFoc = $existing->invoiceDetails
+                        ->filter(fn($d) => !($d->price == 0 && $d->totalprice == 0));
+
+                    $sameCustomer = $existing->customer_id == ($invoiceInput['customer_id'] ?? null);
+                    $sameCount    = $existingNonFoc->count() === count($invoiceInput['details']);
+                    $detailsMatch = false;
+
+                    if ($sameCustomer && $sameCount) {
+                        $existingSorted = $existingNonFoc->map(fn($d) => [
+                            'p' => (int)$d->product_id,
+                            'q' => (float)$d->quantity,
+                            'd' => (float)($d->discount_amount ?? 0),
+                        ])->sortBy('p')->values()->toArray();
+
+                        $inputSorted = collect($invoiceInput['details'])->map(fn($d) => [
+                            'p' => (int)$d['product_id'],
+                            'q' => (float)$d['quantity'],
+                            'd' => (float)($d['discount_amount'] ?? 0),
+                        ])->sortBy('p')->values()->toArray();
+
+                        $detailsMatch = ($existingSorted === $inputSorted);
+                    }
+
+                    if ($detailsMatch) {
+                        // Idempotent retry: already created with identical details — skip creation
+                        $preparedInvoices[] = [
+                            'index'        => $index,
+                            'invoiceInput' => $invoiceInput,
+                            'customer'     => $customer,
+                            'focItems'     => [],
+                            'invoiceDate'  => $existing->date,
+                            'skipExisting' => $existing,
+                        ];
+                        continue; // skip stock check, inventory already deducted
+                    }
+
+                    // UUID collision with different details: clear UUID so a fresh invoice number is assigned
+                    $invoiceInput['uuid'] = null;
                 }
             }
 
@@ -10410,6 +10444,31 @@ class DriverController extends Controller
             $date         = $prepared['invoiceDate'];
             $paymentTerm  = $customer->paymentterm;
 
+            // Idempotent retry: invoice already exists with identical details
+            if (isset($prepared['skipExisting'])) {
+                $existing  = $prepared['skipExisting'];
+                $nonFocCnt = $existing->invoiceDetails
+                    ->filter(fn($d) => !($d->price == 0 && $d->totalprice == 0))
+                    ->count();
+                $results[] = [
+                    'index'           => $index,
+                    'success'         => true,
+                    'invoiceno'       => $existing->invoiceno,
+                    'invoice_id'      => $existing->id,
+                    'date'            => \Carbon\Carbon::parse($existing->date)->format('d-m-Y'),
+                    'customer_id'     => $existing->customer_id,
+                    'customer_name'   => $customer->company,
+                    'total'           => (float) $existing->total,
+                    'paymentterm'     => $existing->paymentterm,
+                    'status'          => $existing->getStatusTextAttribute(),
+                    'payment_created' => false,
+                    'items_count'     => $nonFocCnt,
+                    'created_at'      => $existing->created_at->format('Y-m-d H:i:s'),
+                    'already_exists'  => true,
+                ];
+                continue;
+            }
+
             try {
                 DB::beginTransaction();
 
@@ -10447,7 +10506,7 @@ class DriverController extends Controller
                         'quantity'        => $detail['quantity'],
                         'price'           => $detail['price'] ?? $priceCalculation['unit_price'],
                         'totalprice'      => $itemTotal,
-                        'discount_amount' => $discount,
+                        'discount_amount' => $discount > 0 ? $discount : null,
                         'remark'          => $detail['remark'] ?? null,
                     ];
                 }
