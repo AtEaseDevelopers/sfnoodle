@@ -25,7 +25,7 @@ class InvoiceDataTable extends DataTable
                 return $model->date ? date('d-m-Y', strtotime($model->date)) : '';
             })
             ->editColumn('created_by', function ($model) {
-                return $model->creator_name ?? 'Unknown';
+                return $model->driver_name ?? ($model->creator_name ?? 'Unknown');
             })
             ->editColumn('total', function ($model) {
                 // Format to 2 decimal places
@@ -41,11 +41,12 @@ class InvoiceDataTable extends DataTable
             })
             ->filterColumn('created_by', function ($query, $keyword) {
                 $query->where(function ($q) use ($keyword) {
-                    $q->whereHas('createdByUser', function ($subQuery) use ($keyword) {
-                        $subQuery->where('name', 'like', '%' . $keyword . '%');
-                    })->orWhereHas('createdByDriver', function ($subQuery) use ($keyword) {
-                        $subQuery->where('name', 'like', '%' . $keyword . '%');
-                    });
+                    $q->where('driver_name', 'like', '%' . $keyword . '%')
+                      ->orWhereHas('createdByUser', function ($subQuery) use ($keyword) {
+                          $subQuery->where('name', 'like', '%' . $keyword . '%');
+                      })->orWhereHas('createdByDriver', function ($subQuery) use ($keyword) {
+                          $subQuery->where('name', 'like', '%' . $keyword . '%');
+                      });
                 });
             })
             ->filterColumn('customer_id', function ($query, $keyword) {

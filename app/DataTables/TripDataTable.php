@@ -57,6 +57,17 @@ class TripDataTable extends DataTable
                     </span>';
                 }
             })
+            ->editColumn('driver_id', function ($row) {
+                return $row->driver_name ?? ($row->driver->name ?? 'N/A');
+            })
+            ->filterColumn('driver_id', function ($query, $keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('driver_name', 'like', '%' . $keyword . '%')
+                      ->orWhereHas('driver', function ($subQuery) use ($keyword) {
+                          $subQuery->where('name', 'like', '%' . $keyword . '%');
+                      });
+                });
+            })
             ->filterColumn('date', function ($query, $keyword) {
                 $dates = explode('|', $keyword);
                 if (count($dates) > 1) {
@@ -199,8 +210,8 @@ class TripDataTable extends DataTable
 
             'driver_id'=> new \Yajra\DataTables\Html\Column([
                 'title' => trans('trips.driver'),
-                'data' => 'driver.name',
-                'name' => 'driver.name'
+                'data' => 'driver_id',
+                'name' => 'driver_id'
             ]),
 
             'type'=> new \Yajra\DataTables\Html\Column([
