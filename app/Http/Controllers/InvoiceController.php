@@ -646,11 +646,11 @@ class InvoiceController extends AppBaseController
         $height = (count($allItems) * 50) + 430;
         
         $creator = $invoice->creator;
-        
+
         try {
             $pdf = Pdf::loadView('invoices.print', array(
                 'invoices' => $invoice,
-                'creatorName' => $creator->name ?? 'System',
+                'creatorName' => $invoice->driver_name ?? ($creator->name ?? 'System'),
                 'allItems' => $allItems,
                 'originalTotal' => $originalTotal,
                 'offerAmount' => $offerAmount,

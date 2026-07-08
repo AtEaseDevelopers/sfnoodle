@@ -25,6 +25,7 @@ class Trip extends Model
         'uuid', // Add this column
         'date',
         'driver_id',
+        'driver_name',
         'type',
         'stock_data'
     ];

@@ -384,7 +384,7 @@ class ReportController extends AppBaseController
             'email' => 'email: account@sfnoodles.com',
             
             // Trip Information
-            'salesman' => $driver->name ?? 'N/A',
+            'salesman' => $starttrip->driver_name ?? ($driver->name ?? 'N/A'),
             'printed_time' => Carbon::now()->format('d M Y h:i A'),
             'approved_by' => $latestCount ? (User::find($latestCount->approved_by)->name ?? '-') : '-',
             'trip_id' => 'T-' . ($starttrip->uuid ?? $tripId),

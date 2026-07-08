@@ -38,6 +38,7 @@ class Invoice extends Model
         'is_driver',
         'trip_id',
         'driver_id',
+        'driver_name',
         'autocount',
         'uuid',
     ];

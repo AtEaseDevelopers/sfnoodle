@@ -7196,11 +7196,12 @@ class DriverController extends Controller
                 });
 
             $trip = Trip::create([
-                'date'=> now(),
-                'uuid' => Trip::generateUniqueReference(),
-                'driver_id' => $driver->id,
-                'type' => Trip::START_TRIP,
-                'stock_data' => $currentStock, // JSON store
+                'date'        => now(),
+                'uuid'        => Trip::generateUniqueReference(),
+                'driver_id'   => $driver->id,
+                'driver_name' => $driver->name,
+                'type'        => Trip::START_TRIP,
+                'stock_data'  => $currentStock,
             ]);
             
             $driver->trip_id = $trip->uuid; 
@@ -7285,11 +7286,12 @@ class DriverController extends Controller
             });
             
             $trip = Trip::create([
-                'uuid'=> $driver->trip_id,
-                'date'=> now(),
-                'driver_id' => $driver->id,
-                'type' => Trip::END_TRIP,
-                'stock_data' => $currentStock, // JSON store
+                'uuid'        => $driver->trip_id,
+                'date'        => now(),
+                'driver_id'   => $driver->id,
+                'driver_name' => $driver->name,
+                'type'        => Trip::END_TRIP,
+                'stock_data'  => $currentStock,
             ]); 
 
             $tripSummary = TripController::generateTripReport($trip->uuid);
@@ -8190,12 +8192,12 @@ class DriverController extends Controller
             'email' => 'email: account@sfnoodles.com',
             
             // Trip Information
-            'salesman' => $driver->name ?? 'N/A',
+            'salesman' => $starttrip->driver_name ?? ($driver->name ?? 'N/A'),
             'printed_time' => Carbon::now()->format('d M Y h:i A'),
             'approved_by' => $latestCount ? (User::find($latestCount->approved_by)->name ?? '-') : '-',
             'trip_id' => 'T-' . ($starttrip->uuid ?? $tripId),
             'start_time' => $starttrip ? Carbon::parse($starttrip->date)->format('d M Y h:i A') : 'N/A',
-            'end_time' => Carbon::parse(now())->format('d M Y h:i A') ,
+            'end_time' => Carbon::parse(now())->format('d M Y h:i A'),
             
             // Stock Count Data
             'stock_counts' => $stockCounts,
@@ -9814,6 +9816,7 @@ class DriverController extends Controller
                     'total'       => $total,
                     'paymentterm' => $paymentTerm,
                     'driver_id'   => $driver->id,
+                    'driver_name' => $driver->name,
                     'created_by'  => $driver->id,
                     'is_driver'   => true,
                     'trip_id'     => $driver->trip_id,
@@ -10519,6 +10522,7 @@ class DriverController extends Controller
                     'total'       => $total,
                     'paymentterm' => $paymentTerm,
                     'driver_id'   => $driver->id,
+                    'driver_name' => $driver->name,
                     'created_by'  => $driver->id,
                     'is_driver'   => true,
                     'trip_id'     => $driver->trip_id,
