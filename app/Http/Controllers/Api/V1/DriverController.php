@@ -10121,7 +10121,10 @@ class DriverController extends Controller
         try {
             $input              = $request->all();
             $input['date']      = $invoiceDate;
-            $input['invoiceno'] = \App\Models\Invoice::getNextInvoiceNumber($driver->id);
+            $requestedNo        = $request->invoiceno ?? null;
+            $input['invoiceno'] = ($requestedNo && !Invoice::where('invoiceno', $requestedNo)->exists())
+                                    ? $requestedNo
+                                    : \App\Models\Invoice::getNextInvoiceNumber($driver->id);
             $input['driver_id'] = $driver->id;
             $input['created_by'] = $driver->id;
             $input['is_driver'] = true;
@@ -10472,19 +10475,26 @@ class DriverController extends Controller
                 $userCode   = $driver->invoice_code ?? 'R00';
                 $bulkPrefix = "AE{$year}{$month}/{$userCode}/A";
 
-                $existingBulk = Invoice::where('invoiceno', 'like', $bulkPrefix . '%')->get();
-                $maxNumber    = 0;
-                foreach ($existingBulk as $inv) {
-                    $numericPart = (int) substr($inv->invoiceno, strlen($bulkPrefix));
-                    if ($numericPart > $maxNumber) {
-                        $maxNumber = $numericPart;
+                // Use the invoice number from the request if provided and not already taken;
+                // otherwise fall back to offline bulk format
+                $requestedNo = $invoiceInput['invoiceno'] ?? null;
+                if ($requestedNo && !Invoice::where('invoiceno', $requestedNo)->exists()) {
+                    $invoiceNo = $requestedNo;
+                } else {
+                    $existingBulk = Invoice::where('invoiceno', 'like', $bulkPrefix . '%')->get();
+                    $maxNumber    = 0;
+                    foreach ($existingBulk as $inv) {
+                        $numericPart = (int) substr($inv->invoiceno, strlen($bulkPrefix));
+                        if ($numericPart > $maxNumber) {
+                            $maxNumber = $numericPart;
+                        }
                     }
+                    $nextNumber = $maxNumber + 1;
+                    do {
+                        $invoiceNo = $bulkPrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+                        $nextNumber++;
+                    } while (Invoice::where('invoiceno', $invoiceNo)->exists());
                 }
-                $nextNumber = $maxNumber + 1;
-                do {
-                    $invoiceNo = $bulkPrefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-                    $nextNumber++;
-                } while (Invoice::where('invoiceno', $invoiceNo)->exists());
 
                 $total          = 0;
                 $invoiceDetails = [];
