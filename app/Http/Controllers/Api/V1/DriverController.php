@@ -10107,10 +10107,13 @@ class DriverController extends Controller
         }
 
         if (!empty($insufficientProducts)) {
+            $productLines = array_map(fn($p) =>
+                $p['product_name'] . ' (need ' . $p['required_quantity'] . ', have ' . $p['available_quantity'] . ')',
+                $insufficientProducts
+            );
             return response()->json([
                 'result'                => false,
-                'message'               => __LINE__ . $this->message_separator . 'Insufficient inventory balance',
-                'errors'                => ['inventory' => ['Some products have insufficient inventory (including FOC items)']],
+                'message'               => __LINE__ . $this->message_separator . 'Insufficient stock: ' . implode(', ', $productLines),
                 'insufficient_products' => $insufficientProducts,
                 'data'                  => null
             ], 200);
@@ -10385,6 +10388,8 @@ class DriverController extends Controller
                 $allItemsToCheck[$focItem['product_id']] = ($allItemsToCheck[$focItem['product_id']] ?? 0) + $focItem['quantity'];
             }
 
+            $invoiceLabel = $invoiceInput['invoiceno'] ?? ('Invoice #' . $index);
+
             foreach ($allItemsToCheck as $productId => $quantityNeeded) {
                 $product          = Product::find($productId);
                 $inventoryBalance = InventoryBalance::where('driver_id', $driver->id)
@@ -10394,6 +10399,7 @@ class DriverController extends Controller
                 if (!$inventoryBalance) {
                     $insufficientProducts[] = [
                         'invoice_index'      => $index,
+                        'invoiceno'          => $invoiceInput['invoiceno'] ?? null,
                         'product_id'         => $productId,
                         'product_name'       => $product ? $product->name : 'Unknown',
                         'required_quantity'  => $quantityNeeded,
@@ -10403,6 +10409,7 @@ class DriverController extends Controller
                 } elseif ($inventoryBalance->quantity < $quantityNeeded) {
                     $insufficientProducts[] = [
                         'invoice_index'      => $index,
+                        'invoiceno'          => $invoiceInput['invoiceno'] ?? null,
                         'product_id'         => $productId,
                         'product_name'       => $product ? $product->name : 'Unknown',
                         'required_quantity'  => $quantityNeeded,
@@ -10422,10 +10429,13 @@ class DriverController extends Controller
         }
 
         if (!empty($insufficientProducts)) {
+            $productLines = array_map(fn($p) =>
+                ($p['invoiceno'] ?? ('Invoice #' . $p['invoice_index'])) . ' - ' . $p['product_name'] . ' (need ' . $p['required_quantity'] . ', have ' . $p['available_quantity'] . ')',
+                $insufficientProducts
+            );
             return response()->json([
                 'result'                => false,
-                'message'               => __LINE__ . $this->message_separator . 'Insufficient inventory balance, no invoices created',
-                'errors'                => ['inventory' => ['Some products have insufficient inventory (including FOC items)']],
+                'message'               => __LINE__ . $this->message_separator . 'Insufficient stock: ' . implode(', ', $productLines),
                 'insufficient_products' => $insufficientProducts,
                 'data'                  => null
             ], 200);
