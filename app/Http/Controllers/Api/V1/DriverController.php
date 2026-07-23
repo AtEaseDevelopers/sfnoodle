@@ -7540,14 +7540,12 @@ class DriverController extends Controller
             $inventoryBalances = InventoryBalance::with('product')
             ->where('driver_id', $driver->id)
             ->get()
-            ->groupBy(function($item) {
-                return $item->product->name ?? 'Unknown Product';
-            })
-            ->map(function($items, $productName) {
+            ->groupBy('product_id')
+            ->map(function($items, $productId) {
                 $firstItem = $items->first();
                 return [
-                    'product_name' => $productName,
-                    'product_code' => $firstItem->product->code ?? '', 
+                    'product_name' => $firstItem->product->name ?? 'Unknown Product',
+                    'product_code' => $firstItem->product->code ?? '',
                     'total_quantity' => $items->sum('quantity'),
                 ];
             })
