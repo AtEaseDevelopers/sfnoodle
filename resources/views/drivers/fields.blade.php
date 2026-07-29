@@ -37,6 +37,16 @@
     {!! Form::text('remark', null, ['class' => 'form-control', 'maxlength' => 255]) !!}
 </div>
 
+<!-- Allow Discount Field -->
+<div class="form-group col-sm-6">
+    <label class="d-block">&nbsp;</label>
+    <div class="form-check mt-2">
+        {!! Form::hidden('allow_discount', 0) !!}
+        {!! Form::checkbox('allow_discount', 1, null, ['class' => 'form-check-input', 'id' => 'allow_discount']) !!}
+        {!! Form::label('allow_discount', 'Allow Agent to Set Discount Price', ['class' => 'form-check-label']) !!}
+    </div>
+</div>
+
 <!-- Submit Field -->
 <div class="form-group col-sm-12">
     {!! Form::submit(__('drivers.save'), ['class' => 'btn btn-primary']) !!}

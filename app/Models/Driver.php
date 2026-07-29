@@ -32,7 +32,8 @@ class Driver extends Model
         'trip_id',
         'remark',
         'session',
-        'credit_amount'
+        'credit_amount',
+        'allow_discount'
     ];
 
     protected $hidden = [

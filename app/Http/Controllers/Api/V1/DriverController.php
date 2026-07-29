@@ -10814,6 +10814,7 @@ class DriverController extends Controller
                 'result'  => true,
                 'message' => __LINE__ . $this->message_separator . 'Offline customer list retrieved successfully',
                 'data'    => [
+                    'allow_discount'      => (bool) $driver->allow_discount,
                     'next_invoice_number' => $nextInvoiceNo,
                     'total_customers'     => $result->count(),
                     'customers'           => $result,
