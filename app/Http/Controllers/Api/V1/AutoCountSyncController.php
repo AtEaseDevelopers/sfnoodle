@@ -636,16 +636,29 @@ class AutoCountSyncController extends Controller
                     continue;
                 }
 
-                // Find product by ItemCode + UOM (normalized); fallback to ItemCode only
-                // so legacy products with missing/old UOM still can receive special price.
-                $query = Product::whereRaw('TRIM(code) = ?', [$itemCode]);
+                // Find product by ItemCode + UOM. AutoCount may send multiple UOMs for the
+                // same ItemCode (e.g. A & B) while web only carries one (e.g. B) — only apply
+                // the price to the web product that actually carries this UOM, so the other
+                // UOM's price never lands on the wrong product.
                 if ($uom !== null && $uom !== '') {
-                    $query->whereRaw('UPPER(TRIM(uom)) = ?', [strtoupper($uom)]);
-                }
-                $product = $query->first();
-                if (!$product) {
+                    $product = Product::whereRaw('TRIM(code) = ?', [$itemCode])
+                        ->whereRaw('UPPER(TRIM(uom)) = ?', [strtoupper($uom)])
+                        ->first();
+
+                    // Fallback only to legacy products that have no UOM recorded — never to a
+                    // product that carries a different UOM.
+                    if (!$product) {
+                        $product = Product::whereRaw('TRIM(code) = ?', [$itemCode])
+                            ->where(function ($q) {
+                                $q->whereNull('uom')->orWhereRaw("TRIM(uom) = ''");
+                            })
+                            ->first();
+                    }
+                } else {
+                    // No UOM supplied by AutoCount — match by ItemCode only.
                     $product = Product::whereRaw('TRIM(code) = ?', [$itemCode])->first();
                 }
+
                 if (!$product) {
                     $errors[] = "Product not found for ItemCode {$itemCode} and UOM {$uom}";
                     $skipped++;
