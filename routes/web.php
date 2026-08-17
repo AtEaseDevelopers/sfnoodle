@@ -438,6 +438,7 @@ Route::group(['middleware' => ['auth']], function() {
         Route::post('/invoices/massupdatestatus', [App\Http\Controllers\InvoiceController::class, 'massupdatestatus']);
         Route::post('invoices/{id}/cancel', [App\Http\Controllers\InvoiceController::class, 'cancelInvoice'])->name('invoices.cancelInvoice');
         Route::post('invoices/{id}/sync-autocount', [App\Http\Controllers\InvoiceController::class, 'syncAutocount'])->name('invoices.syncAutocount');
+        Route::post('/invoices/masssyncautocount', [App\Http\Controllers\InvoiceController::class, 'massSyncAutocount'])->name('invoices.massSyncAutocount');
 
         //Invoice Detail
         Route::get('invoiceDetails/getprice/{invoice_id}/{product_id}', [App\Http\Controllers\InvoiceDetailController::class, 'getprice']);

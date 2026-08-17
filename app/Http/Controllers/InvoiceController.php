@@ -858,6 +858,33 @@ class InvoiceController extends AppBaseController
         return redirect(route('invoices.show', encrypt($id)));
     }
 
+    /**
+     * Bulk re-queue selected invoices for AutoCount sync.
+     *
+     * Mirrors syncAutocount() for many invoices at once: only completed invoices
+     * with a trip are eligible; clearing the `autocount` flag re-queues them for
+     * the AutoCount plugin's next poll. Ineligible ids are skipped, not failed.
+     */
+    public function massSyncAutocount(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return response()->json(['status' => false, 'message' => 'Please select at least one invoice.'], 422);
+        }
+
+        $count = Invoice::whereIn('id', $ids)
+            ->where('status', Invoice::STATUS_COMPLETED)
+            ->whereNotNull('trip_id')
+            ->update(['autocount' => null]);
+
+        return response()->json([
+            'status'  => true,
+            'count'   => $count,
+            'message' => $count . ' invoice(s) queued for AutoCount sync.',
+        ]);
+    }
+
     public function syncXero(Request $req)
     {
         try {

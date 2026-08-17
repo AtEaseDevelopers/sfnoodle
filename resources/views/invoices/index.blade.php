@@ -13,6 +13,7 @@
                          <div class="card-header">
                              <i class="fa fa-align-justify"></i>
                              {{ __('invoices.invoices') }}
+                             <a class="btn btn-success btn-sm pull-right" id="masssyncautocount" href="#" title="Sync selected to AutoCount"><i class="fa fa-refresh"></i> Sync to AutoCount</a>
                              <!-- <a class="pull-right" href="{{ route('invoices.create') }}"><i class="fa fa-plus-square fa-lg"></i></a> -->
                              <!-- <a class="pull-right text-danger pr-2" id="massdelete" href="#" alt="Mass delete"><i class="fa fa-trash fa-lg"></i></a>
                              <a class="pull-right text-success pr-2" id="massactive" href="#" alt="Mass active"><i class="fa fa-check fa-lg"></i></a>
@@ -201,6 +202,51 @@
                 },
                 error: function(error) {
                     noti('e','Please contact your administrator',error.responseJSON.message)
+                    HideLoad();
+                }
+            });
+        }
+
+        $(document).on("click", "#masssyncautocount", function(e){
+            e.preventDefault();
+            var m = "";
+            if(window.checkboxid.length == 0){
+                noti('i','Info','Please select at least one row');
+                return;
+            }else if(window.checkboxid.length == 1){
+                m = "Confirm to sync 1 row to AutoCount?"
+            }else{
+                m = "Confirm to sync " + window.checkboxid.length + " rows to AutoCount?"
+            }
+            $.confirm({
+                title: 'Mass Sync to AutoCount',
+                content: m,
+                buttons: {
+                    Yes: function() {
+                        masssyncautocount(window.checkboxid);
+                    },
+                    No: function() {
+                        return;
+                    }
+                }
+            });
+        });
+        function masssyncautocount(ids){
+            ShowLoad();
+            $.ajax({
+                url: "{{config('app.url')}}/invoices/masssyncautocount",
+                type:"POST",
+                data:{
+                    ids: ids
+                    ,_token: "{{ csrf_token() }}"
+                },
+                success:function(response){
+                    window.checkboxid = [];
+                    $('.buttons-reload').click();
+                    noti('s','Queued', (response.message || 'Invoices queued for AutoCount sync.'))
+                },
+                error: function(error) {
+                    noti('e','Please contact your administrator', error.responseJSON ? error.responseJSON.message : 'Sync failed')
                     HideLoad();
                 }
             });
