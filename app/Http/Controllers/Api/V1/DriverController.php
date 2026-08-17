@@ -10138,7 +10138,7 @@ class DriverController extends Controller
                 $product          = Product::find($detail['product_id']);
                 $priceCalculation = $this->calculateProductPriceForInvoice($product, $detail['quantity'], $customer->id);
                 $discount         = (float) ($detail['discount_amount'] ?? 0);
-                $itemTotal        = max(0, $priceCalculation['total_price'] - $discount);
+                $itemTotal        = max(0, $priceCalculation['total_price'] - ($discount * $detail['quantity']));
                 $total           += $itemTotal;
 
                 $invoiceDetails[] = [
@@ -10511,7 +10511,7 @@ class DriverController extends Controller
                     $product          = Product::find($detail['product_id']);
                     $priceCalculation = $this->calculateProductPriceForInvoice($product, $detail['quantity'], $customer->id);
                     $discount         = (float) ($detail['discount_amount'] ?? 0);
-                    $itemTotal        = max(0, $priceCalculation['total_price'] - $discount);
+                    $itemTotal        = max(0, $priceCalculation['total_price'] - ($discount * $detail['quantity']));
                     $total           += $itemTotal;
 
                     $invoiceDetails[] = [
