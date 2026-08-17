@@ -47,6 +47,30 @@
     <p>{{ $invoice->status_text }}</p>
 </div>
 
+<!-- AutoCount Sync Field -->
+<div class="form-group">
+    {!! Form::label('autocount', 'AutoCount') !!}:
+    <p>
+        @if($invoice->autocount === 'Synced')
+            <span class="badge badge-success">Synced</span>
+        @elseif($invoice->autocount)
+            <span class="badge badge-danger">{{ $invoice->autocount }}</span>
+        @else
+            <span class="badge badge-secondary">Pending</span>
+        @endif
+
+        @if($invoice->status == \App\Models\Invoice::STATUS_COMPLETED && $invoice->trip_id)
+            {!! Form::open(['route' => ['invoices.syncAutocount', encrypt($invoice->id)], 'method' => 'post', 'class' => 'd-inline ml-2']) !!}
+                {!! Form::button('<i class="fa fa-refresh"></i> ' . ($invoice->autocount === 'Synced' ? 'Re-sync to AutoCount' : 'Sync to AutoCount'), [
+                    'type' => 'submit',
+                    'class' => 'btn btn-sm btn-outline-primary',
+                    'onclick' => "return confirm('Queue this invoice for AutoCount sync?')"
+                ]) !!}
+            {!! Form::close() !!}
+        @endif
+    </p>
+</div>
+
 <!-- Remark Field -->
 <div class="form-group">
     {!! Form::label('remark', 'Remark') !!}:

@@ -809,6 +809,55 @@ class InvoiceController extends AppBaseController
         return redirect(route('invoices.index'));
     }
 
+    /**
+     * Manually re-queue an invoice for AutoCount sync.
+     *
+     * AutoCount pulls pending invoices via the plugin (see AutoCountSyncController@getPendingInvoices),
+     * which only returns invoices whose `autocount` is null or not 'Synced'. Clearing the flag here
+     * re-queues the invoice so the plugin picks it up on its next poll, even if it was already synced.
+     */
+    public function syncAutocount($id, Request $request)
+    {
+        $id = Crypt::decrypt($id);
+        $invoice = $this->invoiceRepository->find($id);
+
+        if (empty($invoice)) {
+            if (($request->ajax() || $request->wantsJson())) {
+                return response()->json(['status' => false, 'message' => 'Invoice not found'], 404);
+            }
+            Flash::error('Invoice not found');
+            return redirect(route('invoices.index'));
+        }
+
+        // Only completed invoices with a trip are eligible for AutoCount sync.
+        if ($invoice->status != Invoice::STATUS_COMPLETED) {
+            $message = 'Only completed invoices can be synced to AutoCount.';
+            if (($request->ajax() || $request->wantsJson())) {
+                return response()->json(['status' => false, 'message' => $message], 422);
+            }
+            Flash::error($message);
+            return redirect(route('invoices.show', encrypt($id)));
+        }
+        if (empty($invoice->trip_id)) {
+            $message = 'This invoice has no trip and cannot be synced to AutoCount.';
+            if (($request->ajax() || $request->wantsJson())) {
+                return response()->json(['status' => false, 'message' => $message], 422);
+            }
+            Flash::error($message);
+            return redirect(route('invoices.show', encrypt($id)));
+        }
+
+        $invoice->autocount = null;
+        $invoice->save();
+
+        $message = 'Invoice queued for AutoCount sync. It will be picked up on the next sync.';
+        if (($request->ajax() || $request->wantsJson())) {
+            return response()->json(['status' => true, 'message' => $message]);
+        }
+        Flash::success($message);
+        return redirect(route('invoices.show', encrypt($id)));
+    }
+
     public function syncXero(Request $req)
     {
         try {

@@ -6,6 +6,14 @@
     <a href="{{ route('invoices.show', encrypt($id)) }}" class='btn btn-ghost-success'>
        <i class="fa fa-eye"></i>
     </a>
+    @if($status == \App\Models\Invoice::STATUS_COMPLETED && $trip_id)
+        <a href="#"
+           class='btn btn-ghost-warning sync-autocount'
+           data-url="{{ route('invoices.syncAutocount', encrypt($id)) }}"
+           title="{{ $autocount === 'Synced' ? 'Re-sync to AutoCount' : 'Sync to AutoCount' }}">
+           <i class="fa fa-refresh"></i>
+        </a>
+    @endif
     @php
       $tripId = \Illuminate\Support\Facades\DB::table('drivers')
          ->where('trip_id', $trip_id)

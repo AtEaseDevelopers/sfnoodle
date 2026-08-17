@@ -205,5 +205,35 @@
                 }
             });
         }
+
+        $(document).on("click", ".sync-autocount", function(e){
+            e.preventDefault();
+            var url = $(this).data('url');
+            $.confirm({
+                title: 'Sync to AutoCount',
+                content: 'Queue this invoice for AutoCount sync?',
+                buttons: {
+                    Yes: function() {
+                        ShowLoad();
+                        $.ajax({
+                            url: url,
+                            type: "POST",
+                            data: { _token: "{{ csrf_token() }}" },
+                            success: function(response){
+                                $('.buttons-reload').click();
+                                noti('s','Queued','Invoice queued for AutoCount sync.')
+                            },
+                            error: function(error) {
+                                noti('e','Please contact your administrator', error.responseJSON ? error.responseJSON.message : 'Sync failed')
+                                HideLoad();
+                            }
+                        });
+                    },
+                    No: function() {
+                        return;
+                    }
+                }
+            });
+        });
     </script>
 @endpush
