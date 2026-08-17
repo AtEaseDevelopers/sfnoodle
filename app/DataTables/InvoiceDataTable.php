@@ -140,7 +140,7 @@ class InvoiceDataTable extends DataTable
             }
 
             $discount = (float)($detail->discount_amount ?? 0);
-            $total   += max(0, $itemTotal - $discount);
+            $total   += max(0, $itemTotal - ($discount * $quantity));
         }
         return round($total, 2);
     }

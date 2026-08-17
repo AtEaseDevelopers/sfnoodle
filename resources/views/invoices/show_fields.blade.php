@@ -223,9 +223,10 @@
                         // Apply discount to the last row added for this detail
                         if ($discount > 0 && count($displayItems) > $detailStartIndex) {
                             $lastIdx = count($displayItems) - 1;
-                            $displayItems[$lastIdx]['totalprice']      = max(0, $displayItems[$lastIdx]['totalprice'] - $discount);
+                            $lineDiscount = $discount * $displayItems[$lastIdx]['quantity'];
+                            $displayItems[$lastIdx]['totalprice']      = max(0, $displayItems[$lastIdx]['totalprice'] - $lineDiscount);
                             $displayItems[$lastIdx]['discount_amount'] = $discount;
-                            $offerAmount += $discount;
+                            $offerAmount += $lineDiscount;
                         }
                     }
 

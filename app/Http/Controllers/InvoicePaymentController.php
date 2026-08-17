@@ -602,55 +602,58 @@ class InvoicePaymentController extends AppBaseController
             $product = $detail->product;
             $quantity = $detail->quantity;
             $regularPrice = $product->price;
-            
+            $discount = (float)($detail->discount_amount ?? 0);
+
             // Check for special price for this customer
             $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
                 ->where('customer_id', $invoice->customer_id)
                 ->where('status', 1)
                 ->first();
-            
+
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
-            
+
             // Get tiered pricing
             $tieredPricing = $product->tiered_pricing;
-            
+            $itemTotal = 0;
+
             if (!empty($tieredPricing) && is_array($tieredPricing)) {
                 // Sort tiers by quantity descending (largest first for best value)
                 usort($tieredPricing, function($a, $b) {
                     return $b['quantity'] - $a['quantity'];
                 });
-                
+
                 $remainingQuantity = $quantity;
-                
+
                 // Apply tiered pricing for each tier
                 foreach ($tieredPricing as $tier) {
                     if ($remainingQuantity <= 0) {
                         break;
                     }
-                    
+
                     $tierQuantity = $tier['quantity'];
                     $tierPrice = $tier['price'];
-                    
+
                     // Calculate how many full tier packages fit into remaining quantity
                     $numberOfPackages = floor($remainingQuantity / $tierQuantity);
-                    
+
                     if ($numberOfPackages > 0) {
-                        $itemTotal = $numberOfPackages * $tierPrice;
-                        $total += $itemTotal;
+                        $itemTotal += $numberOfPackages * $tierPrice;
                         $remainingQuantity -= ($numberOfPackages * $tierQuantity);
                     }
                 }
-                
+
                 // Handle remaining quantity with base price (special or regular)
                 if ($remainingQuantity > 0) {
-                    $total += $remainingQuantity * $basePrice;
+                    $itemTotal += $remainingQuantity * $basePrice;
                 }
             } else {
                 // No tiered pricing, use base price
-                $total += $quantity * $basePrice;
+                $itemTotal = $quantity * $basePrice;
             }
+
+            $total += max(0, $itemTotal - ($discount * $quantity));
         }
-        
+
         return round($total, 2);
     }
 
@@ -668,44 +671,45 @@ class InvoicePaymentController extends AppBaseController
             $product = $detail->product;
             $quantity = $detail->quantity;
             $regularPrice = $product->price;
-            
+            $discount = (float)($detail->discount_amount ?? 0);
+
             // Check for special price
             $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
                 ->where('customer_id', $invoice->customer_id)
                 ->where('status', 1)
                 ->first();
-            
+
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
             $originalTotal = $quantity * $basePrice;
             $discountedTotal = $originalTotal;
             $hasOffer = false;
             $tierBreakdown = [];
-            
+
             // Get tiered pricing
             $tieredPricing = $product->tiered_pricing;
-            
+
             if (!empty($tieredPricing) && is_array($tieredPricing)) {
                 usort($tieredPricing, function($a, $b) {
                     return $b['quantity'] - $a['quantity'];
                 });
-                
+
                 $remainingQuantity = $quantity;
                 $discountedTotal = 0;
-                
+
                 foreach ($tieredPricing as $tier) {
                     if ($remainingQuantity <= 0) break;
-                    
+
                     $tierQuantity = $tier['quantity'];
                     $tierPrice = $tier['price'];
                     $numberOfPackages = floor($remainingQuantity / $tierQuantity);
-                    
+
                     if ($numberOfPackages > 0) {
                         $quantityInTier = $numberOfPackages * $tierQuantity;
                         $tierTotal = $numberOfPackages * $tierPrice;
                         $discountedTotal += $tierTotal;
                         $remainingQuantity -= $quantityInTier;
                         $hasOffer = true;
-                        
+
                         $tierBreakdown[] = [
                             'packages' => $numberOfPackages,
                             'quantity_per_package' => $tierQuantity,
@@ -715,13 +719,15 @@ class InvoicePaymentController extends AppBaseController
                         ];
                     }
                 }
-                
+
                 if ($remainingQuantity > 0) {
                     $remainingTotal = $remainingQuantity * $basePrice;
                     $discountedTotal += $remainingTotal;
                 }
             }
-            
+
+            $discountedTotal = max(0, $discountedTotal - ($discount * $quantity));
+
             $details[] = [
                 'product_id' => $product->id,
                 'product_code' => $product->code,
@@ -735,7 +741,7 @@ class InvoicePaymentController extends AppBaseController
                 'savings' => $originalTotal - $discountedTotal
             ];
         }
-        
+
         return $details;
     }
 

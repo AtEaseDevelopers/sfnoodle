@@ -5900,9 +5900,10 @@ class DriverController extends Controller
                 // Apply discount to the last row added for this detail
                 if ($discount > 0 && count($allItems) > $detailStartIndex) {
                     $lastIdx = count($allItems) - 1;
-                    $allItems[$lastIdx]['totalprice']      = max(0, $allItems[$lastIdx]['totalprice'] - $discount);
+                    $lineDiscount = $discount * $allItems[$lastIdx]['quantity'];
+                    $allItems[$lastIdx]['totalprice']      = max(0, $allItems[$lastIdx]['totalprice'] - $lineDiscount);
                     $allItems[$lastIdx]['discount_amount'] = $discount;
-                    $offerAmount += $discount;
+                    $offerAmount += $lineDiscount;
                 }
             }
             
