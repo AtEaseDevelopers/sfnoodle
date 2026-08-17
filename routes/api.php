@@ -100,6 +100,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('/driver/bulk-create-invoice', [App\Http\Controllers\Api\V1\DriverController::class, 'bulkCreateInvoice']);
     Route::post('/driver/create-invoice-v2', [App\Http\Controllers\Api\V1\DriverController::class, 'createInvoice_v2']);
     Route::post('/driver/bulk-create-invoice-v2', [App\Http\Controllers\Api\V1\DriverController::class, 'bulkCreateInvoice_v2']);
+    Route::post('/driver/create-invoice-v3', [App\Http\Controllers\Api\V1\DriverController::class, 'createInvoice_v3']);
+    Route::post('/driver/bulk-create-invoice-v3', [App\Http\Controllers\Api\V1\DriverController::class, 'bulkCreateInvoice_v3']);
     Route::get('/driver/offline-customer-list', [App\Http\Controllers\Api\V1\DriverController::class, 'getOfflineCustomerList']);
     Route::post('/driver/check-in-out', [App\Http\Controllers\Api\V1\DriverController::class, 'checkInOut']);
 
