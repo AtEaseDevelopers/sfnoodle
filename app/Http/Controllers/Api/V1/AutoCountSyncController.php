@@ -283,8 +283,10 @@ class AutoCountSyncController extends Controller
                 if (!$d->product) continue;
 
                 $qty        = (int) $d->quantity;
-                $discount   = (float) ($d->discount_amount ?? 0);
-                $total      = max(0, round((float) $d->totalprice - $discount, 2));
+                // totalprice is already stored net of any line discount (see DriverController
+                // invoice creation: totalprice = total_price - discount_amount). Do NOT subtract
+                // discount_amount again here or the discount gets deducted twice in AutoCount.
+                $total      = max(0, round((float) $d->totalprice, 2));
                 $storedUnit = (float) $d->price;
 
                 // When stored unit × qty does not match line total (e.g. tiered pricing or discount applied),
