@@ -596,7 +596,7 @@ class InvoiceController extends AppBaseController
             );
             
             $discount = (float)($detail->discount_amount ?? 0);
-            $discountedTotal = max(0, $priceCalculation['total_price'] - $discount);
+            $discountedTotal = max(0, $priceCalculation['total_price'] - ($discount * $quantity));
             $regularTotal = $quantity * $regularPrice;
 
             $originalTotal += $regularTotal;
