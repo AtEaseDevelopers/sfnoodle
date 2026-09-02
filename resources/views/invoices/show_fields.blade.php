@@ -117,24 +117,19 @@
                         $regularPrice = $product->price;
                         $discount     = (float)($detail['discount_amount'] ?? 0);
 
-                        $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
-                            ->where('status', 1)->get();
-
+                        // A special price only applies when customer_id AND price_category both match.
                         $specialPrice = null;
-                        foreach ($specialPrices as $sp) {
-                            if ($sp->customer_id == $invoice->customer_id) { $specialPrice = $sp; break; }
-                        }
-                        if (!$specialPrice && $customer && $customer->price_category) {
-                            foreach ($specialPrices as $sp) {
-                                if ($sp->price_category && $sp->price_category == $customer->price_category) { $specialPrice = $sp; break; }
-                            }
+                        if ($customer && !empty($customer->price_category)) {
+                            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                                ->where('customer_id', $invoice->customer_id)
+                                ->where('price_category', $customer->price_category)
+                                ->where('status', 1)
+                                ->first();
                         }
 
                         $basePrice        = $specialPrice ? $specialPrice->price : $regularPrice;
                         $hasSpecialPrice  = (bool)$specialPrice;
-                        $specialPriceType = $specialPrice
-                            ? ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific')
-                            : null;
+                        $specialPriceType = $specialPrice ? 'customer_specific' : null;
 
                         $tieredPricing    = $product->tiered_pricing;
                         $detailStartIndex = count($displayItems);

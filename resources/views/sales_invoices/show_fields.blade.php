@@ -92,42 +92,26 @@
                         $quantity = $detail['quantity'];
                         $regularPrice = $product->price;
                         
-                        // Get all special prices for this product
-                        $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
-                            ->where('status', 1)
-                            ->get();
-                        
+                        // A special price only applies when customer_id AND price_category both match.
                         $specialPrice = null;
-                        
-                        // First priority: Check for direct customer match
-                        foreach ($specialPrices as $sp) {
-                            if ($sp->customer_id == $salesInvoice->customer_id) {
-                                $specialPrice = $sp;
-                                break;
-                            }
+                        if ($customer && !empty($customer->price_category)) {
+                            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                                ->where('customer_id', $salesInvoice->customer_id)
+                                ->where('price_category', $customer->price_category)
+                                ->where('status', 1)
+                                ->first();
                         }
-                        
-                        // Second priority: Check for price category match
-                        if (!$specialPrice && $customer && $customer->price_category) {
-                            foreach ($specialPrices as $sp) {
-                                if ($sp->price_category && $sp->price_category == $customer->price_category) {
-                                    $specialPrice = $sp;
-                                    break;
-                                }
-                            }
-                        }
-                        
+
                         $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
                         $hasSpecialPrice = $specialPrice ? true : false;
-                        $specialPriceType = $specialPrice ? 
-                            ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific') : null;
-                        
+                        $specialPriceType = $specialPrice ? 'customer_specific' : null;
+
                         $tieredPricing = $product->tiered_pricing;
-                        
+
                         if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                            // Sort tiers by quantity descending (largest first for best value)
+                            // Sort tiers by quantity ascending (smallest first), matching invoice-creation logic
                             usort($tieredPricing, function($a, $b) {
-                                return $b['quantity'] - $a['quantity'];
+                                return $a['quantity'] - $b['quantity'];
                             });
                             
                             $remainingQuantity = $quantity;

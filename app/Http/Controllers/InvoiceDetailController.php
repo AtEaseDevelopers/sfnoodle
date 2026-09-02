@@ -302,7 +302,16 @@ class InvoiceDetailController extends AppBaseController
             return response()->json(['status' => false, 'message' => 'Product not found!']);
         }
 
-        $specialprice = SpecialPrice::where('customer_id',$invoice->customer_id)->where('product_id',$product_id)->first();
+        // A special price only applies when customer_id AND price_category both match.
+        $customer = $invoice->customer;
+        $specialprice = null;
+        if ($customer && !empty($customer->price_category)) {
+            $specialprice = SpecialPrice::where('customer_id', $invoice->customer_id)
+                ->where('product_id', $product_id)
+                ->where('price_category', $customer->price_category)
+                ->where('status', 1)
+                ->first();
+        }
 
         if (empty($specialprice)) {
             return response()->json(['status' => true, 'message' => 'Special Price not found!', 'data' => $product->price]);

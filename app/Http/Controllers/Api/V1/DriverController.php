@@ -921,12 +921,19 @@ class DriverController extends Controller
                     if(asset($t['customer']['id'])){
                         $task[$c]['customer']['credit'] = round(  (DB::select('call ice_spGetCustomerCreditByDate("'.date('Y-m-d H:i:s').'",'.$t['customer']['id'].');')[0]->credit ?? 0) ,2);
                         // $task[$c]['customer']['credit'] = $t['customer']['id'];
+                        $priceCategory = $t['customer']['price_category'] ?? null;
+                        // A special price only applies when customer_id AND price_category both match.
                         $task[$c]['customer']['product'] = DB::table('products')
-                            ->leftJoin('special_prices', function($join) use($t)
+                            ->leftJoin('special_prices', function($join) use($t, $priceCategory)
                                 {
                                     $join->on('special_prices.customer_id','=',DB::raw("'".$t['customer']['id']."'"));
                                     $join->on('special_prices.product_id', '=', 'products.id');
                                     $join->on('special_prices.status', '=', DB::raw("'1'"));
+                                    if (!empty($priceCategory)) {
+                                        $join->on('special_prices.price_category', '=', DB::raw("'".addslashes($priceCategory)."'"));
+                                    } else {
+                                        $join->on(DB::raw('1'), '=', DB::raw('0'));
+                                    }
                                 })
                             ->where('products.status','1')
                             ->select('products.id','products.code','products.name',DB::raw('coalesce(special_prices.price,products.price) as "price"'))
@@ -1026,12 +1033,19 @@ class DriverController extends Controller
                     if(asset($t['customer']['id'])){
                         $task[$c]['customer']['credit'] = round(  (DB::select('call ice_spGetCustomerCreditByDate("'.date('Y-m-d H:i:s').'",'.$t['customer']['id'].');')[0]->credit ?? 0) ,2);
                         // $task[$c]['customer']['credit'] = $t['customer']['id'];
+                        $priceCategory = $t['customer']['price_category'] ?? null;
+                        // A special price only applies when customer_id AND price_category both match.
                         $task[$c]['customer']['product'] = DB::table('products')
-                            ->leftJoin('special_prices', function($join) use($t)
+                            ->leftJoin('special_prices', function($join) use($t, $priceCategory)
                                 {
                                     $join->on('special_prices.customer_id','=',DB::raw("'".$t['customer']['id']."'"));
                                     $join->on('special_prices.product_id', '=', 'products.id');
                                     $join->on('special_prices.status', '=', DB::raw("'1'"));
+                                    if (!empty($priceCategory)) {
+                                        $join->on('special_prices.price_category', '=', DB::raw("'".addslashes($priceCategory)."'"));
+                                    } else {
+                                        $join->on(DB::raw('1'), '=', DB::raw('0'));
+                                    }
                                 })
                             ->where('products.status','1')
                             ->select('products.id','products.code','products.name',DB::raw('coalesce(special_prices.price,products.price) as "price"'))
@@ -1271,12 +1285,19 @@ class DriverController extends Controller
             }
             //process
             if(isset($data['customer_id'])){
+                $priceCategory = $customer->price_category ?? null;
+                // A special price only applies when customer_id AND price_category both match.
                 $product = DB::table('products')
-                ->leftJoin('special_prices', function($join) use($data)
+                ->leftJoin('special_prices', function($join) use($data, $priceCategory)
                     {
                         $join->on('special_prices.customer_id','=',DB::raw("'".$data['customer_id']."'"));
                         $join->on('special_prices.product_id', '=', 'products.id');
                         $join->on('special_prices.status', '=', DB::raw("'1'"));
+                        if (!empty($priceCategory)) {
+                            $join->on('special_prices.price_category', '=', DB::raw("'".addslashes($priceCategory)."'"));
+                        } else {
+                            $join->on(DB::raw('1'), '=', DB::raw('0'));
+                        }
                     })
                 ->where('products.status','1')
                 ->select('products.id','products.code','products.name',DB::raw('coalesce(special_prices.price,products.price) as "price"'))
@@ -4042,35 +4063,19 @@ class DriverController extends Controller
                 $quantity = $detail->quantity;
                 $regularPrice = $product->price;
                 
-                // Get all special prices for this product
-                $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
-                    ->where('status', 1)
-                    ->get();
-                
+                // A special price only applies when customer_id AND price_category both match.
                 $specialPrice = null;
-                
-                // First priority: Check for direct customer match
-                foreach ($specialPrices as $sp) {
-                    if ($sp->customer_id == $salesInvoice->customer_id) {
-                        $specialPrice = $sp;
-                        break;
-                    }
+                if ($customer && !empty($customer->price_category)) {
+                    $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                        ->where('customer_id', $salesInvoice->customer_id)
+                        ->where('price_category', $customer->price_category)
+                        ->where('status', 1)
+                        ->first();
                 }
-                
-                // Second priority: Check for price category match (if no customer-specific found)
-                if (!$specialPrice && $customer && $customer->price_category) {
-                    foreach ($specialPrices as $sp) {
-                        if ($sp->price_category && $sp->price_category == $customer->price_category) {
-                            $specialPrice = $sp;
-                            break;
-                        }
-                    }
-                }
-                
+
                 $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
                 $hasSpecialPrice = $specialPrice ? true : false;
-                $specialPriceType = $specialPrice ? 
-                    ($specialPrice->customer_id == $salesInvoice->customer_id ? 'customer_specific' : 'category_specific') : null;
+                $specialPriceType = $specialPrice ? 'customer_specific' : null;
                 
                 // Get tiered pricing
                 $tieredPricing = $product->tiered_pricing;
@@ -5420,28 +5425,16 @@ class DriverController extends Controller
         }
 
         $customer = Customer::find($customerId);
-        $specialPrices = SpecialPrice::where('product_id', $product->id)
-            ->where('status', 1)
-            ->get();
 
+        // A special price only applies when it is scoped to BOTH this exact
+        // customer AND this customer's price category on the same row.
         $specialPrice = null;
-
-        // First priority: Check for direct customer match
-        foreach ($specialPrices as $sp) {
-            if ($sp->customer_id == $customerId) {
-                $specialPrice = $sp;
-                break; // Customer-specific takes highest priority
-            }
-        }
-
-        // Second priority: Check for price category match (if no customer-specific found)
-        if (!$specialPrice && $customer && $customer->price_category) {
-            foreach ($specialPrices as $sp) {
-                if ($sp->price_category && $sp->price_category == $customer->price_category) {
-                    $specialPrice = $sp;
-                    break; // Use the first matching category
-                }
-            }
+        if ($customer && !empty($customer->price_category)) {
+            $specialPrice = SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $customerId)
+                ->where('price_category', $customer->price_category)
+                ->where('status', 1)
+                ->first();
         }
         $basePrice = $specialPrice ? $specialPrice->price : $product->price;
 
@@ -5783,35 +5776,19 @@ class DriverController extends Controller
                 $quantity = $detail->quantity;
                 $regularPrice = $product->price;
                 
-                // Get all special prices for this product
-                $specialPrices = SpecialPrice::where('product_id', $product->id)
-                    ->where('status', 1)
-                    ->get();
-                
+                // A special price only applies when customer_id AND price_category both match.
                 $specialPrice = null;
-                
-                // First priority: Check for direct customer match
-                foreach ($specialPrices as $sp) {
-                    if ($sp->customer_id == $invoice->customer_id) {
-                        $specialPrice = $sp;
-                        break;
-                    }
+                if ($customer && !empty($customer->price_category)) {
+                    $specialPrice = SpecialPrice::where('product_id', $product->id)
+                        ->where('customer_id', $invoice->customer_id)
+                        ->where('price_category', $customer->price_category)
+                        ->where('status', 1)
+                        ->first();
                 }
-                
-                // Second priority: Check for price category match (if no customer-specific found)
-                if (!$specialPrice && $customer && $customer->price_category) {
-                    foreach ($specialPrices as $sp) {
-                        if ($sp->price_category && $sp->price_category == $customer->price_category) {
-                            $specialPrice = $sp;
-                            break;
-                        }
-                    }
-                }
-                
+
                 $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
                 $hasSpecialPrice = $specialPrice ? true : false;
-                $specialPriceType = $specialPrice ?
-                    ($specialPrice->customer_id == $invoice->customer_id ? 'customer_specific' : 'category_specific') : null;
+                $specialPriceType = $specialPrice ? 'customer_specific' : null;
 
                 $discount = (float)($detail->discount_amount ?? 0);
                 $detailStartIndex = count($allItems);
@@ -6201,42 +6178,19 @@ class DriverController extends Controller
                 ->pluck('quantity', 'product_id')
                 ->toArray();
             
-            // Get special prices if customer_id is provided using same logic as calculateProductPriceForInvoice
+            // A special price only applies when customer_id AND price_category both match.
             $specialPrices = [];
-            if ($customer_id && $customer) {
-                // Get all special prices for products (no where condition yet)
-                $allSpecialPrices = SpecialPrice::where('status', 1)->get();
-                
-                // Group by product_id and apply priority logic (customer first, then category)
-                foreach ($allSpecialPrices as $sp) {
-                    $productId = $sp->product_id;
-                    
-                    // Check if this special price applies to this customer
-                    $applies = false;
-                    $matchType = null;
-                    
-                    // Priority 1: Direct customer match
-                    if ($sp->customer_id == $customer_id) {
-                        $applies = true;
-                        $matchType = 'customer';
-                    }
-                    // Priority 2: Price category match (if no customer match found yet for this product)
-                    elseif (!$applies && !isset($specialPrices[$productId]) && 
-                            $customer && $customer->price_category && 
-                            $sp->price_category && $sp->price_category == $customer->price_category) {
-                        $applies = true;
-                        $matchType = 'category';
-                    }
-                    
-                    // If applies and either no price set for this product yet, or this is a customer match (higher priority)
-                    if ($applies) {
-                        if (!isset($specialPrices[$productId]) || $matchType == 'customer') {
-                            $specialPrices[$productId] = $sp->price;
-                        }
-                    }
+            if ($customer_id && $customer && !empty($customer->price_category)) {
+                $matchingSpecialPrices = SpecialPrice::where('status', 1)
+                    ->where('customer_id', $customer_id)
+                    ->where('price_category', $customer->price_category)
+                    ->get();
+
+                foreach ($matchingSpecialPrices as $sp) {
+                    $specialPrices[$sp->product_id] = $sp->price;
                 }
             }
-            
+
             // Get recent invoices from last X days
             $recentDate = Carbon::now()->subDays($days);
             
@@ -6411,42 +6365,19 @@ class DriverController extends Controller
                 ->pluck('quantity', 'product_id')
                 ->toArray();
             
-            // Get special prices if customer_id is provided using same logic as calculateProductPriceForInvoice
+            // A special price only applies when customer_id AND price_category both match.
             $specialPrices = [];
-            if ($customer_id && $customer) {
-                // Get all special prices for products
-                $allSpecialPrices = SpecialPrice::where('status', 1)->get();
-                
-                // Group by product_id and apply priority logic (customer first, then category)
-                foreach ($allSpecialPrices as $sp) {
-                    $productId = $sp->product_id;
-                    
-                    // Check if this special price applies to this customer
-                    $applies = false;
-                    $matchType = null;
-                    
-                    // Priority 1: Direct customer match
-                    if ($sp->customer_id == $customer_id) {
-                        $applies = true;
-                        $matchType = 'customer';
-                    }
-                    // Priority 2: Price category match (if no customer match found yet for this product)
-                    elseif (!$applies && !isset($specialPrices[$productId]) && 
-                            $customer && $customer->price_category && 
-                            $sp->price_category && $sp->price_category == $customer->price_category) {
-                        $applies = true;
-                        $matchType = 'category';
-                    }
-                    
-                    // If applies and either no price set for this product yet, or this is a customer match (higher priority)
-                    if ($applies) {
-                        if (!isset($specialPrices[$productId]) || $matchType == 'customer') {
-                            $specialPrices[$productId] = $sp->price;
-                        }
-                    }
+            if ($customer_id && $customer && !empty($customer->price_category)) {
+                $matchingSpecialPrices = SpecialPrice::where('status', 1)
+                    ->where('customer_id', $customer_id)
+                    ->where('price_category', $customer->price_category)
+                    ->get();
+
+                foreach ($matchingSpecialPrices as $sp) {
+                    $specialPrices[$sp->product_id] = $sp->price;
                 }
             }
-            
+
             // Helper function to get full image URL
             $getImageUrl = function($imagePath) {
                 if (empty($imagePath)) {
@@ -11434,14 +11365,12 @@ class DriverController extends Controller
                 $productList = $products->map(function ($product) use ($customer, $priceCategory, $specialPricesByProduct) {
                     $spList = $specialPricesByProduct->get($product->id, collect());
 
-                    // Priority 1: customer-specific special price
-                    $customerSp = $spList->firstWhere('customer_id', $customer->id);
-
-                    // Priority 2: price_category match
-                    $categorySp = null;
-                    if (!$customerSp && $priceCategory) {
-                        $categorySp = $spList->firstWhere('price_category', $priceCategory);
-                    }
+                    // A special price only applies when customer_id AND price_category both match.
+                    $matchedSp = $priceCategory
+                        ? $spList->first(function ($sp) use ($customer, $priceCategory) {
+                            return $sp->customer_id == $customer->id && $sp->price_category == $priceCategory;
+                        })
+                        : null;
 
                     $tieredPricing = !empty($product->tiered_pricing) ? $product->tiered_pricing : null;
 
@@ -11451,8 +11380,8 @@ class DriverController extends Controller
                         'code'                 => $product->code,
                         'category'             => $product->category,
                         'default_price'        => (float) $product->price,
-                        'special_price'        => $customerSp ? (float) $customerSp->price : null,
-                        'price_category_price' => $categorySp ? (float) $categorySp->price : null,
+                        'special_price'        => $matchedSp ? (float) $matchedSp->price : null,
+                        'price_category_price' => null,
                         'tiered_pricing'       => $tieredPricing,
                     ];
                 })->values();

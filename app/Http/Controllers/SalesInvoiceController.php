@@ -795,28 +795,15 @@ class SalesInvoiceController extends AppBaseController
     private function calculateProductPriceForInvoice($product, $quantity, $customerId)
     {
         $customer = Customer::find($customerId);
-        $specialPrices = SpecialPrice::where('product_id', $product->id)
-            ->where('status', 1)
-            ->get();
 
+        // A special price only applies when customer_id AND price_category both match.
         $specialPrice = null;
-
-        // First priority: Check for direct customer match
-        foreach ($specialPrices as $sp) {
-            if ($sp->customer_id == $customerId) {
-                $specialPrice = $sp;
-                break; // Customer-specific takes highest priority
-            }
-        }
-
-        // Second priority: Check for price category match (if no customer-specific found)
-        if (!$specialPrice && $customer && $customer->price_category) {
-            foreach ($specialPrices as $sp) {
-                if ($sp->price_category && $sp->price_category == $customer->price_category) {
-                    $specialPrice = $sp;
-                    break; // Use the first matching category
-                }
-            }
+        if ($customer && !empty($customer->price_category)) {
+            $specialPrice = SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $customerId)
+                ->where('price_category', $customer->price_category)
+                ->where('status', 1)
+                ->first();
         }
         $basePrice = $specialPrice ? $specialPrice->price : $product->price;
 
