@@ -11470,13 +11470,17 @@ class DriverController extends Controller
 
                     $tieredPricing = !empty($product->tiered_pricing) ? $product->tiered_pricing : null;
 
+                    // Mobile only reads special_price, so it must carry the fully
+                    // resolved price: customer-specific match, else category match.
+                    $resolvedSp = $customerSp ?? $categorySp;
+
                     return [
                         'id'                   => $product->id,
                         'name'                 => $product->name,
                         'code'                 => $product->code,
                         'category'             => $product->category,
                         'default_price'        => (float) $product->price,
-                        'special_price'        => $customerSp ? (float) $customerSp->price : null,
+                        'special_price'        => $resolvedSp ? (float) $resolvedSp->price : null,
                         'price_category_price' => $categorySp ? (float) $categorySp->price : null,
                         'tiered_pricing'       => $tieredPricing,
                     ];
