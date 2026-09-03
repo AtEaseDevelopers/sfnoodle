@@ -3,7 +3,6 @@
 namespace App\DataTables;
 
 use App\Models\Invoice;
-use App\Models\Customer;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\EloquentDataTable;
 
@@ -72,19 +71,17 @@ class InvoiceDataTable extends DataTable
     private function calculateDiscountedTotal($invoice)
     {
         $total = 0;
-        $customer = Customer::find($invoice->customer_id);
-        
+        $customer = $invoice->customer;
+
         foreach ($invoice->invoiceDetails as $detail) {
             if ($detail->price == 0 && $detail->totalprice == 0) continue;
             $product = $detail->product;
             $quantity = $detail->quantity;
             $regularPrice = $product->price;
-            
-            // Get all special prices for this product
-            $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
-                ->where('status', 1)
-                ->get();
-            
+
+            // Get all special prices for this product (cached per product to avoid N+1 across rows)
+            $specialPrices = $this->getSpecialPricesForProduct($product->id);
+
             $specialPrice = null;
             
             // First priority: Check for direct customer match
@@ -143,6 +140,24 @@ class InvoiceDataTable extends DataTable
             $total   += max(0, $itemTotal - ($discount * $quantity));
         }
         return round($total, 2);
+    }
+
+    /**
+     * Special prices per product, cached for the lifetime of this request so
+     * rendering many invoice rows doesn't re-query the same product repeatedly.
+     *
+     * @var array<int, \Illuminate\Support\Collection>
+     */
+    private $specialPricesByProduct = [];
+
+    private function getSpecialPricesForProduct($productId)
+    {
+        if (!array_key_exists($productId, $this->specialPricesByProduct)) {
+            $this->specialPricesByProduct[$productId] = \App\Models\SpecialPrice::where('product_id', $productId)
+                ->where('status', 1)
+                ->get();
+        }
+        return $this->specialPricesByProduct[$productId];
     }
 
     /**
