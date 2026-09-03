@@ -24,6 +24,12 @@ class SpecialPriceDataTable extends DataTable
                 return $model->product->name . ' - (' . $model->product->code . ')';
             }
             return '-';
+        })
+        ->filterColumn('product.name', function ($query, $keyword) {
+            $query->whereHas('product', function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
+                  ->orWhere('code', 'like', "%{$keyword}%");
+            });
         });
     }
 
