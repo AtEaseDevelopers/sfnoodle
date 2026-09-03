@@ -372,6 +372,7 @@ class AutoCountSyncController extends Controller
 
             if ($status === 'Synced') {
                 $invoice->autocount = 'Synced';
+                $invoice->autocount_synced_at = now();
             } elseif ($status === 'Error') {
                 $errorText = $message !== '' ? 'Error: ' . $message : 'Error';
                 $invoice->autocount = mb_substr($errorText, 0, 255);
