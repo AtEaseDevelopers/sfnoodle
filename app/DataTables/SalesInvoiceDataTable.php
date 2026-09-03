@@ -61,28 +61,23 @@ class SalesInvoiceDataTable extends DataTable
             
             $quantity = $detail->quantity;
             $regularPrice = $product->price ?? 0;
-            $customer = $salesInvoice->customer;
-
-            // A special price only applies when customer_id AND price_category both match.
-            $specialPrice = null;
-            if ($customer && !empty($customer->price_category)) {
-                $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                    ->where('customer_id', $salesInvoice->customer_id)
-                    ->where('price_category', $customer->price_category)
-                    ->where('status', 1)
-                    ->first();
-            }
-
+            
+            // Check for special price for this customer
+            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $salesInvoice->customer_id)
+                ->where('status', 1)
+                ->first();
+            
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
-
+            
             // Get tiered pricing (handle null case)
             $tieredPricing = $product->tiered_pricing;
-
+            
             // Check if tiered pricing exists and is a valid array
             if (!empty($tieredPricing) && is_array($tieredPricing) && count($tieredPricing) > 0) {
-                // Sort tiers by quantity ascending (smallest first), matching invoice-creation logic
+                // Sort tiers by quantity descending (largest first for best value)
                 usort($tieredPricing, function($a, $b) {
-                    return $a['quantity'] - $b['quantity'];
+                    return $b['quantity'] - $a['quantity'];
                 });
                 
                 $remainingQuantity = $quantity;

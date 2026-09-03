@@ -80,16 +80,31 @@ class InvoiceDataTable extends DataTable
             $quantity = $detail->quantity;
             $regularPrice = $product->price;
             
-            // A special price only applies when customer_id AND price_category both match.
+            // Get all special prices for this product
+            $specialPrices = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('status', 1)
+                ->get();
+            
             $specialPrice = null;
-            if ($customer && !empty($customer->price_category)) {
-                $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                    ->where('customer_id', $invoice->customer_id)
-                    ->where('price_category', $customer->price_category)
-                    ->where('status', 1)
-                    ->first();
+            
+            // First priority: Check for direct customer match
+            foreach ($specialPrices as $sp) {
+                if ($sp->customer_id == $invoice->customer_id) {
+                    $specialPrice = $sp;
+                    break;
+                }
             }
-
+            
+            // Second priority: Check for price category match (if no customer-specific found)
+            if (!$specialPrice && $customer && $customer->price_category) {
+                foreach ($specialPrices as $sp) {
+                    if ($sp->price_category && $sp->price_category == $customer->price_category) {
+                        $specialPrice = $sp;
+                        break;
+                    }
+                }
+            }
+            
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
             
             // Get tiered pricing
@@ -98,9 +113,8 @@ class InvoiceDataTable extends DataTable
             $itemTotal = 0;
 
             if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                // Sort tiers by quantity ascending (smallest first), matching invoice-creation logic
                 usort($tieredPricing, function($a, $b) {
-                    return $a['quantity'] - $b['quantity'];
+                    return $b['quantity'] - $a['quantity'];
                 });
 
                 $remainingQuantity = $quantity;

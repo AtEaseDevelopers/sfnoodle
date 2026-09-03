@@ -598,23 +598,17 @@ class InvoicePaymentController extends AppBaseController
     {
         $total = 0;
         
-        $customer = $invoice->customer;
-
         foreach ($invoice->invoiceDetails as $detail) {
             $product = $detail->product;
             $quantity = $detail->quantity;
             $regularPrice = $product->price;
             $discount = (float)($detail->discount_amount ?? 0);
 
-            // A special price only applies when customer_id AND price_category both match.
-            $specialPrice = null;
-            if ($customer && !empty($customer->price_category)) {
-                $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                    ->where('customer_id', $invoice->customer_id)
-                    ->where('price_category', $customer->price_category)
-                    ->where('status', 1)
-                    ->first();
-            }
+            // Check for special price for this customer
+            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $invoice->customer_id)
+                ->where('status', 1)
+                ->first();
 
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
 
@@ -623,9 +617,9 @@ class InvoicePaymentController extends AppBaseController
             $itemTotal = 0;
 
             if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                // Sort tiers by quantity ascending (smallest first), matching invoice-creation logic
+                // Sort tiers by quantity descending (largest first for best value)
                 usort($tieredPricing, function($a, $b) {
-                    return $a['quantity'] - $b['quantity'];
+                    return $b['quantity'] - $a['quantity'];
                 });
 
                 $remainingQuantity = $quantity;
@@ -672,23 +666,18 @@ class InvoicePaymentController extends AppBaseController
     private function getInvoiceDetailsWithDiscount($invoice)
     {
         $details = [];
-        $customer = $invoice->customer;
-
+        
         foreach ($invoice->invoiceDetails as $detail) {
             $product = $detail->product;
             $quantity = $detail->quantity;
             $regularPrice = $product->price;
             $discount = (float)($detail->discount_amount ?? 0);
 
-            // A special price only applies when customer_id AND price_category both match.
-            $specialPrice = null;
-            if ($customer && !empty($customer->price_category)) {
-                $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
-                    ->where('customer_id', $invoice->customer_id)
-                    ->where('price_category', $customer->price_category)
-                    ->where('status', 1)
-                    ->first();
-            }
+            // Check for special price
+            $specialPrice = \App\Models\SpecialPrice::where('product_id', $product->id)
+                ->where('customer_id', $invoice->customer_id)
+                ->where('status', 1)
+                ->first();
 
             $basePrice = $specialPrice ? $specialPrice->price : $regularPrice;
             $originalTotal = $quantity * $basePrice;
@@ -700,9 +689,8 @@ class InvoicePaymentController extends AppBaseController
             $tieredPricing = $product->tiered_pricing;
 
             if (!empty($tieredPricing) && is_array($tieredPricing)) {
-                // Sort tiers by quantity ascending (smallest first), matching invoice-creation logic
                 usort($tieredPricing, function($a, $b) {
-                    return $a['quantity'] - $b['quantity'];
+                    return $b['quantity'] - $a['quantity'];
                 });
 
                 $remainingQuantity = $quantity;
