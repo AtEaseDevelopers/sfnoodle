@@ -921,16 +921,34 @@ class DriverController extends Controller
                     if(asset($t['customer']['id'])){
                         $task[$c]['customer']['credit'] = round(  (DB::select('call ice_spGetCustomerCreditByDate("'.date('Y-m-d H:i:s').'",'.$t['customer']['id'].');')[0]->credit ?? 0) ,2);
                         // $task[$c]['customer']['credit'] = $t['customer']['id'];
+                        // A special price applies when either the customer_id matches,
+                        // or (if not) the customer's price_category matches - customer match wins.
+                        $customerId   = $t['customer']['id'];
+                        $priceCategory = $t['customer']['price_category'] ?? null;
+
+                        $specialPriceMap = [];
+                        SpecialPrice::where('status', 1)
+                            ->where(function($q) use ($customerId, $priceCategory) {
+                                $q->where('customer_id', $customerId);
+                                if (!empty($priceCategory)) {
+                                    $q->orWhere('price_category', $priceCategory);
+                                }
+                            })
+                            ->get()
+                            ->each(function($sp) use (&$specialPriceMap, $customerId) {
+                                if ($sp->customer_id == $customerId || !isset($specialPriceMap[$sp->product_id])) {
+                                    $specialPriceMap[$sp->product_id] = $sp->price;
+                                }
+                            });
+
                         $task[$c]['customer']['product'] = DB::table('products')
-                            ->leftJoin('special_prices', function($join) use($t)
-                                {
-                                    $join->on('special_prices.customer_id','=',DB::raw("'".$t['customer']['id']."'"));
-                                    $join->on('special_prices.product_id', '=', 'products.id');
-                                    $join->on('special_prices.status', '=', DB::raw("'1'"));
-                                })
                             ->where('products.status','1')
-                            ->select('products.id','products.code','products.name',DB::raw('coalesce(special_prices.price,products.price) as "price"'))
-                            ->get();
+                            ->select('products.id','products.code','products.name','products.price')
+                            ->get()
+                            ->map(function($p) use ($specialPriceMap) {
+                                $p->price = $specialPriceMap[$p->id] ?? $p->price;
+                                return $p;
+                            });
                         $task[$c]['customer']['groupcompany'] = DB::table('companies')
                             ->where('companies.group_id',explode(',',$t['customer']['group'])[0])
                             ->select('companies.*')
@@ -1026,16 +1044,34 @@ class DriverController extends Controller
                     if(asset($t['customer']['id'])){
                         $task[$c]['customer']['credit'] = round(  (DB::select('call ice_spGetCustomerCreditByDate("'.date('Y-m-d H:i:s').'",'.$t['customer']['id'].');')[0]->credit ?? 0) ,2);
                         // $task[$c]['customer']['credit'] = $t['customer']['id'];
+                        // A special price applies when either the customer_id matches,
+                        // or (if not) the customer's price_category matches - customer match wins.
+                        $customerId   = $t['customer']['id'];
+                        $priceCategory = $t['customer']['price_category'] ?? null;
+
+                        $specialPriceMap = [];
+                        SpecialPrice::where('status', 1)
+                            ->where(function($q) use ($customerId, $priceCategory) {
+                                $q->where('customer_id', $customerId);
+                                if (!empty($priceCategory)) {
+                                    $q->orWhere('price_category', $priceCategory);
+                                }
+                            })
+                            ->get()
+                            ->each(function($sp) use (&$specialPriceMap, $customerId) {
+                                if ($sp->customer_id == $customerId || !isset($specialPriceMap[$sp->product_id])) {
+                                    $specialPriceMap[$sp->product_id] = $sp->price;
+                                }
+                            });
+
                         $task[$c]['customer']['product'] = DB::table('products')
-                            ->leftJoin('special_prices', function($join) use($t)
-                                {
-                                    $join->on('special_prices.customer_id','=',DB::raw("'".$t['customer']['id']."'"));
-                                    $join->on('special_prices.product_id', '=', 'products.id');
-                                    $join->on('special_prices.status', '=', DB::raw("'1'"));
-                                })
                             ->where('products.status','1')
-                            ->select('products.id','products.code','products.name',DB::raw('coalesce(special_prices.price,products.price) as "price"'))
-                            ->get();
+                            ->select('products.id','products.code','products.name','products.price')
+                            ->get()
+                            ->map(function($p) use ($specialPriceMap) {
+                                $p->price = $specialPriceMap[$p->id] ?? $p->price;
+                                return $p;
+                            });
                         $task[$c]['customer']['groupcompany'] = DB::table('companies')
                             ->where('companies.group_id',explode(',',$t['customer']['group'])[0])
                             ->select('companies.*')
@@ -1271,16 +1307,34 @@ class DriverController extends Controller
             }
             //process
             if(isset($data['customer_id'])){
-                $product = DB::table('products')
-                ->leftJoin('special_prices', function($join) use($data)
-                    {
-                        $join->on('special_prices.customer_id','=',DB::raw("'".$data['customer_id']."'"));
-                        $join->on('special_prices.product_id', '=', 'products.id');
-                        $join->on('special_prices.status', '=', DB::raw("'1'"));
+                // A special price applies when either the customer_id matches,
+                // or (if not) the customer's price_category matches - customer match wins.
+                $customerId    = $data['customer_id'];
+                $priceCategory = $customer->price_category ?? null;
+
+                $specialPriceMap = [];
+                SpecialPrice::where('status', 1)
+                    ->where(function($q) use ($customerId, $priceCategory) {
+                        $q->where('customer_id', $customerId);
+                        if (!empty($priceCategory)) {
+                            $q->orWhere('price_category', $priceCategory);
+                        }
                     })
+                    ->get()
+                    ->each(function($sp) use (&$specialPriceMap, $customerId) {
+                        if ($sp->customer_id == $customerId || !isset($specialPriceMap[$sp->product_id])) {
+                            $specialPriceMap[$sp->product_id] = $sp->price;
+                        }
+                    });
+
+                $product = DB::table('products')
                 ->where('products.status','1')
-                ->select('products.id','products.code','products.name',DB::raw('coalesce(special_prices.price,products.price) as "price"'))
-                ->get();
+                ->select('products.id','products.code','products.name','products.price')
+                ->get()
+                ->map(function($p) use ($specialPriceMap) {
+                    $p->price = $specialPriceMap[$p->id] ?? $p->price;
+                    return $p;
+                });
                 return response()->json([
                     'result' => true,
                     'message' => __LINE__.$this->message_separator.'api.message.product_found',
