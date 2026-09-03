@@ -1852,46 +1852,38 @@ class DriverController extends Controller
             }
             
             $id = $data['invoice_id'];
-            
-            
+
             $invoice = Invoice::where('id',$id)
             ->with('customer')
-            ->with('driver')
-            ->with('invoicedetail.product')
+            ->with('invoiceDetails.product')
             ->first();
-    
+
             if (empty($invoice)) {
                 abort('404');
             }
-    
-            $min = 450;
-            $each = 23;
-            $height = (count($invoice['invoicedetail']) * $each) + $min;    
-            
-            try
-            {
-                $credit = DB::select('call ice_spGetCustomerCreditByDate("'.$invoice->updated_at.'",'.$invoice->customer_id.');');
-                
-                if($credit)
-                {
-                    $invoice->newcredit = round($credit[0]->credit,2);
-    
-                }
-    
+
+            // Render the stored invoice prices as-is (no recalculation)
+            $allItems = [];
+            foreach ($invoice->invoiceDetails as $detail) {
+                $isFoc = ($detail->price == 0 && $detail->totalprice == 0);
+                $allItems[] = [
+                    'display_name'    => (optional($detail->product)->code ?? 'N/A') . ($isFoc ? ' (FOC)' : ''),
+                    'quantity'        => $detail->quantity,
+                    'price'           => $detail->price,
+                    'totalprice'      => $detail->totalprice,
+                    'discount_amount' => $detail->discount_amount ?? 0,
+                ];
             }
-            catch(Exception $ex)
-            {
-                 $invoice->newcredit  = 0;
-            }
-            $invoice->customer->groupcompany = DB::table('companies')
-            ->where('companies.group_id',explode(',',$invoice->customer->group)[0])
-            ->select('companies.*')
-            ->first() ?? null;
-            
-              $pdf = Pdf::loadView('invoices.print', array(
-                    'invoice' => $invoice
-                ));
-    
+
+            $height = (count($allItems) * 50) + 430;
+
+            $pdf = Pdf::loadView('invoices.print', [
+                'invoices' => $invoice,
+                'creatorName' => $invoice->driver_name ?? ($invoice->creator->name ?? 'System'),
+                'allItems' => $allItems,
+                'finalTotal' => $invoice->total,
+            ]);
+
             $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true]);
     
             $invoiceFilename = 'invoice-' . $invoice->invoiceno . '.pdf';
