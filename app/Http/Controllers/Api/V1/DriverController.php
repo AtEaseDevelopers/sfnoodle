@@ -1853,43 +1853,22 @@ class DriverController extends Controller
             
             $id = $data['invoice_id'];
 
-            $invoice = Invoice::where('id',$id)
-            ->with('customer')
-            ->with('invoiceDetails.product')
-            ->first();
+            $invoice = Invoice::where('id',$id)->first();
 
             if (empty($invoice)) {
                 abort('404');
             }
 
-            // Render the stored invoice prices as-is (no recalculation)
-            $allItems = [];
-            foreach ($invoice->invoiceDetails as $detail) {
-                $isFoc = ($detail->price == 0 && $detail->totalprice == 0);
-                $allItems[] = [
-                    'display_name'    => (optional($detail->product)->code ?? 'N/A') . ($isFoc ? ' (FOC)' : ''),
-                    'quantity'        => $detail->quantity,
-                    'price'           => $detail->price,
-                    'totalprice'      => $detail->totalprice,
-                    'discount_amount' => $detail->discount_amount ?? 0,
-                ];
+            // Reuse the same price calculation as the admin-side print (special prices, tiers, FOC, discounts)
+            $b64 = $this->getinvoicepdf($invoice->id);
+            if (!is_string($b64)) {
+                return $b64; // error response passthrough
             }
-
-            $height = (count($allItems) * 50) + 430;
-
-            $pdf = Pdf::loadView('invoices.print', [
-                'invoices' => $invoice,
-                'creatorName' => $invoice->driver_name ?? ($invoice->creator->name ?? 'System'),
-                'allItems' => $allItems,
-                'finalTotal' => $invoice->total,
-            ]);
-
-            $pdf->setPaper(array(0, 0, 300, $height), 'portrait')->setOptions(['isPhpEnabled' => true, 'isRemoteEnabled' => true]);
     
             $invoiceFilename = 'invoice-' . $invoice->invoiceno . '.pdf';
             $path = 'invoices-pdf/' . $invoiceFilename;
             
-            Storage::disk('public')->put($path, $pdf->output());
+            Storage::disk('public')->put($path, base64_decode($b64));
             $url = url($path);
 
             return response()->json([
@@ -5922,7 +5901,7 @@ class DriverController extends Controller
 
             $pdf = Pdf::loadView('invoices.print', [
                 'invoices' => $invoice,
-                'creatorName' => $creator->name ?? 'System',
+                'creatorName' => $invoice->driver_name ?? ($creator->name ?? 'System'),
                 'allItems' => $allItems,
                 'originalTotal' => $originalTotal,
                 'offerAmount' => $offerAmount,
