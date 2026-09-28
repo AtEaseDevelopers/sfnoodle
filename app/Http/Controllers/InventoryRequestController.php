@@ -93,6 +93,8 @@ class InventoryRequestController extends Controller
                 'driver_id' => $request->driver_id,
                 'items' => $items, // Store as JSON array
                 'status' => InventoryRequest::STATUS_PENDING,
+                // Tag the driver's active trip so the request appears in the trip summary StockIn
+                'trip_id' => optional(Driver::find($request->driver_id))->trip_id,
                 'remarks' => $request->remarks,
             ]);
 
