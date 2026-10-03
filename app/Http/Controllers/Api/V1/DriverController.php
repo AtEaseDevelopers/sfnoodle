@@ -811,21 +811,13 @@ class DriverController extends Controller
                 ], 401);
             }
             //process
-            // $kelindan = Kelindan::where('status',1)->select('id','name')->get()->toarray();
-            $kelindan = DB::select("select k.id, k.name from kelindans k left join ( select driver_id, type, kelindan_id from trips where id in ( select max(id) as id from trips group by driver_id ) ) b on k.id = b.kelindan_id and b.type = 1 where b.kelindan_id is null;");
-            if(count($kelindan) != 0){
-                return response()->json([
-                    'result' => true,
-                    'message' => __LINE__.$this->message_separator.'api.message.kelindan_found',
-                    'data' => $kelindan
-                ], 200);
-            }else{
-                return response()->json([
-                    'result' => false,
-                    'message' => __LINE__.$this->message_separator.'api.message.kelindan_not_found',
-                    'data' => null
-                ], 200);
-            }
+            // Deprecated: kelindan is no longer used (trips.kelindan_id was removed).
+            // Kept so older mobile builds that still call this don't hit a 500.
+            return response()->json([
+                'result' => true,
+                'message' => __LINE__.$this->message_separator.'Deprecated, no longer used',
+                'data' => []
+            ], 200);
         }
         catch(Exception $e){
             return response()->json([
@@ -850,21 +842,13 @@ class DriverController extends Controller
                 ], 401);
             }
             //process
-            // $lorry = Lorry::where('status',1)->select('id','lorryno')->get()->toarray();
-            $lorry = DB::select("select l.id, l.lorryno from lorrys l left join ( select driver_id, type, lorry_id from trips where id in (select max(id) as id from trips group by driver_id) ) b on l.id = b.lorry_id and b.type = 1 where b.lorry_id is null;");
-            if(count($lorry) != 0){
-                return response()->json([
-                    'result' => true,
-                    'message' => __LINE__.$this->message_separator.'api.message.lorry_found',
-                    'data' => $lorry
-                ], 200);
-            }else{
-                return response()->json([
-                    'result' => false,
-                    'message' => __LINE__.$this->message_separator.'api.message.lorry_not_found',
-                    'data' => null
-                ], 200);
-            }
+            // Deprecated: lorry is no longer used (trips.lorry_id was removed).
+            // Kept so older mobile builds that still call this don't hit a 500.
+            return response()->json([
+                'result' => true,
+                'message' => __LINE__.$this->message_separator.'Deprecated, no longer used',
+                'data' => []
+            ], 200);
         }
         catch(Exception $e){
             return response()->json([
