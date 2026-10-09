@@ -372,7 +372,6 @@
         </ul>
     @endcan
  
-    {{-- Special Prices menu hidden: feature not in use. Remove this comment wrapper to restore.
     @can('specialprice')
         <ul class="nav-dropdown-items">
             <li class="nav-item {{ Request::is('specialprices*') ? 'active' : '' }}">
@@ -382,7 +381,6 @@
             </li>
         </ul>
     @endcan
-    --}}
 
     @can('foc')
         <ul class="nav-dropdown-items">
